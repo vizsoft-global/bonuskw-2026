@@ -5,33 +5,134 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { loadCart, saveCart } from "@/lib/cart/store";
+import { useI18n } from "@/lib/i18n/locale";
+
+type StatusResponse = {
+  status?: string;
+  gatewayStatus?: string | null;
+  chargeId?: string | null;
+  error?: string;
+};
+
+type Outcome = "checking" | "paid" | "failed" | "pending";
+
+const MAX_POLLS = 20;
+const POLL_MS = 2000;
 
 function ReturnBody() {
   const params = useSearchParams();
   const { user } = useAuth();
-  const [status, setStatus] = useState("Checking payment…");
-  const orderId = params.get("orderId") || params.get("tap_id") || "";
+  const { t } = useI18n();
+  const [outcome, setOutcome] = useState<Outcome>("checking");
+  const [gateway, setGateway] = useState<string>("");
+  const orderId = params.get("orderId") || "";
+  // Tap appends `tap_id` (the charge id) when it redirects back itself.
+  const chargeId = params.get("chargeId") || params.get("tap_id") || "";
 
   useEffect(() => {
-    if (!user || !orderId) return;
-    let n = 0;
-    const id = window.setInterval(() => {
-      void user.getIdToken().then(async (token) => {
-        const res = await fetch(`/api/checkout/status?orderId=${encodeURIComponent(orderId)}`, {
+    if (!user || (!orderId && !chargeId)) return;
+    let polls = 0;
+    let stopped = false;
+    let timer: number | undefined;
+
+    async function check() {
+      if (stopped) return;
+      polls += 1;
+      try {
+        const token = await user!.getIdToken();
+        const query = new URLSearchParams();
+        if (orderId) query.set("orderId", orderId);
+        if (chargeId) query.set("chargeId", chargeId);
+        const res = await fetch(`/api/checkout/status?${query.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
-        const json = (await res.json()) as { status?: string };
-        setStatus(json.status || "Pending");
-        if (json.status === "Paid" || json.status === "CAPTURED" || n++ > 12) window.clearInterval(id);
-      });
-    }, 2000);
-    return () => window.clearInterval(id);
-  }, [user, orderId]);
+        const json = (await res.json()) as StatusResponse;
+        if (json.gatewayStatus) setGateway(json.gatewayStatus);
+        if (json.status === "Paid" || json.status === "CAPTURED") {
+          setOutcome("paid");
+          // The purchased lines are fulfilled; empty the cart so the next
+          // checkout does not re-buy them. Saved-for-later stays.
+          try {
+            const cart = await loadCart(user!.uid);
+            if (cart.lines.length) await saveCart(user!.uid, { ...cart, lines: [] });
+          } catch {
+            // best effort
+          }
+          return;
+        }
+        if (json.status === "Failed" || res.status === 409) {
+          setOutcome("failed");
+          return;
+        }
+      } catch {
+        // network blip: keep polling
+      }
+      if (polls >= MAX_POLLS) {
+        setOutcome("pending");
+        return;
+      }
+      timer = window.setTimeout(check, POLL_MS);
+    }
+
+    void check();
+    return () => {
+      stopped = true;
+      if (timer) window.clearTimeout(timer);
+    };
+  }, [user, orderId, chargeId]);
+
+  const title =
+    outcome === "paid"
+      ? t("paymentSuccessTitle")
+      : outcome === "failed"
+        ? t("paymentFailedTitle")
+        : outcome === "pending"
+          ? t("paymentPendingTitle")
+          : t("paymentChecking");
+  const body =
+    outcome === "paid"
+      ? t("paymentSuccessBody")
+      : outcome === "failed"
+        ? t("paymentFailedBody")
+        : outcome === "pending"
+          ? t("paymentPendingBody")
+          : "";
 
   return (
     <AppShell>
-      <h1 className="text-2xl font-semibold">{status}</h1>
-      <Link href="/" className="mt-4 inline-block text-primary">Home</Link>
+      <div className="glass rounded-3xl p-5">
+        <h1 className="text-2xl font-semibold">{title}</h1>
+        {body ? <p className="mt-2 text-sm text-muted">{body}</p> : null}
+        {gateway && outcome !== "paid" ? (
+          <p className="mt-1 text-xs text-muted">{gateway}</p>
+        ) : null}
+        <div className="mt-5 flex flex-wrap gap-2">
+          {outcome === "paid" ? (
+            <>
+              <Link href="/my-space" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+                {t("goToMyCourses")}
+              </Link>
+              <Link href="/dues" className="rounded-full border border-line px-5 py-3 text-sm font-medium">
+                {t("viewDues")}
+              </Link>
+            </>
+          ) : null}
+          {outcome === "failed" ? (
+            <Link href="/checkout" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+              {t("tryAgain")}
+            </Link>
+          ) : null}
+          {outcome === "pending" ? (
+            <Link href="/my-space" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+              {t("goToMyCourses")}
+            </Link>
+          ) : null}
+          <Link href="/" className="rounded-full px-5 py-3 text-sm text-primary">
+            {t("home")}
+          </Link>
+        </div>
+      </div>
     </AppShell>
   );
 }
