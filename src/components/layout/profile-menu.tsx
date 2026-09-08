@@ -19,10 +19,10 @@ export function ProfileMenu({
 }) {
   const { t, locale, setLocale } = useI18n();
   const { logout } = useAuth();
-  const { resolvedTheme, setTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
-  const isDark = resolvedTheme !== "light";
+  const isDark = theme !== "light";
 
   useEffect(() => {
     if (!open) return;
