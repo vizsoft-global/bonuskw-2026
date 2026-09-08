@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
+import { AppFrame } from "@/components/layout/app-shell";
 import { PwaRegister } from "@/components/system/pwa-register";
 import { VersionGuard } from "@/components/system/version-guard";
 import "./globals.css";
@@ -33,7 +34,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <VersionGuard />
           <PwaRegister />
           <div id="ba-recaptcha" />
-          {children}
+          <AppFrame>{children}</AppFrame>
         </Providers>
       </body>
     </html>

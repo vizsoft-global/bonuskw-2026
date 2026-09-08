@@ -1,17 +1,14 @@
 "use client";
 
-import { AppShell } from "@/components/layout/app-shell";
-import { useI18n } from "@/lib/i18n/locale";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { PageLoader } from "@/components/shared/loader";
 
 export default function LanguagePage() {
-  const { t, locale, setLocale } = useI18n();
-  return (
-    <AppShell>
-      <h1 className="mb-4 text-xl font-semibold">{t("language")}</h1>
-      <div className="flex gap-3">
-        <button type="button" onClick={() => setLocale("en")} className={locale === "en" ? "text-primary" : ""}>English</button>
-        <button type="button" onClick={() => setLocale("ar")} className={locale === "ar" ? "text-primary" : ""}>العربية</button>
-      </div>
-    </AppShell>
-  );
+  const router = useRouter();
+  useEffect(() => {
+    window.sessionStorage.setItem("ba_open_lang", "1");
+    router.replace("/profile");
+  }, [router]);
+  return <PageLoader />;
 }

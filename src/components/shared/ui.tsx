@@ -79,7 +79,7 @@ export function CourseCard({
         layout === "list" ? "grid grid-cols-[112px_1fr] md:grid-cols-[180px_1fr]" : "flex flex-col",
       )}
     >
-      <Link href={href} className="relative block aspect-video bg-black/20">
+      <Link href={href} className="relative block aspect-[5/3] bg-black/20">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" className="h-full w-full object-cover" />

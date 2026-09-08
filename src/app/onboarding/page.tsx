@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
+import { CtaButton } from "@/components/auth/cta-button";
+import { SelectField } from "@/components/auth/field";
+import { PageLoader } from "@/components/shared/loader";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useAuth } from "@/lib/auth/auth-provider";
@@ -21,104 +25,124 @@ export default function OnboardingPage() {
   const [university, setUniversity] = useState("");
   const [field, setField] = useState("");
   const [year, setYear] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     void (async () => {
-      const [c, u, b] = await Promise.all([
-        getDocs(collection(getDb(), collections.country)),
-        getDocs(collection(getDb(), collections.university)),
-        getDocs(collection(getDb(), collections.branch)),
-      ]);
-      setCountries(c.docs.map((d) => ({ id: d.id, name: String(d.get("name") || d.id) })));
-      setUniversities(
-        u.docs.map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          countryId: d.get("countryRef")?.id,
-        })),
-      );
-      setFields(
-        b.docs.map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          universityId: d.get("universityRef")?.id,
-        })),
-      );
+      try {
+        const [c, u, b] = await Promise.all([
+          getDocs(collection(getDb(), collections.country)),
+          getDocs(collection(getDb(), collections.university)),
+          getDocs(collection(getDb(), collections.branch)),
+        ]);
+        setCountries(c.docs.map((d) => ({ id: d.id, name: String(d.get("name") || d.id) })));
+        setUniversities(
+          u.docs.map((d) => ({
+            id: d.id,
+            name: String(d.get("name") || d.id),
+            countryId: d.get("countryRef")?.id,
+          })),
+        );
+        setFields(
+          b.docs.map((d) => ({
+            id: d.id,
+            name: String(d.get("name") || d.id),
+            universityId: d.get("universityRef")?.id,
+          })),
+        );
+      } finally {
+        setReady(true);
+      }
     })();
   }, []);
 
   async function save() {
     if (!user || !country || !university || !field) return;
-    await updateDoc(doc(getDb(), collections.users, user.uid), {
-      countryRef: doc(getDb(), collections.country, country),
-      universityRef: doc(getDb(), collections.university, university),
-      branchRef: doc(getDb(), collections.branch, field),
-      year_of_study: year || null,
-      welcomeStatus: true,
-    });
-    await refreshProfile();
-    router.replace("/");
+    setBusy(true);
+    try {
+      await updateDoc(doc(getDb(), collections.users, user.uid), {
+        countryRef: doc(getDb(), collections.country, country),
+        universityRef: doc(getDb(), collections.university, university),
+        branchRef: doc(getDb(), collections.branch, field),
+        year_of_study: year || null,
+        welcomeStatus: true,
+      });
+      await refreshProfile();
+      router.replace("/");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const years = [
+    { id: "1st Year", name: t("year1") },
+    { id: "2nd Year", name: t("year2") },
+    { id: "3rd Year", name: t("year3") },
+    { id: "Final Year", name: t("yearFinal") },
+  ];
+
+  if (!ready) {
+    return (
+      <AuthShell showBack>
+        <PageLoader />
+      </AuthShell>
+    );
   }
 
   return (
-    <main className="mx-auto grid min-h-dvh max-w-lg place-items-center px-6">
-      <div className="w-full space-y-4">
-        <h1 className="text-2xl font-semibold">{t("createAccount")}</h1>
-        <Select label={t("country")} value={country} onChange={setCountry} options={countries} />
-        <Select
-          label={t("university")}
-          value={university}
-          onChange={setUniversity}
-          options={universities.filter((u) => !country || u.countryId === country)}
-        />
-        <Select
-          label={t("field")}
-          value={field}
-          onChange={setField}
-          options={fields.filter((f) => !university || f.universityId === university)}
-        />
-        <label className="block text-sm">
-          {t("year")} <span className="text-muted">({t("yearOptional")})</span>
-          <input
-            value={year}
-            onChange={(e) => setYear(e.target.value)}
-            className="mt-2 w-full rounded-2xl border border-line bg-transparent px-3 py-3"
+    <AuthShell showBack>
+      <div className="flex flex-col gap-[43px]">
+        <div className="flex flex-col gap-2.5">
+          <AuthHeading>{t("tellUsStudies")}</AuthHeading>
+          <p className="text-[14px] text-white/60">{t("studiesSubtitle")}</p>
+        </div>
+        <div className="flex flex-col gap-[25px]">
+          <SelectField
+            icon="/onboarding/globe.svg"
+            label={t("country")}
+            placeholder={t("selectCountry")}
+            value={country}
+            onChange={(v) => {
+              setCountry(v);
+              setUniversity("");
+              setField("");
+            }}
+            options={countries}
           />
-        </label>
-        <button type="button" onClick={() => void save()} className="w-full rounded-full bg-primary py-3 font-semibold text-white">
-          {t("finish")}
-        </button>
+          <SelectField
+            icon="/onboarding/bank.svg"
+            label={t("university")}
+            placeholder={t("selectUniversity")}
+            value={university}
+            onChange={(v) => {
+              setUniversity(v);
+              setField("");
+            }}
+            options={universities.filter((u) => !country || u.countryId === country)}
+          />
+          <SelectField
+            icon="/onboarding/graduation-hat.svg"
+            label={t("field")}
+            placeholder={t("selectMajor")}
+            value={field}
+            onChange={setField}
+            options={fields.filter((f) => !university || f.universityId === university)}
+          />
+          <SelectField
+            icon="/onboarding/certificate.svg"
+            label={t("year")}
+            optional={t("yearOptional")}
+            placeholder={t("selectYear")}
+            value={year}
+            onChange={setYear}
+            options={years}
+          />
+        </div>
+        <CtaButton loading={busy} disabled={busy || !country || !university || !field} onClick={() => void save()}>
+          {t("saveContinue")}
+        </CtaButton>
       </div>
-    </main>
-  );
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-  options: Option[];
-}) {
-  return (
-    <label className="block text-sm">
-      {label}
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-2 w-full rounded-2xl border border-line bg-bg px-3 py-3"
-      >
-        <option value="">—</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
-    </label>
+    </AuthShell>
   );
 }

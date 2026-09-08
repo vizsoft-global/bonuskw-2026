@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 
 function ReturnBody() {
@@ -28,9 +29,11 @@ function ReturnBody() {
     return () => window.clearInterval(id);
   }, [user, orderId]);
 
+  const checking = status === "Checking payment…";
+
   return (
-    <AppShell>
-      <h1 className="text-2xl font-semibold">{status}</h1>
+    <AppShell loading={checking} title={status} skeleton={<ListPageSkeleton rows={3} />}>
+      <p className="text-2xl font-semibold">{status}</p>
       <Link href="/" className="mt-4 inline-block text-primary">Home</Link>
     </AppShell>
   );
@@ -38,7 +41,7 @@ function ReturnBody() {
 
 export default function CheckoutReturnPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div className="min-h-dvh bg-[#050505]" />}>
       <ReturnBody />
     </Suspense>
   );
