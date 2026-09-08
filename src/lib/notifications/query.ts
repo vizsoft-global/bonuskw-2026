@@ -15,6 +15,7 @@ export type NotificationItem = {
 export function useAnnouncements() {
   return useQuery({
     queryKey: ["announcements"],
+    staleTime: 5 * 60_000,
     queryFn: async () => {
       const snap = await getDocs(query(collection(getDb(), collections.announcement), limit(30)));
       return snap.docs

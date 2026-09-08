@@ -15,7 +15,7 @@ import {
 import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
 import { HomeIcon } from "@/components/home/icon";
@@ -26,7 +26,6 @@ import { NotificationsBellButton, NotificationsMenu } from "@/components/notific
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart } from "@/lib/cart/store";
-import { listCourses } from "@/lib/catalog/queries";
 import { useI18n } from "@/lib/i18n/locale";
 import { haptic } from "@/lib/ui/haptics";
 import { useDeferredLoading } from "@/lib/ui/deferred-loading";
@@ -249,22 +248,19 @@ function TabItem({
 }
 
 function CatalogWarmup() {
-  const { user } = useAuth();
-  const client = useQueryClient();
   const router = useRouter();
 
   useEffect(() => {
-    for (const href of tabHrefs) router.prefetch(href);
+    const prefetch = () => {
+      for (const href of tabHrefs) router.prefetch(href);
+    };
+    const idle = window.requestIdleCallback?.(prefetch);
+    const timer = window.setTimeout(prefetch, 2500);
+    return () => {
+      if (idle) window.cancelIdleCallback?.(idle);
+      window.clearTimeout(timer);
+    };
   }, [router]);
-
-  useEffect(() => {
-    if (!user) return;
-    void client.prefetchQuery({
-      queryKey: ["courses"],
-      queryFn: listCourses,
-      staleTime: 30_000,
-    });
-  }, [user, client]);
 
   return null;
 }

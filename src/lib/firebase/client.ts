@@ -2,7 +2,13 @@
 
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider, OAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import {
+  getFirestore,
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager,
+  type Firestore,
+} from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 import { firebaseWebConfig } from "./config";
@@ -15,8 +21,19 @@ export function getFirebaseAuth() {
   return getAuth(getFirebaseApp());
 }
 
+let db: Firestore | undefined;
+
 export function getDb() {
-  return getFirestore(getFirebaseApp());
+  if (db) return db;
+  const app = getFirebaseApp();
+  try {
+    db = initializeFirestore(app, {
+      localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }),
+    });
+  } catch {
+    db = getFirestore(app);
+  }
+  return db;
 }
 
 export function getBucket() {

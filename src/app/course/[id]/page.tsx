@@ -44,7 +44,11 @@ export default function CoursePage() {
   });
   const chapters = useQuery({ queryKey: ["chapters", id], queryFn: () => listChapters(id) });
   const lessons = useQuery({ queryKey: ["lessons", id], queryFn: () => listLessons(id) });
-  const quizzes = useQuery({ queryKey: ["quizzes", id], queryFn: () => listQuizzes(id) });
+  const quizzes = useQuery({
+    queryKey: ["quizzes", id],
+    queryFn: () => listQuizzes(id),
+    enabled: tab === "tests",
+  });
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
     enabled: Boolean(course.data?.authorRef?.id),
@@ -164,22 +168,29 @@ export default function CoursePage() {
       };
     }),
   );
+  const lessonRows = lessons.data ?? [];
+  const lessonsByChapter = new Map<string, typeof lessonRows>();
+  for (const lesson of lessonRows) {
+    const chapterId = (lesson.chapterRef as { id?: string } | undefined)?.id;
+    if (!chapterId) continue;
+    const bucket = lessonsByChapter.get(chapterId);
+    if (bucket) bucket.push(lesson);
+    else lessonsByChapter.set(chapterId, [lesson]);
+  }
   const chapterRows = (chapters.data ?? []).map((chapter) => ({
     id: chapter.id,
     name: chapter.name,
     sellable: chapter.sellable,
     price: chapter.price,
-    lessons: (lessons.data ?? [])
-      .filter((lesson) => (lesson.chapterRef as { id?: string } | undefined)?.id === chapter.id)
-      .map((lesson) => ({
-        id: lesson.id,
-        name: lesson.name,
-        image: lesson.image,
-        videoDuration: lesson.videoDuration,
-        locked:
-          lessonAccess({ lesson: lesson as LessonDoc, chapter: chapter as never }) === "locked" ||
-          isLessonLocked(lesson as LessonDoc),
-      })),
+    lessons: (lessonsByChapter.get(chapter.id) ?? []).map((lesson) => ({
+      id: lesson.id,
+      name: lesson.name,
+      image: lesson.image,
+      videoDuration: lesson.videoDuration,
+      locked:
+        lessonAccess({ lesson: lesson as LessonDoc, chapter: chapter as never }) === "locked" ||
+        isLessonLocked(lesson as LessonDoc),
+    })),
   }));
 
   return (

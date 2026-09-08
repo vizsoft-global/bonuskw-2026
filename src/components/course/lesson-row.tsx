@@ -21,7 +21,7 @@ export function LessonRow({
       <div className="relative aspect-[82/55] overflow-hidden rounded-[10px] border-[0.5px] border-white/25 bg-[#252525]">
         {image ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" className="h-full w-full object-cover" />
+          <img src={image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : null}
         <span className={cn("absolute inset-0 grid place-items-center", locked ? "bg-black/45" : "bg-black/20")}>
           {locked ? (

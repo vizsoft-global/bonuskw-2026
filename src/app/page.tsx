@@ -32,7 +32,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { HomeSkeleton } from "@/components/shared/skeleton";
 import { PageLoader } from "@/components/shared/loader";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { exploreCourses, getBatch, getCourse, listCourses, listLessons } from "@/lib/catalog/queries";
+import { CATALOG_STALE_MS, exploreCourses, getCourse, getDocsByIds, listCourses } from "@/lib/catalog/queries";
 import { upsertLine, loadCart, saveCart } from "@/lib/cart/store";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -109,7 +109,7 @@ function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
   const [topic, setTopic] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
 
-  const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses });
+  const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses, staleTime: CATALOG_STALE_MS });
   const stories = useQuery({
     queryKey: ["stories"],
     queryFn: async () => {
@@ -162,27 +162,19 @@ function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
   const authors = useQuery({
     queryKey: ["authors", authorIds.join(",")],
     enabled: authorIds.length > 0,
+    staleTime: CATALOG_STALE_MS,
     queryFn: async () => {
-      const pairs = await Promise.all(
-        authorIds.map(async (id) => {
-          const snap = await getDoc(doc(getDb(), collections.users, id));
-          return [id, String(snap.get("display_name") || "")] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<string, string>;
+      const rows = await getDocsByIds(collections.users, authorIds);
+      return Object.fromEntries(Object.entries(rows).map(([id, row]) => [id, String(row.display_name || "")]));
     },
   });
   const batches = useQuery({
     queryKey: ["home-batches", batchIds.join(",")],
     enabled: batchIds.length > 0,
+    staleTime: CATALOG_STALE_MS,
     queryFn: async () => {
-      const pairs = await Promise.all(
-        batchIds.map(async (id) => {
-          const row = await getBatch(id);
-          return [id, row?.name || ""] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<string, string>;
+      const rows = await getDocsByIds(collections.batches, batchIds);
+      return Object.fromEntries(Object.entries(rows).map(([id, row]) => [id, String(row.name || "")]));
     },
   });
 
@@ -390,33 +382,27 @@ async function loadContinueItems(uid: string, courseIds: Array<string | undefine
     updatedAt: toDate(d.get("updatedAt")),
   }));
 
-  const rows: Array<ContinueItem | null> = await Promise.all(
-    ids.map(async (courseId) => {
-      const [course, lessons] = await Promise.all([getCourse(courseId), listLessons(courseId)]);
-      if (!course) return null;
-      const courseProgress = progress.filter((p) => p.courseId === courseId);
-      const completedIds = new Set(courseProgress.filter((p) => p.completed).map((p) => p.lessonId));
-      const total = lessons.length || 1;
-      const done = lessons.filter((l) => completedIds.has(l.id)).length;
-      const remaining = lessons.filter((l) => !completedIds.has(l.id));
-      const hrsLeft = Math.round(remaining.reduce((sum, l) => sum + Number(l.videoDuration || 0), 0) / 3600);
-      const last = courseProgress.reduce<Date | null>((max, p) => {
-        if (!p.updatedAt) return max;
-        return !max || p.updatedAt > max ? p.updatedAt : max;
-      }, null);
-      const item: ContinueItem = {
-        courseId,
-        name: course.name || "",
-        image: course.image,
-        pct: Math.round((done / total) * 100),
-        hrsLeft,
-        nextName: remaining[0] ? String(remaining[0].name || "") : undefined,
-        lastStudied: last ? formatDistanceToNow(last, { addSuffix: true }) : undefined,
-      };
-      return item;
-    }),
-  );
-  return rows.filter((row): row is ContinueItem => row !== null);
+  const courses = await Promise.all(ids.map((courseId) => getCourse(courseId)));
+  return courses.flatMap((course, index) => {
+    if (!course) return [];
+    const courseId = ids[index];
+    const courseProgress = progress.filter((p) => p.courseId === courseId);
+    const done = courseProgress.filter((p) => p.completed).length;
+    const total = Math.max(Number(course.numberLessons || 0), done, 1);
+    const hours = Number(course.totalHours || course.totalCourseHour || 0);
+    const last = courseProgress.reduce<Date | null>((max, p) => {
+      if (!p.updatedAt) return max;
+      return !max || p.updatedAt > max ? p.updatedAt : max;
+    }, null);
+    return [{
+      courseId,
+      name: course.name || "",
+      image: course.image,
+      pct: Math.min(100, Math.round((done / total) * 100)),
+      hrsLeft: Math.max(0, Math.round(hours * (1 - done / total))),
+      lastStudied: last ? formatDistanceToNow(last, { addSuffix: true }) : undefined,
+    }];
+  });
 }
 
 async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) {

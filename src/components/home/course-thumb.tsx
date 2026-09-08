@@ -43,7 +43,7 @@ export function CourseThumb({
     >
       {hasThumb(image) ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <ThumbPlaceholder />
       )}
