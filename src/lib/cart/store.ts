@@ -4,15 +4,21 @@ import { doc, getDoc, setDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 
+export type CartLineKind = "course" | "chapter" | "ebook" | "installment";
+export type CartPaymentType = "Full payment" | "EMI";
+
 export type CartLine = {
-  kind: "course" | "chapter" | "ebook" | "installment";
+  kind: CartLineKind;
   courseId: string;
   chapterId?: string;
   installmentId?: string;
-  paymentType: "Full payment" | "EMI";
+  paymentType: CartPaymentType;
+  /** Denormalised for instant rendering; the quote API is the source of truth for money. */
   title?: string;
   image?: string;
   price?: number;
+  emiPrices?: [number, number, number];
+  emiAvailable?: boolean;
   addedAt: number;
 };
 
@@ -20,29 +26,75 @@ export type CartState = {
   lines: CartLine[];
   savedForLater: CartLine[];
   couponCode?: string;
+  updatedAt?: number;
 };
 
-const empty: CartState = { lines: [], savedForLater: [] };
+export const emptyCart: CartState = { lines: [], savedForLater: [] };
+
+export function lineKey(line: Pick<CartLine, "kind" | "courseId" | "chapterId" | "installmentId">) {
+  return `${line.kind}:${line.courseId}:${line.chapterId || ""}:${line.installmentId || ""}`;
+}
 
 export async function loadCart(uid: string): Promise<CartState> {
   const snap = await getDoc(doc(getDb(), collections.userCart, uid));
-  if (!snap.exists()) return empty;
+  if (!snap.exists()) return emptyCart;
   const data = snap.data() as Partial<CartState>;
   return {
-    lines: data.lines ?? [],
-    savedForLater: data.savedForLater ?? [],
+    lines: Array.isArray(data.lines) ? data.lines : [],
+    savedForLater: Array.isArray(data.savedForLater) ? data.savedForLater : [],
     couponCode: data.couponCode,
+    updatedAt: data.updatedAt,
   };
 }
 
 export async function saveCart(uid: string, cart: CartState) {
-  await setDoc(doc(getDb(), collections.userCart, uid), cart, { merge: true });
+  const payload: CartState = { ...cart, updatedAt: Date.now() };
+  if (payload.couponCode === undefined) delete payload.couponCode;
+  await setDoc(doc(getDb(), collections.userCart, uid), payload, { merge: true });
+  return payload;
 }
 
-export function upsertLine(cart: CartState, line: CartLine) {
-  const key = `${line.kind}:${line.courseId}:${line.chapterId || ""}`;
-  const lines = cart.lines.filter(
-    (item) => `${item.kind}:${item.courseId}:${item.chapterId || ""}` !== key,
+export function upsertLine(cart: CartState, line: CartLine): CartState {
+  const key = lineKey(line);
+  const lines = cart.lines.filter((item) => lineKey(item) !== key);
+  const savedForLater = cart.savedForLater.filter((item) => lineKey(item) !== key);
+  return { ...cart, lines: [...lines, line], savedForLater };
+}
+
+export function removeLine(cart: CartState, key: string): CartState {
+  return {
+    ...cart,
+    lines: cart.lines.filter((item) => lineKey(item) !== key),
+    savedForLater: cart.savedForLater.filter((item) => lineKey(item) !== key),
+  };
+}
+
+export function moveToSaved(cart: CartState, key: string): CartState {
+  const line = cart.lines.find((item) => lineKey(item) === key);
+  if (!line) return cart;
+  return {
+    ...cart,
+    lines: cart.lines.filter((item) => lineKey(item) !== key),
+    savedForLater: [...cart.savedForLater.filter((item) => lineKey(item) !== key), line],
+  };
+}
+
+export function moveToCart(cart: CartState, key: string): CartState {
+  const line = cart.savedForLater.find((item) => lineKey(item) === key);
+  if (!line) return cart;
+  return upsertLine(
+    { ...cart, savedForLater: cart.savedForLater.filter((item) => lineKey(item) !== key) },
+    { ...line, addedAt: Date.now() },
   );
-  return { ...cart, lines: [...lines, line] };
+}
+
+export function setPaymentType(cart: CartState, key: string, paymentType: CartPaymentType): CartState {
+  return {
+    ...cart,
+    lines: cart.lines.map((item) => (lineKey(item) === key ? { ...item, paymentType } : item)),
+  };
+}
+
+export function hasLine(cart: CartState, key: string) {
+  return cart.lines.some((item) => lineKey(item) === key);
 }

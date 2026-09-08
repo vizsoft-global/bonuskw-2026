@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
   ...(!onVercel && isProduction ? { deploymentId: buildVersion } : {}),
   env: {
     NEXT_PUBLIC_APP_VERSION: isProduction ? buildVersion : "dev",
+    NEXT_PUBLIC_BUILD_TIME: String(Date.now()),
   },
   images: {
     remotePatterns: [

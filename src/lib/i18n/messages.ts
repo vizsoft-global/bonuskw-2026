@@ -1,198 +1,40 @@
 import type { Locale } from "./content";
+import { auth } from "./dictionaries/auth";
+import { catalog } from "./dictionaries/catalog";
+import { commerce } from "./dictionaries/commerce";
+import { core } from "./dictionaries/core";
+import { learning } from "./dictionaries/learning";
+import { profile } from "./dictionaries/profile";
 
-export const messages = {
-  en: {
-    appName: "Bonus Academy",
-    splash: "Learn anytime",
-    getStarted: "Get started",
-    haveAccount: "I have an account",
-    signUpMobile: "Sign up with mobile number",
-    welcomeBack: "Welcome back",
-    createAccount: "Create your account",
-    phoneHint: "Enter your mobile number to receive a verification code.",
-    mobileNumber: "Mobile number",
-    continue: "Continue",
-    agree: "By continuing, you agree to the Terms of Service and Privacy Policy.",
-    verifyTitle: "Enter the code",
-    verifyHint: "We sent a code to",
-    verify: "Verify",
-    resend: "Resend SMS",
-    whatsapp: "Didn't get it? Send via WhatsApp",
-    smsFallback: "Send via SMS",
-    google: "Continue with Google",
-    apple: "Continue with Apple",
-    country: "Current country",
-    university: "University",
-    field: "Field of study",
-    year: "Year of study",
-    yearOptional: "Optional",
-    finish: "Continue",
-    home: "Home",
-    store: "Store",
-    mySpace: "My Space",
-    profile: "Profile",
-    search: "Search courses, ebooks or instructors…",
-    streak: "Streak",
-    activeCourses: "Active courses",
-    studyTime: "Study time",
-    continueLearning: "Continue learning",
-    explore: "Explore courses",
-    all: "All",
-    enroll: "Enroll",
-    resume: "Resume",
-    start: "Start",
-    bookmark: "Save",
-    saved: "Saved",
-    share: "Share",
-    chapters: "Chapters",
-    lessons: "Lessons",
-    hours: "Hours",
-    enrollNow: "Enroll now",
-    addToCart: "Add to cart",
-    resources: "Resources",
-    tests: "Tests",
-    instructor: "Instructor",
-    noBatch: "Enrolment is closed — no batch is running.",
-    batchFull: "This batch is full.",
-    draft: "This course is not available.",
-    fullPay: "Pay in full",
-    emi: "Installments",
-    cart: "Cart",
-    checkout: "Review & pay",
-    coupon: "Coupon",
-    apply: "Apply",
-    knet: "Pay with K-Net",
-    card: "Pay with card",
-    proceed: "Proceed to payment",
-    saveLater: "Save for later",
-    moveToCart: "Move to cart",
-    myCourses: "My courses",
-    myEbooks: "My ebooks",
-    personal: "Personal information",
-    deviceLogs: "Device logs",
-    changePassword: "Change password",
-    transactions: "Transactions",
-    notifications: "Notifications",
-    language: "Language",
-    theme: "Theme",
-    dark: "Dark",
-    light: "Light",
-    system: "System",
-    terms: "Terms & conditions",
-    logout: "Log out",
-    sessionEnded: "Your account was signed in on another device.",
-    signInAgain: "Sign in again",
-    updateRequired: "A new version is available. Refreshing…",
-    empty: "Nothing here yet",
-    next: "Next",
-    completed: "Completed",
-    rating: "Rating",
-    priceHigh: "Price: high to low",
-    priceLow: "Price: low to high",
-    topic: "Topic",
-    filter: "Filters",
-    download: "Download",
-    invoice: "Download invoice",
-    secure: "Secure payment · Instant access after purchase",
-  },
-  ar: {
-    appName: "بونص أكاديمي",
-    splash: "تعلّم في أي وقت",
-    getStarted: "ابدأ الآن",
-    haveAccount: "لدي حساب",
-    signUpMobile: "سجّل برقم الهاتف",
-    welcomeBack: "مرحبًا بعودتك",
-    createAccount: "أنشئ حسابك",
-    phoneHint: "أدخل رقم هاتفك لاستلام رمز التحقق.",
-    mobileNumber: "رقم الهاتف",
-    continue: "متابعة",
-    agree: "بالمتابعة أنت توافق على الشروط وسياسة الخصوصية.",
-    verifyTitle: "أدخل الرمز",
-    verifyHint: "أرسلنا رمزًا إلى",
-    verify: "تحقق",
-    resend: "إعادة إرسال الرسالة",
-    whatsapp: "لم يصلك؟ أرسل عبر واتساب",
-    smsFallback: "أرسل عبر رسالة نصية",
-    google: "المتابعة مع جوجل",
-    apple: "المتابعة مع آبل",
-    country: "الدولة الحالية",
-    university: "الجامعة",
-    field: "التخصص",
-    year: "السنة الدراسية",
-    yearOptional: "اختياري",
-    finish: "متابعة",
-    home: "الرئيسية",
-    store: "المتجر",
-    mySpace: "مساحتي",
-    profile: "الملف",
-    search: "ابحث عن الدورات أو الكتب أو المدرّسين…",
-    streak: "السلسلة",
-    activeCourses: "الدورات النشطة",
-    studyTime: "وقت الدراسة",
-    continueLearning: "واصل التعلم",
-    explore: "استكشف الدورات",
-    all: "الكل",
-    enroll: "سجّل",
-    resume: "استئناف",
-    start: "ابدأ",
-    bookmark: "حفظ",
-    saved: "المحفوظات",
-    share: "مشاركة",
-    chapters: "الفصول",
-    lessons: "الدروس",
-    hours: "ساعات",
-    enrollNow: "سجّل الآن",
-    addToCart: "أضف إلى السلة",
-    resources: "الموارد",
-    tests: "الاختبارات",
-    instructor: "المدرّس",
-    noBatch: "التسجيل مغلق — لا توجد دفعة حالية.",
-    batchFull: "هذه الدفعة ممتلئة.",
-    draft: "هذه الدورة غير متاحة.",
-    fullPay: "دفع كامل",
-    emi: "أقساط",
-    cart: "السلة",
-    checkout: "المراجعة والدفع",
-    coupon: "قسيمة",
-    apply: "تطبيق",
-    knet: "الدفع عبر كي نت",
-    card: "الدفع بالبطاقة",
-    proceed: "المتابعة للدفع",
-    saveLater: "حفظ لوقت لاحق",
-    moveToCart: "نقل إلى السلة",
-    myCourses: "دوراتي",
-    myEbooks: "كتبي",
-    personal: "المعلومات الشخصية",
-    deviceLogs: "سجل الأجهزة",
-    changePassword: "تغيير كلمة المرور",
-    transactions: "المعاملات",
-    notifications: "الإشعارات",
-    language: "اللغة",
-    theme: "المظهر",
-    dark: "داكن",
-    light: "فاتح",
-    system: "النظام",
-    terms: "الشروط والأحكام",
-    logout: "تسجيل الخروج",
-    sessionEnded: "تم تسجيل الدخول من جهاز آخر.",
-    signInAgain: "سجّل الدخول مجددًا",
-    updateRequired: "يتوفر إصدار جديد. جارٍ التحديث…",
-    empty: "لا يوجد شيء هنا بعد",
-    next: "التالي",
-    completed: "مكتمل",
-    rating: "التقييم",
-    priceHigh: "السعر: من الأعلى",
-    priceLow: "السعر: من الأدنى",
-    topic: "الموضوع",
-    filter: "تصفية",
-    download: "تنزيل",
-    invoice: "تحميل الفاتورة",
-    secure: "دفع آمن · وصول فوري بعد الشراء",
-  },
-} as const;
+/**
+ * Each feature owns one dictionary file under `dictionaries/`. They are merged
+ * here so `t()` accepts any key from any of them. Keys must be unique across
+ * dictionaries; later entries win if they collide, so avoid collisions.
+ */
+const dictionaries = [core, auth, catalog, learning, commerce, profile] as const;
 
-export type MessageKey = keyof (typeof messages)["en"];
+type Dictionary = (typeof dictionaries)[number];
+type KeysOf<T> = T extends { en: infer E } ? keyof E : never;
 
-export function t(locale: Locale, key: MessageKey) {
-  return messages[locale][key] ?? messages.en[key];
+export type MessageKey = Extract<KeysOf<Dictionary>, string>;
+type Messages = Record<Locale, Record<string, string>>;
+
+function merge(locale: Locale): Record<string, string> {
+  return Object.assign({}, ...dictionaries.map((d) => d[locale] as Record<string, string>));
+}
+
+export const messages: Messages = { en: merge("en"), ar: merge("ar") };
+
+export type MessageVars = Record<string, string | number>;
+
+function interpolate(template: string, vars?: MessageVars) {
+  if (!vars) return template;
+  return template.replace(/\{(\w+)\}/g, (_, name: string) =>
+    name in vars ? String(vars[name]) : `{${name}}`,
+  );
+}
+
+export function t(locale: Locale, key: MessageKey, vars?: MessageVars) {
+  const template = messages[locale][key] ?? messages.en[key] ?? key;
+  return interpolate(template, vars);
 }
