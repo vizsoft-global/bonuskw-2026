@@ -1,0 +1,45 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+    function isSelf(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if isSelf(uid);
+      allow delete: if false;
+    }
+    match /subscription/{id} {
+      allow read: if signedIn() && resource.data.userRef == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /chapterAccess/{id} {
+      allow read: if signedIn() && resource.data.userRef == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /ebookAccess/{id} {
+      allow read: if signedIn() && resource.data.userRef == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /orders/{id} {
+      allow read: if signedIn() && resource.data.userRef == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /installments/{id} {
+      allow read: if signedIn() && resource.data.userRef == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /sessions/{id} {
+      allow read: if signedIn() && resource.data.userref == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+    match /userdeviceinfo/{id} {
+      allow read: if signedIn() && resource.data.device_user_ref == /databases/$(database)/documents/users/$(request.auth.uid);
+      allow write: if false;
+    }
+  }
+}

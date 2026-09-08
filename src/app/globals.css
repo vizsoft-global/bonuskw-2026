@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #f7f7f8;
+  --surface: rgba(255, 255, 255, 0.86);
+  --surface-solid: #ffffff;
+  --line: rgba(15, 15, 16, 0.08);
+  --text: #121214;
+  --muted: #6b6b73;
+  --accent: #ff4a1c;
+  --accent-soft: rgba(255, 74, 28, 0.12);
+  --primary: #1a6dff;
+  --success: #1f9d6a;
+  --warning: #e8a317;
+  --ring: rgba(26, 109, 255, 0.35);
+  --shadow: 0 18px 50px rgba(16, 16, 18, 0.08);
+}
+
+.dark {
+  --bg: #0b0b0c;
+  --surface: rgba(22, 22, 24, 0.78);
+  --surface-solid: #141416;
+  --line: rgba(255, 255, 255, 0.08);
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --accent: #ff4a1c;
+  --accent-soft: rgba(255, 74, 28, 0.16);
+  --primary: #1a6dff;
+  --success: #3dcaa0;
+  --warning: #f0b429;
+  --ring: rgba(26, 109, 255, 0.45);
+  --shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface-solid);
+  --color-line: var(--line);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-primary: var(--primary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --font-sans: var(--font-inter), var(--font-arabic), ui-sans-serif, system-ui;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-inter), var(--font-arabic), ui-sans-serif, system-ui;
+}
+
+[dir="rtl"] body {
+  font-family: var(--font-arabic), var(--font-inter), ui-sans-serif, system-ui;
+}
+
+.glass {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+}
+
+.story-ring {
+  background: conic-gradient(from 210deg, var(--accent), #ff8a4c, var(--primary), var(--accent));
+}
+
+.hide-scrollbar {
+  scrollbar-width: none;
+}
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
