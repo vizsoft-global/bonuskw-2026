@@ -41,6 +41,7 @@ export type UserDoc = {
   emailVerifed?: boolean;
   welcomeStatus?: boolean;
   updatedAt?: Timestamp | Date;
+  year_of_study?: string;
 };
 
 /** A purchasable download attached to an eBook. */
@@ -645,6 +646,10 @@ export type AdminNavigationDoc = {
 export type SettingsStory = {
   title?: string;
   image?: string;
+  images?: string[];
+  video?: string;
+  videos?: string[];
+  media?: Array<string | { url?: string; type?: string }>;
   status?: string;
   startDate?: Timestamp | Date;
   endDate?: Timestamp | Date;

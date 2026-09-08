@@ -1,23 +1,34 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { doc, getDoc } from "firebase/firestore";
+import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
+import { HomeIcon } from "@/components/home/icon";
+import { InstructorHero, InstructorTabs } from "@/components/instructor/hero";
 import { AppShell } from "@/components/layout/app-shell";
-import { CourseCard, RatingStars } from "@/components/shared/ui";
-import { listCourses } from "@/lib/catalog/queries";
+import { EmptyState } from "@/components/shared/empty-state";
+import { InstructorSkeleton } from "@/components/shared/skeleton";
+import { useAuth } from "@/lib/auth/auth-provider";
+import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
+import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
-import { isEbookCourse } from "@/lib/format";
+import { ebookPageCount, isEbookCourse } from "@/lib/format";
+import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import type { UserDoc } from "@/lib/types/firestore";
+import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
+import { cn } from "@/lib/utils";
 
 export default function InstructorPage() {
   const { id } = useParams<{ id: string }>();
-  const { t } = useI18n();
+  const router = useRouter();
+  const { t, locale } = useI18n();
+  const { user, profile, refreshProfile } = useAuth();
   const [tab, setTab] = useState<"courses" | "ebooks">("courses");
-  const user = useQuery({
+
+  const instructor = useQuery({
     queryKey: ["instructor", id],
     queryFn: async () => {
       const snap = await getDoc(doc(getDb(), collections.users, id));
@@ -25,43 +36,218 @@ export default function InstructorPage() {
     },
   });
   const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses });
-  const mine = (courses.data ?? []).filter((c) => c.authorRef?.id === id && c.status !== "Draft");
+
+  const mine = publishedCourses(courses.data ?? []).filter((c) => c.authorRef?.id === id);
+  const courseRows = mine.filter((c) => !isEbookCourse(c));
+  const ebookRows = mine.filter((c) => isEbookCourse(c));
+  const visible = tab === "ebooks" ? ebookRows : courseRows;
+
+  const batchIds = [...new Set(courseRows.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
+  const batches = useQuery({
+    queryKey: ["instructor-batches", batchIds.join(",")],
+    enabled: batchIds.length > 0,
+    queryFn: async () => {
+      const pairs = await Promise.all(
+        batchIds.map(async (batchId) => {
+          const row = await getBatch(batchId);
+          return [batchId, row?.name || ""] as const;
+        }),
+      );
+      return Object.fromEntries(pairs) as Record<string, string>;
+    },
+  });
+
+  const savedKey = (profile?.fvrtCourseList ?? []).map((ref) => ref.id).join(",");
+  const savedIds = useMemo(() => new Set(savedKey ? savedKey.split(",") : []), [savedKey]);
+
+  const name = instructor.data?.display_name || t("instructor");
+  const ratings = mine.map((c) => Number(c.totalRatting || 0)).filter((n) => n > 0);
+  const rating = ratings.length ? ratings.reduce((sum, n) => sum + n, 0) / ratings.length : 0;
+
+  const items: ExploreItem[] = visible.map((row) => {
+    const ebook = isEbookCourse(row);
+    const pages = ebookPageCount(row);
+    return {
+      id: row.id,
+      name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
+      image: row.image,
+      rating: Number(row.totalRatting || 0),
+      author: name,
+      lessons: ebook ? undefined : Number(row.numberLessons || 0),
+      hours: ebook ? undefined : Number(row.totalHours || row.totalCourseHour || 0),
+      pages: ebook ? pages : undefined,
+      batch: !ebook && row.batchesRef?.id ? batches.data?.[row.batchesRef.id] : undefined,
+      saved: savedIds.has(row.id),
+      href: ebook ? `/store/${row.id}` : `/course/${row.id}`,
+      aspect: ebook ? "3/4" : "5/3",
+    };
+  });
+
+  async function addItem(row: CourseDoc & { id: string }) {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    if (isEbookCourse(row)) await addEbookToCart(user.uid, row);
+    else await addCourseToCart(user.uid, row);
+    router.push("/cart");
+  }
+
+  async function toggleSave(courseId: string) {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    const saved = savedIds.has(courseId);
+    await updateDoc(doc(getDb(), collections.users, user.uid), {
+      fvrtCourseList: saved
+        ? arrayRemove(doc(getDb(), collections.course, courseId))
+        : arrayUnion(doc(getDb(), collections.course, courseId)),
+    });
+    await refreshProfile();
+  }
+
+  async function share() {
+    const url = window.location.href;
+    try {
+      if (navigator.share) await navigator.share({ title: name, url });
+      else await navigator.clipboard.writeText(url);
+    } catch {
+      /* cancelled */
+    }
+  }
+
+  const courseLabels = {
+    enroll: t("enroll"),
+    lessons: t("lessons"),
+    hrs: t("hrs"),
+    save: t("bookmark"),
+    saved: t("saved"),
+  };
+  const ebookLabels = {
+    enroll: t("addToCart"),
+    lessons: t("lessons"),
+    hrs: t("hrs"),
+    save: t("bookmark"),
+    saved: t("saved"),
+    pages: t("pages"),
+  };
+
+  const actions = (
+    <button type="button" onClick={() => void share()} aria-label={t("share")} className="grid size-6 place-items-center">
+      <span className="size-5">
+        <HomeIcon src="/course/share.svg" />
+      </span>
+    </button>
+  );
+
+  if (instructor.isPending || courses.isPending) {
+    return (
+      <AppShell loading compactHeader title={t("instructorDetails")} actions={actions} skeleton={<InstructorSkeleton />} />
+    );
+  }
+  if (!instructor.data) {
+    return (
+      <AppShell compactHeader title={t("instructorDetails")} actions={actions}>
+        <EmptyState
+          icon="/course/book.svg"
+          title={t("instructor")}
+          body={t("emptyInstructorCoursesBody")}
+          cta={{ href: "/", label: t("explore") }}
+        />
+      </AppShell>
+    );
+  }
 
   return (
-    <AppShell>
-      <div className="mb-6 overflow-hidden rounded-3xl bg-gradient-to-r from-black to-accent/30 p-6">
-        <div className="flex items-center gap-4">
-          <span className="size-16 overflow-hidden rounded-full bg-white/10">
-            {user.data?.photo_url ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={user.data.photo_url} alt="" className="h-full w-full object-cover" />
-            ) : null}
-          </span>
-          <div>
-            <h1 className="text-xl font-semibold">{user.data?.display_name || t("instructor")}</h1>
-            <RatingStars value={4.8} />
-            <p className="text-sm text-muted">
-              {mine.filter((c) => !isEbookCourse(c)).length} {t("lessons")} · {mine.filter((c) => isEbookCourse(c)).length} ebooks
-            </p>
-          </div>
+    <AppShell compactHeader title={t("instructorDetails")} actions={actions}>
+      <InstructorHero
+        photo={instructor.data.photo_url}
+        name={name}
+        bio={instructor.data.bio}
+        verified={instructor.data.instuctorStatus === "Approved"}
+        rating={rating}
+        courseCount={courseRows.length}
+        ebookCount={ebookRows.length}
+        labels={{
+          rating: t("rating"),
+          totalCourses: t("totalCourses"),
+          ebooks: t("ebooks"),
+          coursesUnit: t("coursesUnit"),
+          booksUnit: t("booksUnit"),
+        }}
+      />
+
+      <InstructorTabs
+        tab={tab}
+        onTab={setTab}
+        courses={courseRows.length}
+        ebooks={ebookRows.length}
+        labels={{ courses: t("coursesUnit"), ebooks: t("ebooks") }}
+      />
+
+      {items.length ? (
+        <div
+          className={cn(
+            "mt-5",
+            exploreGridClass,
+            tab === "ebooks"
+              ? "lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))]"
+              : "lg:grid-cols-[repeat(auto-fill,minmax(227px,1fr))]",
+          )}
+        >
+          {items.map((item) => {
+            const row = visible.find((c) => c.id === item.id);
+            return (
+              <ExploreGridCard
+                key={item.id}
+                item={item}
+                labels={tab === "ebooks" ? ebookLabels : courseLabels}
+                onEnroll={() => row && void addItem(row)}
+                onSave={() => void toggleSave(item.id)}
+              />
+            );
+          })}
         </div>
-      </div>
-      <div className="mb-4 flex gap-3 text-sm">
-        <button type="button" onClick={() => setTab("courses")}>{t("explore")}</button>
-        <button type="button" onClick={() => setTab("ebooks")}>{t("store")}</button>
-      </div>
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {mine
-          .filter((c) => (tab === "ebooks" ? isEbookCourse(c) : !isEbookCourse(c)))
-          .map((course) => (
-            <CourseCard
-              key={course.id}
-              href={isEbookCourse(course) ? `/store/${course.id}` : `/course/${course.id}`}
-              title={course.name || ""}
-              image={course.image}
-            />
-          ))}
-      </div>
+      ) : (
+        <EmptyState
+          icon="/course/book.svg"
+          title={tab === "ebooks" ? t("emptyInstructorEbooksTitle") : t("emptyInstructorCoursesTitle")}
+          body={tab === "ebooks" ? t("emptyInstructorEbooksBody") : t("emptyInstructorCoursesBody")}
+        />
+      )}
     </AppShell>
+  );
+}
+
+async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) {
+  const cart = await loadCart(uid);
+  await saveCart(
+    uid,
+    upsertLine(cart, {
+      kind: "course",
+      courseId: course.id,
+      paymentType: "Full payment",
+      title: course.name,
+      image: course.image,
+      price: course.price,
+      addedAt: Date.now(),
+    }),
+  );
+}
+
+async function addEbookToCart(uid: string, book: CourseDoc & { id: string }) {
+  const cart = await loadCart(uid);
+  await saveCart(
+    uid,
+    upsertLine(cart, {
+      kind: "ebook",
+      courseId: book.id,
+      paymentType: "Full payment",
+      title: book.name,
+      image: book.image,
+      price: book.price,
+      addedAt: Date.now(),
+    }),
   );
 }

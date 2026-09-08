@@ -6,6 +6,9 @@ import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, serverTimestamp } from "firebase/firestore";
 import { httpsCallable } from "firebase/functions";
 import { AppShell } from "@/components/layout/app-shell";
+import { EmptyState } from "@/components/shared/empty-state";
+import { Loader } from "@/components/shared/loader";
+import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse, listChapters, listLessons, listQuizzes } from "@/lib/catalog/queries";
 import { getDb, getFns } from "@/lib/firebase/client";
@@ -23,6 +26,7 @@ export default function LearnPage() {
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [otp, setOtp] = useState<{ otp?: string; playbackInfo?: string; provider?: string; uid?: string } | null>(null);
+  const [otpBusy, setOtpBusy] = useState(false);
   const [score, setScore] = useState<string>("");
   const [review, setReview] = useState(5);
 
@@ -57,13 +61,18 @@ export default function LearnPage() {
 
   async function play() {
     if (!user || !lesson) return;
-    const token = await user.getIdToken();
-    const res = await fetch("/api/video/otp", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ lessonId: lesson.id }),
-    });
-    setOtp(await res.json());
+    setOtpBusy(true);
+    try {
+      const token = await user.getIdToken();
+      const res = await fetch("/api/video/otp", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ lessonId: lesson.id }),
+      });
+      setOtp(await res.json());
+    } finally {
+      setOtpBusy(false);
+    }
   }
 
   async function submitQuiz(quizId: string) {
@@ -91,12 +100,17 @@ export default function LearnPage() {
         : "";
 
   return (
-    <AppShell>
+    <AppShell loading={lessons.isPending || course.isPending} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
+      {(lessons.data ?? []).length ? (
       <div className="grid gap-4 lg:grid-cols-[1.4fr_0.7fr]">
         <div className="lg:sticky lg:top-24">
-          <div className="aspect-video overflow-hidden rounded-3xl bg-black">
+          <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
             {src ? (
               <iframe title={String(lesson?.name || "Lesson")} src={src} className="h-full w-full" allow="fullscreen" />
+            ) : otpBusy ? (
+              <div className="grid h-full w-full place-items-center">
+                <Loader size="page" />
+              </div>
             ) : (
               <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
                 {t("start")}
@@ -105,7 +119,7 @@ export default function LearnPage() {
           </div>
           <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
         </div>
-        <aside className="max-h-[70vh] overflow-y-auto rounded-3xl border border-line p-3">
+        <aside className="overflow-y-auto rounded-[16px] border border-line p-3 lg:max-h-[70vh] lg:rounded-3xl">
           {(chapters.data ?? []).map((chapter) => (
             <div key={chapter.id} className="mb-3">
               <p className="text-sm font-medium">{String(chapter.name)}</p>
@@ -119,7 +133,7 @@ export default function LearnPage() {
                       setLessonId(item.id);
                       setOtp(null);
                     }}
-                    className={`mt-1 block w-full rounded-xl px-2 py-2 text-start text-sm ${item.id === lesson?.id ? "bg-primary/15" : ""}`}
+                    className={`mt-1 block min-h-11 w-full rounded-xl px-2 py-2.5 text-start text-sm ${item.id === lesson?.id ? "bg-primary/15" : ""}`}
                   >
                     {String(item.name)}
                   </button>
@@ -141,6 +155,9 @@ export default function LearnPage() {
           </button>
         </aside>
       </div>
+      ) : (
+        <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
+      )}
     </AppShell>
   );
 }

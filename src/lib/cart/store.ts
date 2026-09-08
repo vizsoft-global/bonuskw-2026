@@ -13,6 +13,7 @@ export type CartLine = {
   title?: string;
   image?: string;
   price?: number;
+  batch?: string;
   addedAt: number;
 };
 
@@ -35,8 +36,20 @@ export async function loadCart(uid: string): Promise<CartState> {
   };
 }
 
+function compactLine(line: CartLine): CartLine {
+  return Object.fromEntries(Object.entries(line).filter(([, value]) => value !== undefined)) as CartLine;
+}
+
 export async function saveCart(uid: string, cart: CartState) {
-  await setDoc(doc(getDb(), collections.userCart, uid), cart, { merge: true });
+  await setDoc(
+    doc(getDb(), collections.userCart, uid),
+    {
+      lines: cart.lines.map(compactLine),
+      savedForLater: cart.savedForLater.map(compactLine),
+      couponCode: cart.couponCode ?? "",
+    },
+    { merge: true },
+  );
 }
 
 export function upsertLine(cart: CartState, line: CartLine) {

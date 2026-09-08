@@ -7,7 +7,18 @@ import { AuthProvider } from "@/lib/auth/auth-provider";
 import { LocaleProvider } from "@/lib/i18n/locale";
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new QueryClient());
+  const [client] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: {
+            staleTime: 30_000,
+            gcTime: 5 * 60_000,
+            refetchOnWindowFocus: false,
+          },
+        },
+      }),
+  );
   return (
     <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
       <LocaleProvider>

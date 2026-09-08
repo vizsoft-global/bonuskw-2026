@@ -1,0 +1,14 @@
+<svg preserveAspectRatio="none" overflow="visible" style="display: block;" width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Fire-Fill--Streamline-Phosphor-Fill" clip-path="url(#clip0_0_91)">
+<path id="Vector" d="M9.11649 0.568014C8.80753 0.311145 8.33734 0.438095 8.19964 0.815557L6.60259 5.20091L4.84874 3.5015C4.599 3.25927 4.19375 3.2895 3.98271 3.56611C2.41034 5.6263 1.61182 7.69883 1.61182 9.72563C1.61182 14.6433 6.93531 17.7168 11.1941 15.258C13.1706 14.1168 14.3882 12.0079 14.3882 9.72563C14.3882 5.40997 10.7012 1.88558 9.11649 0.568014ZM12.0572 10.4037C11.7488 12.1264 10.4001 13.4748 8.6773 13.7829C8.64542 13.7883 8.61311 13.791 8.58075 13.7908C8.1337 13.7907 7.85442 13.3067 8.07805 12.9196C8.16475 12.7695 8.31398 12.666 8.48494 12.6373C9.6878 12.4348 10.7085 11.4141 10.9124 10.2091C10.9873 9.76819 11.5114 9.57368 11.8558 9.85899C12.0157 9.9914 12.092 10.199 12.0572 10.4037Z" fill="url(#paint0_linear_0_91)"/>
+</g>
+<defs>
+<linearGradient id="paint0_linear_0_91" x1="8.00001" y1="0.433594" x2="8.00001" y2="16.1234" gradientUnits="userSpaceOnUse">
+<stop stop-color="#F58268"/>
+<stop offset="1" stop-color="#E52F06"/>
+</linearGradient>
+<clipPath id="clip0_0_91">
+<rect width="16" height="16" fill="white"/>
+</clipPath>
+</defs>
+</svg>
