@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const failSafe = window.setTimeout(() => {
       if (!cancelled) setReady(true);
     }, 2500);
-    let unsub = () => undefined;
+    let unsub: () => void = () => undefined;
     try {
       unsub = onAuthStateChanged(getFirebaseAuth(), (next) => {
         if (cancelled) return;
