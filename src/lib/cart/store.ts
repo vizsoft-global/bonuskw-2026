@@ -19,6 +19,7 @@ export type CartLine = {
   price?: number;
   emiPrices?: [number, number, number];
   emiAvailable?: boolean;
+  batch?: string;
   addedAt: number;
 };
 
@@ -47,9 +48,18 @@ export async function loadCart(uid: string): Promise<CartState> {
   };
 }
 
+function compactLine(line: CartLine): CartLine {
+  return Object.fromEntries(Object.entries(line).filter(([, value]) => value !== undefined)) as CartLine;
+}
+
 export async function saveCart(uid: string, cart: CartState) {
-  const payload: CartState = { ...cart, updatedAt: Date.now() };
-  if (payload.couponCode === undefined) delete payload.couponCode;
+  const payload: CartState = {
+    ...cart,
+    lines: cart.lines.map(compactLine),
+    savedForLater: cart.savedForLater.map(compactLine),
+    couponCode: cart.couponCode ?? "",
+    updatedAt: Date.now(),
+  };
   await setDoc(doc(getDb(), collections.userCart, uid), payload, { merge: true });
   return payload;
 }

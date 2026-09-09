@@ -4,6 +4,7 @@ import {
   collection,
   doc,
   getDoc,
+  documentId,
   getDocs,
   query,
   where,
@@ -19,9 +20,23 @@ export function publishedCourses(rows: Array<CourseDoc & { id: string }>) {
   return rows.filter((row) => isPublished(row) && !row.trashed);
 }
 
+export const CATALOG_STALE_MS = 5 * 60_000;
+
 export async function listCourses() {
   const snap = await getDocs(collection(getDb(), collections.course));
   return snap.docs.map((d) => ({ id: d.id, ...(d.data() as CourseDoc) }));
+}
+
+export async function getDocsByIds(collectionName: string, ids: string[]) {
+  const unique = [...new Set(ids.filter(Boolean))];
+  const out: Record<string, DocumentData> = {};
+  const db = getDb();
+  for (let i = 0; i < unique.length; i += 10) {
+    const chunk = unique.slice(i, i + 10);
+    const snap = await getDocs(query(collection(db, collectionName), where(documentId(), "in", chunk)));
+    for (const row of snap.docs) out[row.id] = row.data();
+  }
+  return out;
 }
 
 export async function getCourse(id: string) {

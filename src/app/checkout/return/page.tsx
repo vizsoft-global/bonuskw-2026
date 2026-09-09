@@ -4,6 +4,7 @@ import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
+import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart } from "@/lib/cart/store";
 import { useI18n } from "@/lib/i18n/locale";
@@ -100,9 +101,9 @@ function ReturnBody() {
           : "";
 
   return (
-    <AppShell>
+    <AppShell loading={outcome === "checking"} title={title} skeleton={<ListPageSkeleton rows={3} />}>
       <div className="glass rounded-3xl p-5">
-        <h1 className="text-2xl font-semibold">{title}</h1>
+        <p className="text-2xl font-semibold">{title}</p>
         {body ? <p className="mt-2 text-sm text-muted">{body}</p> : null}
         {gateway && outcome !== "paid" ? (
           <p className="mt-1 text-xs text-muted">{gateway}</p>
@@ -119,7 +120,7 @@ function ReturnBody() {
             </>
           ) : null}
           {outcome === "failed" ? (
-            <Link href="/checkout" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+            <Link href="/cart" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
               {t("tryAgain")}
             </Link>
           ) : null}
@@ -139,7 +140,7 @@ function ReturnBody() {
 
 export default function CheckoutReturnPage() {
   return (
-    <Suspense>
+    <Suspense fallback={<div className="min-h-dvh bg-[#050505]" />}>
       <ReturnBody />
     </Suspense>
   );

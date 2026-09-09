@@ -129,6 +129,112 @@
   }
 }
 
+/* Design V2 uses hardcoded dark hexes. Remap them when the theme class is light. */
+html:not(.dark) .bg-\[\#050505\],
+html:not(.dark) .bg-\[\#0b0b0c\],
+html:not(.dark) .lg\:bg-\[\#050505\] {
+  background-color: #f7f7f8;
+}
+html:not(.dark) .bg-\[\#141414\],
+html:not(.dark) .bg-\[\#1a1a1a\],
+html:not(.dark) .bg-\[\#1d1d1d\],
+html:not(.dark) .bg-\[\#1f1f1f\],
+html:not(.dark) .bg-\[\#252525\] {
+  background-color: #ffffff;
+}
+html:not(.dark) .bg-\[\#2a2a2a\],
+html:not(.dark) .bg-\[\#292929\],
+html:not(.dark) .bg-\[\#333\],
+html:not(.dark) .bg-\[\#3a3a3a\] {
+  background-color: #ececee;
+}
+html:not(.dark) .bg-\[rgba\(22\,22\,22\,0\.7\)\] {
+  background-color: rgba(255, 255, 255, 0.92);
+}
+html:not(.dark) .bg-white\/5,
+html:not(.dark) .bg-white\/\[0\.06\],
+html:not(.dark) .lg\:bg-white\/\[0\.03\],
+html:not(.dark) .hover\:bg-white\/5:hover {
+  background-color: rgba(18, 18, 20, 0.05);
+}
+html:not(.dark) .bg-white\/10,
+html:not(.dark) .bg-white\/15 {
+  background-color: #ffffff;
+}
+html:not(.dark) .bg-black\/25 {
+  background-color: rgba(255, 255, 255, 0.86);
+}
+html:not(.dark) .text-\[\#fafafa\],
+html:not(.dark) .text-\[\#f2f2f2\],
+html:not(.dark) .text-\[\#c8c8c8\],
+html:not(.dark) .hover\:text-\[\#fafafa\]:hover {
+  color: #121214;
+}
+html:not(.dark) .text-\[\#999\],
+html:not(.dark) .text-\[\#666\],
+html:not(.dark) .text-\[\#808080\],
+html:not(.dark) .placeholder\:text-\[\#999\]::placeholder {
+  color: #6b6b73;
+}
+html:not(.dark) .text-white,
+html:not(.dark) .text-white\/40,
+html:not(.dark) .text-white\/50,
+html:not(.dark) .text-white\/60,
+html:not(.dark) .placeholder\:text-white\/30::placeholder,
+html:not(.dark) .placeholder\:text-white\/35::placeholder,
+html:not(.dark) .placeholder\:text-white\/40::placeholder {
+  color: #121214;
+}
+html:not(.dark) .text-white\/50,
+html:not(.dark) .text-white\/60 {
+  color: #6b6b73;
+}
+html:not(.dark) .bg-\[\#0c5eff\].text-white,
+html:not(.dark) .bg-primary.text-white,
+html:not(.dark) .bg-\[\#f24822\].text-white,
+html:not(.dark) .bg-\[\#545454\].text-white,
+html:not(.dark) .bg-\[\#ff7a00\].text-white,
+html:not(.dark) .bg-\[\#0c5eff\] .text-white,
+html:not(.dark) .bg-primary .text-white,
+html:not(.dark) .bg-\[\#f24822\] .text-white,
+html:not(.dark) .bg-\[\#ff7a00\] .text-white,
+html:not(.dark) .bg-black\/50 .text-white,
+html:not(.dark) .bg-black\/50.text-white,
+html:not(.dark) .bg-black\/60 .text-white {
+  color: #fff;
+}
+html:not(.dark) .border-white,
+html:not(.dark) .border-white\/10,
+html:not(.dark) .border-white\/15,
+html:not(.dark) .border-white\/20,
+html:not(.dark) .border-white\/25,
+html:not(.dark) .border-white\/40,
+html:not(.dark) .border-white\/50,
+html:not(.dark) .lg\:border-white\/15,
+html:not(.dark) .border-\[\#fafafa\]\/10,
+html:not(.dark) .divide-white\/10 > :not(:last-child) {
+  border-color: rgba(18, 18, 20, 0.1);
+}
+html:not(.dark) .bg-white\/10.divide-white\/10,
+html:not(.dark) .border-b.border-white\/10 {
+  border-color: rgba(18, 18, 20, 0.1);
+}
+html:not(.dark) .ring-\[\#050505\] {
+  --tw-ring-color: #f7f7f8;
+}
+html:not(.dark) .border-\[\#050505\] {
+  border-color: #f7f7f8;
+}
+html:not(.dark) img[src$=".svg"]:not([src*="glow"]):not([src*="knet"]):not([src*="visa"]) {
+  filter: brightness(0);
+}
+html:not(.dark) .bg-\[\#0c5eff\] img,
+html:not(.dark) .bg-\[\#f24822\] img,
+html:not(.dark) .bg-\[\#ff7a00\] img,
+html:not(.dark) .bg-primary img {
+  filter: none;
+}
+
 @layer utilities {
   .glass {
     background: var(--surface);
@@ -211,5 +317,22 @@
   *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .route-enter {
+    animation: route-enter 180ms ease-out;
+  }
+}
+
+@keyframes route-enter {
+  from {
+    opacity: 0.72;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

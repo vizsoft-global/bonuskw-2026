@@ -68,6 +68,12 @@ export function isEbookCourse(course?: { itemType?: string }) {
   return course?.itemType === EBOOK_ITEM_TYPE;
 }
 
+export function ebookPageCount(course?: { numberLessons?: number; ebookFiles?: unknown[] }) {
+  const lessons = Number(course?.numberLessons || 0);
+  if (lessons > 0) return lessons;
+  return course?.ebookFiles?.length ?? 0;
+}
+
 export function startOfToday() {
   return startOfDay(new Date());
 }

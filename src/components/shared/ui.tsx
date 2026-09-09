@@ -167,7 +167,7 @@ export function CourseCard({
         <CourseThumb
           image={image}
           title={title}
-          className={cn(list ? "h-full" : "aspect-video")}
+          className={cn(list ? "h-full" : "aspect-[5/3]")}
           badge={
             batch ? (
               <Badge tone="overlay">{batch}</Badge>

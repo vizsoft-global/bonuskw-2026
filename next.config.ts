@@ -11,9 +11,13 @@ const onVercel = Boolean(process.env.VERCEL || process.env.NEXT_DEPLOYMENT_ID);
 
 const nextConfig: NextConfig = {
   ...(!onVercel && isProduction ? { deploymentId: buildVersion } : {}),
+  allowedDevOrigins: ["127.0.2.2", "localhost"],
   env: {
     NEXT_PUBLIC_APP_VERSION: isProduction ? buildVersion : "dev",
     NEXT_PUBLIC_BUILD_TIME: String(Date.now()),
+  },
+  experimental: {
+    optimizePackageImports: ["lucide-react", "date-fns", "lottie-react"],
   },
   images: {
     remotePatterns: [
@@ -31,9 +35,11 @@ const nextConfig: NextConfig = {
       { source: "/main", destination: "/", permanent: false },
       { source: "/eBookSStores", destination: "/store", permanent: false },
       { source: "/myzone", destination: "/my-space", permanent: false },
-      { source: "/checkOutPage", destination: "/checkout", permanent: false },
+      { source: "/checkOutPage", destination: "/cart", permanent: false },
+      { source: "/checkout", destination: "/cart", permanent: false },
       { source: "/searchPage", destination: "/search", permanent: false },
       { source: "/loginwithNumber", destination: "/login", permanent: false },
+      { source: "/profile/notifications", destination: "/profile", permanent: false },
     ];
   },
 };

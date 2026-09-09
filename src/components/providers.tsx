@@ -13,12 +13,17 @@ export function Providers({ children }: { children: React.ReactNode }) {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { staleTime: 60_000, refetchOnWindowFocus: false, retry: 1 },
+          queries: {
+            staleTime: 30_000,
+            gcTime: 5 * 60_000,
+            refetchOnWindowFocus: false,
+            retry: 1,
+          },
         },
       }),
   );
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem storageKey="ba_theme">
+    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
       <LocaleProvider>
         <QueryClientProvider client={client}>
           <AuthProvider>

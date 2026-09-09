@@ -3,6 +3,7 @@ import { auth } from "./dictionaries/auth";
 import { catalog } from "./dictionaries/catalog";
 import { commerce } from "./dictionaries/commerce";
 import { core } from "./dictionaries/core";
+import { design } from "./dictionaries/design";
 import { learning } from "./dictionaries/learning";
 import { profile } from "./dictionaries/profile";
 
@@ -11,7 +12,7 @@ import { profile } from "./dictionaries/profile";
  * here so `t()` accepts any key from any of them. Keys must be unique across
  * dictionaries; later entries win if they collide, so avoid collisions.
  */
-const dictionaries = [core, auth, catalog, learning, commerce, profile] as const;
+const dictionaries = [core, auth, catalog, learning, commerce, profile, design] as const;
 
 type Dictionary = (typeof dictionaries)[number];
 type KeysOf<T> = T extends { en: infer E } ? keyof E : never;

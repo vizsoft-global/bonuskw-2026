@@ -61,23 +61,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [kicked, setKicked] = useState(false);
 
   const loadProfile = useCallback(async (uid: string) => {
-    const snap = await getDoc(doc(getDb(), collections.users, uid));
-    if (!snap.exists()) {
+    try {
+      const snap = await getDoc(doc(getDb(), collections.users, uid));
+      if (!snap.exists()) {
+        setProfile(null);
+        return null;
+      }
+      const next = { id: snap.id, ...(snap.data() as UserDoc) };
+      setProfile(next);
+      return next;
+    } catch {
       setProfile(null);
       return null;
     }
-    const next = { id: snap.id, ...(snap.data() as UserDoc) };
-    setProfile(next);
-    return next;
   }, []);
 
   useEffect(() => {
-    return onAuthStateChanged(getFirebaseAuth(), async (next) => {
-      setUser(next);
-      if (next) await loadProfile(next.uid);
-      else setProfile(null);
+    let cancelled = false;
+    const failSafe = window.setTimeout(() => {
+      if (!cancelled) setReady(true);
+    }, 2500);
+    let unsub: () => void = () => undefined;
+    try {
+      unsub = onAuthStateChanged(getFirebaseAuth(), (next) => {
+        if (cancelled) return;
+        setUser(next);
+        setReady(true);
+        window.clearTimeout(failSafe);
+        if (next) void loadProfile(next.uid);
+        else setProfile(null);
+      });
+    } catch {
       setReady(true);
-    });
+      window.clearTimeout(failSafe);
+    }
+    return () => {
+      cancelled = true;
+      window.clearTimeout(failSafe);
+      unsub();
+    };
   }, [loadProfile]);
 
   useEffect(() => {
@@ -147,7 +169,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       profile,
       ready,
-      needsOnboarding: Boolean(user && needsAcademic(profile)),
+      needsOnboarding: Boolean(user && profile && needsAcademic(profile)),
       kicked,
       sendSms: async (phone) => {
         const normalized = normalizePhone(phone);
