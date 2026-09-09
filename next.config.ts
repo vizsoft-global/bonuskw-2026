@@ -28,6 +28,16 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "*.cloudflarestream.com" },
     ],
   },
+  async headers() {
+    return [
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico|icon.png|sw.js).*)",
+        headers: [
+          { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
+        ],
+      },
+    ];
+  },
   async redirects() {
     return [
       { source: "/homePage", destination: "/", permanent: false },

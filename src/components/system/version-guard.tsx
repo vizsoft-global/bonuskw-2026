@@ -36,7 +36,7 @@ export function VersionGuard() {
   useEffect(() => {
     const check = async () => {
       try {
-        const res = await fetch("/api/version", { cache: "no-store" });
+        const res = await fetch(`/api/version?t=${Date.now()}`, { cache: "no-store" });
         const json = (await res.json()) as { version?: string };
         if (json.version && json.version !== "dev" && APP_VERSION !== "dev" && json.version !== APP_VERSION) {
           await clearAndReload();
@@ -46,9 +46,13 @@ export function VersionGuard() {
       }
     };
     void check();
-    const id = window.setInterval(check, 5 * 60 * 1000);
+    const id = window.setInterval(check, 20 * 1000);
     const onFocus = () => void check();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void check();
+    };
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisible);
 
     const onError = (event: ErrorEvent) => {
       const message = String(event.message || "");
@@ -84,6 +88,7 @@ export function VersionGuard() {
     return () => {
       window.clearInterval(id);
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
       stop?.();
