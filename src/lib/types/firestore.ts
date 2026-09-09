@@ -717,10 +717,36 @@ export type SettingsStory = {
   id?: string;
 };
 
+export type PopupLocation = "home" | "course" | "cart";
+
+export type CustomPopup = {
+  id: string;
+  title?: string;
+  subtitle?: string;
+  message?: string;
+  media?: StoryMedia[];
+  locations?: PopupLocation[];
+  courseIds?: string[];
+  status?: string;
+  startDate?: Timestamp | Date;
+  endDate?: Timestamp | Date;
+  redirect_url?: string;
+  buttonLabel?: string;
+  created_at?: Timestamp | Date;
+};
+
 export type SettingsDoc = {
   logo?: string;
   faviicon?: string;
   settings_status?: SettingsStory[];
+  popupMsg?: {
+    title?: string;
+    subtitle?: string;
+    message?: string;
+    image?: string;
+    images?: string[];
+  };
+  popupItems?: CustomPopup[];
 };
 
 export type CouponDoc = {

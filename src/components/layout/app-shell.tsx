@@ -18,11 +18,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
+import { CustomPopupHost } from "@/components/home/custom-popup";
 import { HomeIcon } from "@/components/home/icon";
 import { Avatar } from "@/components/layout/avatar";
 import { BackButton } from "@/components/layout/back-button";
 import { ProfileMenu } from "@/components/layout/profile-menu";
 import { NotificationsBellButton, NotificationsMenu } from "@/components/notifications/menu";
+import { ScrollToTop } from "@/components/shared/scroll-to-top";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart } from "@/lib/cart/store";
@@ -325,6 +327,7 @@ function AppChrome({ children }: { children: ReactNode }) {
     <ShellContext.Provider value={ctx}>
       <div className="relative min-h-dvh overflow-x-hidden bg-[#050505] text-[#fafafa]">
         <CatalogWarmup />
+        <CustomPopupHost />
         <HeaderGlow />
 
         <header className="relative z-40 overflow-visible lg:sticky lg:top-0 lg:bg-[#050505]">
@@ -472,6 +475,7 @@ function AppChrome({ children }: { children: ReactNode }) {
             />
           ) : null}
           {children}
+          <ScrollToTop raised={showTabBar} />
         </main>
 
         <nav

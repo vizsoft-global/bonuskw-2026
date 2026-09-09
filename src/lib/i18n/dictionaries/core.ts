@@ -92,6 +92,7 @@ export const core = {
     download: "Download",
     invoice: "Download invoice",
     secure: "Secure payment · Instant access after purchase",
+    backToTop: "Back to top",
   },
   ar: {
     appName: "بونص أكاديمي",
@@ -186,5 +187,6 @@ export const core = {
     download: "تنزيل",
     invoice: "تحميل الفاتورة",
     secure: "دفع آمن · وصول فوري بعد الشراء",
+    backToTop: "العودة إلى الأعلى",
   },
 } as const;
