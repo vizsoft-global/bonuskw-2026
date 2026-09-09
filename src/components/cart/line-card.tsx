@@ -3,15 +3,29 @@
 import { HomeIcon } from "@/components/home/icon";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import type { CartLine } from "@/lib/cart/store";
-import { splitEmi } from "@/lib/course/emi";
+import { EMI_COUNT, splitEmi } from "@/lib/course/emi";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
 
-function linePriceLabel(line: CartLine, locale: Locale, emiMonths: string) {
+function linePriceLabel(
+  line: CartLine,
+  locale: Locale,
+  emiMonths: string,
+  quoted?: number[],
+) {
   const amount = Number(line.price) || 0;
   if (line.paymentType !== "EMI") return formatKwdLocale(amount, locale);
-  return emiMonths.replace("{amount}", formatKwdLocale(splitEmi(amount, "even")[0], locale));
+  // Server quote wins (it knows promotions/coupons); fall back to the course plan.
+  const plan =
+    quoted && quoted.length >= 2
+      ? quoted
+      : line.emiAmounts && line.emiAmounts.length >= 2
+        ? line.emiAmounts
+        : splitEmi(amount, "even", line.emiCount ?? EMI_COUNT);
+  return emiMonths
+    .replace("{amount}", formatKwdLocale(plan[0], locale))
+    .replace("{n}", String(plan.length));
 }
 
 export function LineCard({
@@ -21,9 +35,12 @@ export function LineCard({
   onSaveLater,
   onRemove,
   labels,
+  installments,
 }: {
   line: CartLine;
   locale: Locale;
+  /** Quoted installment amounts for this line when paying by EMI. */
+  installments?: number[];
   onPayType: (type: "Full payment" | "EMI") => void;
   onSaveLater: () => void;
   onRemove: () => void;
@@ -53,13 +70,13 @@ export function LineCard({
               <span />
             )}
             <p className="max-w-[58%] shrink-0 text-end text-[13px] font-semibold leading-tight text-[#fafafa]">
-              {linePriceLabel(line, locale, labels.emiMonths)}
+              {linePriceLabel(line, locale, labels.emiMonths, installments)}
             </p>
           </div>
         </div>
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 px-1">
-        {line.kind === "course" ? (
+        {line.kind === "course" && line.emiAvailable !== false ? (
           <div className="flex gap-2 text-[11px]">
             <button
               type="button"

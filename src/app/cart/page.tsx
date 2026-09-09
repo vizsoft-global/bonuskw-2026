@@ -35,7 +35,11 @@ export default function CartPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<CartState>({ lines: [], savedForLater: [] });
-  const [quote, setQuote] = useState<{ dueNow?: number; suggestions?: Array<{ name?: string }> } | null>(null);
+  const [quote, setQuote] = useState<{
+    dueNow?: number;
+    suggestions?: Array<{ name?: string }>;
+    lines?: Array<{ kind: string; courseRef: string; installments?: number[] | null }>;
+  } | null>(null);
   const [coupon, setCoupon] = useState("");
   const [ready, setReady] = useState(false);
   const [source, setSource] = useState<PaymentSource>("src_kw.knet");
@@ -191,6 +195,13 @@ export default function CartPage() {
 
   const due =
     quote?.dueNow ?? cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
+  const quotedInstallments = (line: CartLine) =>
+    quote?.lines?.find(
+      (q) => q.kind === "course" && q.courseRef.endsWith(`/${line.courseId}`) && q.installments,
+    )?.installments ?? undefined;
+  // "Pay all in EMI" is only offered when at least one course allows it.
+  const emiEligible = cart.lines.filter((l) => l.kind === "course" && l.emiAvailable !== false);
+  const allEmi = emiEligible.length > 0 && emiEligible.every((l) => l.paymentType === "EMI");
   const dueLabel = formatKwdLocale(due, locale);
   const canPay = accept && !busy && cart.lines.length > 0;
   const lineLabels = {
@@ -258,6 +269,7 @@ export default function CartPage() {
                 line={line}
                 locale={locale}
                 labels={lineLabels}
+                installments={quotedInstallments(line)}
                 onPayType={(type) => setPay(line, type)}
                 onSaveLater={() =>
                   void persist({
@@ -271,6 +283,24 @@ export default function CartPage() {
                 }
               />
             ))}
+            {emiEligible.length > 1 ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void persist({
+                    ...cart,
+                    lines: cart.lines.map((item) =>
+                      item.kind === "course" && item.emiAvailable !== false
+                        ? { ...item, paymentType: allEmi ? "Full payment" : "EMI" }
+                        : item,
+                    ),
+                  })
+                }
+                className="h-[44px] rounded-[12px] border border-white/20 px-4 text-[12px] font-medium text-[#fafafa]"
+              >
+                {allEmi ? t("payAllFull") : t("payAllEmi")}
+              </button>
+            ) : null}
             <div className="flex gap-2">
               <input
                 value={coupon}

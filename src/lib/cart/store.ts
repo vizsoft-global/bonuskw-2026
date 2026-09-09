@@ -17,7 +17,9 @@ export type CartLine = {
   title?: string;
   image?: string;
   price?: number;
-  emiPrices?: [number, number, number];
+  /** Plan snapshot from the course at add time; the quote API is authoritative. */
+  emiCount?: number;
+  emiAmounts?: number[];
   emiAvailable?: boolean;
   batch?: string;
   addedAt: number;

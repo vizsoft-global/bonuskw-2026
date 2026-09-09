@@ -19,7 +19,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes } from "@/lib/catalog/queries";
 import { enrolmentBlock } from "@/lib/course/enrol";
-import { splitEmi } from "@/lib/course/emi";
+import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
 import { lessonAccess } from "@/lib/course/entitlement";
 import { isLessonLocked, isQuizLocked } from "@/lib/course/locks";
 import { getDb } from "@/lib/firebase/client";
@@ -104,6 +104,10 @@ export default function CoursePage() {
           title: c.name,
           image: c.image,
           price: Number(c.price) || 0,
+          emiAvailable: Boolean(c.emiPaymentStatus),
+          ...(c.emiPaymentStatus
+            ? { emiCount: courseEmiCount(c), emiAmounts: emiPlan(c) }
+            : {}),
           ...(batch.data?.name ? { batch: batch.data.name } : {}),
           addedAt: Date.now(),
         }),
@@ -219,7 +223,9 @@ export default function CoursePage() {
             hoursLabel={t("hrs")}
             price={formatKwdLocale(c.price, locale)}
             enrollLabel={t("enrollNow")}
-            emiPrice={t("emiMonths").replace("{amount}", formatKwdLocale(emiInstallment(c), locale))}
+            emiPrice={t("emiMonths")
+              .replace("{amount}", formatKwdLocale(emiPlan(c)[0], locale))
+              .replace("{n}", String(courseEmiCount(c)))}
             emiLabel={t("payInEmi")}
             secure={t("secure")}
             block={block}
@@ -285,10 +291,19 @@ export default function CoursePage() {
   );
 }
 
-function emiInstallment(course: { price?: number; firstEMIprice?: number }) {
-  const first = Number(course.firstEMIprice);
-  if (first > 0) return first;
-  return splitEmi(Number(course.price) || 0, "even")[0];
+/** The course's installment plan; even split of the price when none is stored. */
+function emiPlan(course: {
+  price?: number;
+  emiCount?: number;
+  emiAmounts?: number[];
+  firstEMIprice?: number;
+  secondEMIprice?: number;
+  thirdEMIprice?: number;
+}) {
+  const count = courseEmiCount(course);
+  const stored = courseEmiAmounts(course).slice(0, count);
+  if (stored.length === count && stored.every((a) => a > 0)) return stored;
+  return splitEmi(Number(course.price) || 0, "even", count);
 }
 
 function courseLanguage(course: object) {

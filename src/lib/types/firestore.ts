@@ -113,11 +113,17 @@ export type CourseDoc = {
   whatsappGroupLink?: string;
   /** Toggle: buyers must submit their university schedule before enrolling. */
   university_schedule_required?: boolean;
-  /** True when the course is sold in three installments rather than one payment. */
+  /** True when the course is sold in installments rather than one payment. */
   emiPaymentStatus?: boolean;
+  /** Legacy mirror of `emiAmounts[0..2]`. */
   firstEMIprice?: number;
   secondEMIprice?: number;
   thirdEMIprice?: number;
+  /** Number of installments in the plan (2–6). Legacy courses default to 3. */
+  emiCount?: number;
+  /** Amount of each installment, `emiCount` entries. */
+  emiAmounts?: number[];
+  emiScheduleRef?: DocumentReference;
   /**
    * How the three installment amounts were (or should be) derived from `price`.
    * `custom` means an admin edited the amounts by hand.
@@ -176,6 +182,12 @@ export type SubscriptionDoc = {
   firstEMIvalidUpto?: Timestamp | Date;
   secondEMIvalidUpto?: Timestamp | Date;
   thirdEMIvalidUpto?: Timestamp | Date;
+  /** Plan size (2–6); legacy EMI subscriptions default to 3. */
+  installmentCount?: number;
+  /** Installments captured so far. */
+  paidCount?: number;
+  emiAmounts?: number[];
+  nextDueAt?: Timestamp | Date | null;
   /** "Ongoing" | "Archived" */
   status?: string;
   courseUniversitySchedule?: string;
@@ -279,7 +291,7 @@ export type OrderLine = {
   /** Charged now: full total, first EMI, chapter/ebook price, or installment amount. */
   amountNow: number;
   /** Post-coupon EMI split for course EMI lines. */
-  installments?: [number, number, number];
+  installments?: number[];
   courseName?: string;
   chapterName?: string;
   /** List price before promotions (same as listPrice when none applied). */
@@ -337,8 +349,9 @@ export type InstallmentDoc = {
   subscriptionRef?: DocumentReference;
   courseRef?: DocumentReference;
   orderRef?: DocumentReference;
-  /** 1 | 2 | 3 */
+  /** 1-based position in the plan (1..6). */
   index?: number;
+  count?: number;
   amount?: number;
   /** "paid" | "due" | "overdue" | "waived" */
   status?: string;
@@ -409,7 +422,10 @@ export type ChapterDoc = {
   serialNumber?: number;
   /** Chapter lock. Boolean in Firestore, not a status string. */
   status?: boolean;
+  /** Legacy gate: "First" | "Second" | "Third". */
   emiType?: string;
+  /** 1-based installment that unlocks this chapter. */
+  emiIndex?: number;
   /** When true, chapter can be bought alone (paid non-ebook courses only). */
   sellable?: boolean;
   /** Standalone chapter price in KWD. */
