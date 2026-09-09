@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
-import { useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import { StoryViewer } from "@/components/home/story-viewer";
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n/locale";
 import { storyKey, storyThumb } from "@/lib/stories/media";
@@ -18,20 +19,39 @@ export function StoriesRow({
   const { t } = useI18n();
   const raw = useSyncExternalStore(subscribeSeen, getSeenSnapshot, getSeenServerSnapshot);
   const seen = parseSeen(raw);
+  // Stories open as an overlay on the current page and auto-advance; the
+  // /stories route stays only for deep links.
+  const [openIndex, setOpenIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (openIndex === null) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [openIndex]);
 
   if (!stories.length) return null;
 
   return (
     <div className={cn("relative min-w-0", fade && "flex-1")}>
+      {openIndex !== null
+        ? createPortal(
+            <StoryViewer stories={stories} startIndex={openIndex} onClose={() => setOpenIndex(null)} />,
+            document.body,
+          )
+        : null}
       <div className="flex gap-[10px] overflow-x-auto hide-scrollbar">
         {stories.map((story, i) => {
           const key = storyKey(story, i);
           const viewed = seen.includes(key);
           const thumb = storyThumb(story);
           return (
-            <Link
+            <button
               key={key}
-              href={`/stories?i=${i}`}
+              type="button"
+              onClick={() => setOpenIndex(i)}
               className="flex w-[78px] shrink-0 flex-col items-center gap-[3px]"
             >
               <span
@@ -50,7 +70,7 @@ export function StoriesRow({
               <span className="w-full truncate text-center text-[12px] text-[#fafafa]">
                 {story.title || t("story")}
               </span>
-            </Link>
+            </button>
           );
         })}
       </div>

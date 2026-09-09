@@ -9,8 +9,21 @@ import { markSeen } from "@/lib/stories/seen";
 import { STORY_MS, storyKey, storySegments, storyThumb, type StorySegment } from "@/lib/stories/media";
 import type { SettingsStory } from "@/lib/types/firestore";
 
-export function StoryViewer({ stories, startIndex }: { stories: SettingsStory[]; startIndex: number }) {
+export function StoryViewer({
+  stories,
+  startIndex,
+  onClose,
+}: {
+  stories: SettingsStory[];
+  startIndex: number;
+  /**
+   * When set, the viewer is embedded as an overlay on the current page:
+   * closing calls back instead of navigating and the URL is left alone.
+   */
+  onClose?: () => void;
+}) {
   const router = useRouter();
+  const embedded = Boolean(onClose);
   const { t } = useI18n();
   const [storyIndex, setStoryIndex] = useState(() => clamp(startIndex, stories.length));
   const [segmentIndex, setSegmentIndex] = useState(0);
@@ -31,7 +44,10 @@ export function StoryViewer({ stories, startIndex }: { stories: SettingsStory[];
   const paused = held || hidden;
   const courseId = story?.linkedRef?.id;
 
-  const close = useCallback(() => router.push("/"), [router]);
+  const close = useCallback(() => {
+    if (onClose) onClose();
+    else router.push("/");
+  }, [onClose, router]);
 
   const goNext = useCallback(() => {
     const segs = story ? storySegments(story) : [];
@@ -81,8 +97,8 @@ export function StoryViewer({ stories, startIndex }: { stories: SettingsStory[];
   useEffect(() => {
     if (!story) return;
     markSeen(storyKey(story, storyIndex));
-    window.history.replaceState(null, "", `/stories?i=${storyIndex}`);
-  }, [story, storyIndex]);
+    if (!embedded) window.history.replaceState(null, "", `/stories?i=${storyIndex}`);
+  }, [embedded, story, storyIndex]);
 
   useEffect(() => {
     advancingRef.current = false;
@@ -177,6 +193,10 @@ export function StoryViewer({ stories, startIndex }: { stories: SettingsStory[];
   }
 
   if (!story || !segment) {
+    if (embedded) {
+      close();
+      return null;
+    }
     return (
       <main className="grid min-h-dvh place-items-center bg-[#050505] text-[#999]">
         {t("empty")}
@@ -185,12 +205,31 @@ export function StoryViewer({ stories, startIndex }: { stories: SettingsStory[];
   }
 
   return (
-    <div className="relative min-h-dvh overflow-clip bg-[#050505] text-[#fafafa]">
-      <div className="pointer-events-none absolute -end-16 -top-24 hidden h-[162px] w-[483px] overflow-hidden lg:block">
-        <HomeIcon src="/home/glow.svg" />
-      </div>
-      <div className="hidden h-[81px] shrink-0 lg:block" />
-      <div className="flex flex-col items-center px-[15px] pt-[60px] lg:px-0 lg:pt-0">
+    <div
+      className={
+        embedded
+          ? "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
+          : "relative min-h-dvh overflow-clip bg-[#050505] text-[#fafafa]"
+      }
+      onClick={embedded ? (e) => e.target === e.currentTarget && close() : undefined}
+      role={embedded ? "dialog" : undefined}
+      aria-modal={embedded ? true : undefined}
+    >
+      {!embedded ? (
+        <>
+          <div className="pointer-events-none absolute -end-16 -top-24 hidden h-[162px] w-[483px] overflow-hidden lg:block">
+            <HomeIcon src="/home/glow.svg" />
+          </div>
+          <div className="hidden h-[81px] shrink-0 lg:block" />
+        </>
+      ) : null}
+      <div
+        className={
+          embedded
+            ? "flex w-full flex-col items-center px-[15px] py-[24px] lg:px-0"
+            : "flex flex-col items-center px-[15px] pt-[60px] lg:px-0 lg:pt-0"
+        }
+      >
         <div className="flex w-full max-w-[384px] flex-col items-center gap-[15px] lg:gap-[25px]">
           <header className="flex w-full items-center justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 pe-[50px]">
