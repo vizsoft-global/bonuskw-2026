@@ -33,6 +33,14 @@ import { HomeSkeleton } from "@/components/shared/skeleton";
 import { PageLoader } from "@/components/shared/loader";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { CATALOG_STALE_MS, exploreCourses, getCourse, getDocsByIds, listCourses } from "@/lib/catalog/queries";
+import { TaxonomyPicker } from "@/components/taxonomy/taxonomy-picker";
+import {
+  EMPTY_SELECTION,
+  filterCoursesByTaxonomy,
+  selectionFromProfile,
+  useTaxonomy,
+  type TaxonomySelection,
+} from "@/lib/taxonomy/use-taxonomy";
 import { upsertLine, loadCart, saveCart } from "@/lib/cart/store";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -56,7 +64,7 @@ const SPLASH_KEY = "ba_splash_done";
 let splashPlayed = false;
 
 export default function HomePage() {
-  const { user, profile, ready, needsOnboarding, kicked } = useAuth();
+  const { user, ready, needsOnboarding, kicked } = useAuth();
   const router = useRouter();
   const [boot, setBoot] = useState<"wait" | "splash" | "go">(splashPlayed ? "go" : "wait");
 
@@ -99,15 +107,18 @@ export default function HomePage() {
     return <PageLoader full />;
   }
 
-  return <HomeBody uid={user.uid} branchId={profile?.branchRef?.id} />;
+  return <HomeBody uid={user.uid} />;
 }
 
-function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
+function HomeBody({ uid }: { uid: string }) {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
-  const [topic, setTopic] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
+  // Filter starts at the student's own university/field; they can widen it.
+  const [filter, setFilter] = useState<TaxonomySelection | null>(null);
+  const tax = useTaxonomy();
+  const profileSelection = selectionFromProfile(profile, tax);
 
   const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses, staleTime: CATALOG_STALE_MS });
   const stories = useQuery({
@@ -134,27 +145,18 @@ function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
       return snap.docs.filter((d) => d.get("status") === "Ongoing");
     },
   });
-  const categories = useQuery({
-    queryKey: ["courseCategory"],
-    queryFn: async () => {
-      const snap = await getDocs(collection(getDb(), collections.courseCategory));
-      return snap.docs
-        .map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          status: String(d.get("status") || ""),
-        }))
-        .filter((c) => !c.status || /active|publish/i.test(c.status));
-    },
-  });
   const continueLearning = useQuery({
     queryKey: ["continue", uid, (subs.data ?? []).map((d) => d.id).join(",")],
     enabled: Boolean(subs.data),
     queryFn: () => loadContinueItems(uid, (subs.data ?? []).map((d) => d.get("courseRef")?.id as string | undefined)),
   });
 
-  const published = exploreCourses(courses.data ?? [], branchId ? ({ branchRef: { id: branchId } } as never) : null);
-  const explore = topic ? published.filter((c) => c.courseCategoryRef?.id === topic) : published;
+  const published = exploreCourses(courses.data ?? []);
+  // Start on the student's own university/field, but never on an empty list.
+  const selection =
+    filter ?? (filterCoursesByTaxonomy(published, profileSelection).length ? profileSelection : EMPTY_SELECTION);
+  const filtered = Boolean(selection.country || selection.university || selection.category || selection.topic);
+  const explore = filterCoursesByTaxonomy(published, selection);
 
   const authorIds = [...new Set(explore.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
   const batchIds = [...new Set(explore.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
@@ -292,34 +294,7 @@ function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-            <button
-              type="button"
-              onClick={() => setTopic("")}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-[27px] px-3 py-2 text-[14px]",
-                !topic ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
-              )}
-            >
-              <span className="size-4">
-                <HomeIcon src="/home/shapes.svg" />
-              </span>
-              {t("all")}
-            </button>
-            {(categories.data ?? []).map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setTopic(cat.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-[27px] px-3 py-2 text-[14px]",
-                  topic === cat.id ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          <TaxonomyPicker value={selection} onChange={setFilter} />
 
           {exploreItems.length ? (
             view === "list" ? (
@@ -356,9 +331,9 @@ function HomeBody({ uid, branchId }: { uid: string; branchId?: string }) {
           ) : (
             <EmptyState
               icon="/home/shapes.svg"
-              title={topic ? t("emptyExploreTopicTitle") : t("emptyExploreTitle")}
-              body={topic ? t("emptyExploreTopicBody") : t("emptyExploreBody")}
-              cta={topic ? { onClick: () => setTopic(""), label: t("viewAll") } : undefined}
+              title={filtered ? t("emptyExploreTopicTitle") : t("emptyExploreTitle")}
+              body={filtered ? t("emptyExploreTopicBody") : t("emptyExploreBody")}
+              cta={filtered ? { onClick: () => setFilter(EMPTY_SELECTION), label: t("viewAll") } : undefined}
             />
           )}
         </section>

@@ -531,23 +531,6 @@ export type QuizResultDoc = {
   lastAttemptAt?: Timestamp | Date;
 };
 
-export type ZoomCourseDoc = {
-  courseRef?: DocumentReference;
-  chapterRef?: DocumentReference;
-  lessonRef?: DocumentReference;
-  serialNumber?: number;
-  title?: string;
-  bio?: string;
-  timezone?: string;
-  duration?: string;
-  password?: string;
-  hostURL?: string;
-  joinURL?: string;
-  meetingID?: string;
-  meetingPassword?: string;
-  zoomDate?: Timestamp | Date;
-  startTime?: string;
-};
 
 export type ReviewDoc = {
   userRef?: DocumentReference;
@@ -775,36 +758,8 @@ export type CouponDoc = {
   userRef?: DocumentReference[];
 };
 
-export type MeetingDoc = {
-  title?: string;
-  image?: string;
-  startDate?: Timestamp | Date;
-  endDate?: Timestamp | Date;
-  dayList?: string[];
-  sessionList?: string[];
-  sessionTime?: string;
-  slotLimit?: number;
-};
 
-export type MeetingBookedDoc = {
-  userRef?: DocumentReference;
-  meetingRef?: DocumentReference;
-  bookedDate?: Timestamp | Date;
-  sessionTime?: string;
-  remarks?: string;
-};
 
-export type PollDoc = {
-  serialNum?: number;
-  title?: string;
-  bio?: string;
-  question?: string;
-  image?: string;
-  authRef?: DocumentReference;
-  courseRef?: DocumentReference;
-  createdAt?: Timestamp | Date;
-  endAt?: Timestamp | Date;
-};
 
 export type BatchDoc = {
   id?: string;

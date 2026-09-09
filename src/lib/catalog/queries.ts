@@ -14,7 +14,7 @@ import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { isEbookCourse } from "@/lib/format";
 import { isPublished } from "@/lib/course/status";
-import type { BatchDoc, CourseDoc, UserDoc } from "@/lib/types/firestore";
+import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
 
 export function publishedCourses(rows: Array<CourseDoc & { id: string }>) {
   return rows.filter((row) => isPublished(row) && !row.trashed);
@@ -102,14 +102,9 @@ export async function listResources(courseId: string) {
     .sort((a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0));
 }
 
-export function exploreCourses(
-  courses: Array<CourseDoc & { id: string }>,
-  profile?: Pick<UserDoc, "branchRef"> | null,
-) {
-  const published = publishedCourses(courses).filter((c) => !isEbookCourse(c));
-  if (!profile?.branchRef) return published;
-  const preferred = published.filter((c) => c.branchRef?.id === profile.branchRef?.id);
-  return preferred.length ? preferred : published;
+/** Published, non-ebook courses. Filtering by taxonomy happens in the picker. */
+export function exploreCourses(courses: Array<CourseDoc & { id: string }>) {
+  return publishedCourses(courses).filter((c) => !isEbookCourse(c));
 }
 
 export function storeEbooks(courses: Array<CourseDoc & { id: string }>) {

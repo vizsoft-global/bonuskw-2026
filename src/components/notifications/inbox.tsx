@@ -5,7 +5,7 @@ import { NotificationRows } from "@/components/notifications/list";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Skeleton } from "@/components/shared/skeleton";
 import { useI18n } from "@/lib/i18n/locale";
-import { useAnnouncements } from "@/lib/notifications/query";
+import { useUserNotifications } from "@/lib/notifications/query";
 import {
   clearAllNotes,
   getNotesStateServerSnapshot,
@@ -16,7 +16,7 @@ import {
 } from "@/lib/notifications/state";
 
 export function useVisibleNotifications() {
-  const notes = useAnnouncements();
+  const notes = useUserNotifications();
   const raw = useSyncExternalStore(subscribeNotesState, getNotesStateSnapshot, getNotesStateServerSnapshot);
   const state = parseNotesState(raw);
   const visible = useMemo(

@@ -18,6 +18,7 @@ import { collections } from "@/lib/firebase/collections";
 import { isEbookCourse } from "@/lib/format";
 import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
+import { useTaxonomy } from "@/lib/taxonomy/use-taxonomy";
 import {
   clearRecentSearches,
   loadRecentSearches,
@@ -54,6 +55,7 @@ function FilterSelect({
 
 export default function SearchPage() {
   const { t, locale } = useI18n();
+  const tax = useTaxonomy();
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
   const [q, setQ] = useState("");
@@ -108,7 +110,7 @@ export default function SearchPage() {
       return !text || name.includes(text) || (c.subtitle || "").toLowerCase().includes(text);
     });
     if (rating) rows = rows.filter((c) => (c.totalRatting || 0) >= rating);
-    if (topic) rows = rows.filter((c) => c.courseCategoryRef?.id === topic);
+    if (topic) rows = rows.filter((c) => c.branchRef?.id === topic);
     rows = [...rows].sort((a, b) => {
       if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
       if (sort === "price_asc") return (a.price || 0) - (b.price || 0);
@@ -117,7 +119,9 @@ export default function SearchPage() {
     return rows;
   }, [courses.data, q, rating, sort, topic, locale]);
 
-  const topics = [...new Set((courses.data ?? []).map((c) => c.courseCategoryRef?.id).filter(Boolean))] as string[];
+  // Topics that at least one course is filed under, shown by name.
+  const topicIds = new Set((courses.data ?? []).map((c) => c.branchRef?.id).filter(Boolean));
+  const topics = tax.topics.filter((b) => topicIds.has(b.id));
   const showRecents = recents.length > 0 && (focused || !q.trim());
 
   const authorIds = [...new Set(results.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
@@ -278,8 +282,8 @@ export default function SearchPage() {
             <FilterSelect value={topic} onChange={setTopic}>
               <option value="">{t("all")}</option>
               {topics.map((item) => (
-                <option key={item} value={item}>
-                  {item}
+                <option key={item.id} value={item.id}>
+                  {item.name}
                 </option>
               ))}
             </FilterSelect>

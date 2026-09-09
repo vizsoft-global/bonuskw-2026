@@ -46,13 +46,20 @@ export function NotificationRows({
           >
             <span className="flex min-w-0 flex-1 items-center gap-2.5">
               <SparkleMark read={read} />
-              <span
-                className={cn(
-                  "min-w-0 flex-1 text-[12px] font-medium leading-normal",
-                  read ? "text-[#666]" : "text-white",
-                )}
-              >
-                {note.text}
+              <span className="min-w-0 flex-1">
+                {note.title && note.title !== note.text ? (
+                  <span className={cn("block truncate text-[12px] font-semibold", read ? "text-[#666]" : "text-white")}>
+                    {note.title}
+                  </span>
+                ) : null}
+                <span
+                  className={cn(
+                    "block text-[12px] font-medium leading-normal",
+                    read ? "text-[#666]" : note.title && note.title !== note.text ? "text-[#c8c8c8]" : "text-white",
+                  )}
+                >
+                  {note.text}
+                </span>
               </span>
             </span>
             {note.createdAt ? (

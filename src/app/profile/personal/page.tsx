@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { collection, doc, getDocs, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { CtaButton } from "@/components/auth/cta-button";
-import { SelectField } from "@/components/auth/field";
+import {
+  AcademicFields,
+  EMPTY_ACADEMIC,
+  academicFromProfile,
+  academicPatch,
+  isAcademicComplete,
+  type AcademicValue,
+} from "@/components/taxonomy/academic-fields";
 import { Avatar } from "@/components/layout/avatar";
 import { ProfileField, ProfileTabs, SectionLabel } from "@/components/profile/ui";
 import { ProfilePane } from "@/components/profile/pane";
@@ -11,8 +18,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
-
-type Option = { id: string; name: string; countryId?: string; universityId?: string };
+import { useTaxonomy } from "@/lib/taxonomy/use-taxonomy";
 
 function splitLocation(location?: string) {
   if (!location) return { city: "", country: "" };
@@ -29,14 +35,11 @@ export default function PersonalPage() {
   const [email, setEmail] = useState("");
   const [countryText, setCountryText] = useState("");
   const [city, setCity] = useState("");
-  const [countries, setCountries] = useState<Option[]>([]);
-  const [universities, setUniversities] = useState<Option[]>([]);
-  const [fields, setFields] = useState<Option[]>([]);
-  const [country, setCountry] = useState("");
-  const [university, setUniversity] = useState("");
-  const [field, setField] = useState("");
-  const [year, setYear] = useState("");
+  const [academic, setAcademic] = useState<AcademicValue>(EMPTY_ACADEMIC);
   const [busy, setBusy] = useState(false);
+  const tax = useTaxonomy();
+  const school = tax.isSchool(academic.university);
+  const academicComplete = isAcademicComplete(academic, school);
 
   useEffect(() => {
     if (!profile) return;
@@ -45,43 +48,8 @@ export default function PersonalPage() {
     const loc = splitLocation(profile.location);
     setCity(loc.city);
     setCountryText(loc.country);
-    setCountry(profile.countryRef?.id || "");
-    setUniversity(profile.universityRef?.id || "");
-    setField(profile.branchRef?.id || "");
-    setYear(profile.year_of_study || "");
+    setAcademic(academicFromProfile(profile));
   }, [profile]);
-
-  useEffect(() => {
-    void (async () => {
-      const [c, u, b] = await Promise.all([
-        getDocs(collection(getDb(), collections.country)),
-        getDocs(collection(getDb(), collections.university)),
-        getDocs(collection(getDb(), collections.branch)),
-      ]);
-      setCountries(c.docs.map((d) => ({ id: d.id, name: String(d.get("name") || d.id) })));
-      setUniversities(
-        u.docs.map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          countryId: d.get("countryRef")?.id,
-        })),
-      );
-      setFields(
-        b.docs.map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          universityId: d.get("universityRef")?.id,
-        })),
-      );
-    })();
-  }, []);
-
-  const years = [
-    { id: "1st Year", name: t("year1") },
-    { id: "2nd Year", name: t("year2") },
-    { id: "3rd Year", name: t("year3") },
-    { id: "Final Year", name: t("yearFinal") },
-  ];
 
   async function savePersonal() {
     if (!user) return;
@@ -100,15 +68,10 @@ export default function PersonalPage() {
   }
 
   async function saveAcademic() {
-    if (!user || !country || !university || !field) return;
+    if (!user || !academicComplete) return;
     setBusy(true);
     try {
-      await updateDoc(doc(getDb(), collections.users, user.uid), {
-        countryRef: doc(getDb(), collections.country, country),
-        universityRef: doc(getDb(), collections.university, university),
-        branchRef: doc(getDb(), collections.branch, field),
-        year_of_study: year || null,
-      });
+      await updateDoc(doc(getDb(), collections.users, user.uid), academicPatch(academic, tax, school));
       await refreshProfile();
     } finally {
       setBusy(false);
@@ -156,51 +119,12 @@ export default function PersonalPage() {
             <SectionLabel>{t("academicInfo")}</SectionLabel>
           </div>
           <div className="mt-[15px] flex flex-col gap-[25px]">
-            <SelectField
-              icon="/onboarding/globe.svg"
-              label={t("country")}
-              placeholder={t("selectCountry")}
-              value={country}
-              onChange={(v) => {
-                setCountry(v);
-                setUniversity("");
-                setField("");
-              }}
-              options={countries}
-            />
-            <SelectField
-              icon="/onboarding/bank.svg"
-              label={t("university")}
-              placeholder={t("selectUniversity")}
-              value={university}
-              onChange={(v) => {
-                setUniversity(v);
-                setField("");
-              }}
-              options={universities.filter((u) => !country || u.countryId === country)}
-            />
-            <SelectField
-              icon="/onboarding/graduation-hat.svg"
-              label={t("field")}
-              placeholder={t("selectMajor")}
-              value={field}
-              onChange={setField}
-              options={fields.filter((f) => !university || f.universityId === university)}
-            />
-            <SelectField
-              icon="/onboarding/certificate.svg"
-              label={t("year")}
-              optional={t("yearOptional")}
-              placeholder={t("selectYear")}
-              value={year}
-              onChange={setYear}
-              options={years}
-            />
+            <AcademicFields value={academic} onChange={setAcademic} />
           </div>
           <div className="mt-8 pb-4">
             <CtaButton
               loading={busy}
-              disabled={busy || !country || !university || !field}
+              disabled={busy || !academicComplete}
               onClick={() => void saveAcademic()}
             >
               {t("saveChanges")}

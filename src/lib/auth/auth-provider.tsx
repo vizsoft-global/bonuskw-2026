@@ -51,7 +51,8 @@ let confirmation: ConfirmationResult | null = null;
 let verifier: RecaptchaVerifier | null = null;
 
 function needsAcademic(profile: UserDoc | null) {
-  return !profile?.countryRef || !profile.universityRef || !profile.branchRef;
+  // High-school students pick a grade (categoryRef) instead of a field (branchRef).
+  return !profile?.countryRef || !profile.universityRef || !(profile.branchRef || profile.categoryRef);
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {

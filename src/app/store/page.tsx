@@ -28,6 +28,14 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { TaxonomyPicker } from "@/components/taxonomy/taxonomy-picker";
+import {
+  EMPTY_SELECTION,
+  filterCoursesByTaxonomy,
+  selectionFromProfile,
+  useTaxonomy,
+  type TaxonomySelection,
+} from "@/lib/taxonomy/use-taxonomy";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { placementOf } from "@/lib/course/status";
@@ -44,8 +52,10 @@ export default function StorePage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const router = useRouter();
-  const [topic, setTopic] = useState("");
   const [view, setView] = useState<"grid" | "list">("grid");
+  const [filter, setFilter] = useState<TaxonomySelection | null>(null);
+  const tax = useTaxonomy();
+  const profileSelection = selectionFromProfile(profile, tax);
 
   const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses });
   const stories = useQuery({
@@ -74,23 +84,13 @@ export default function StorePage() {
       return snap.docs.filter((d) => d.get("status") === "Ongoing");
     },
   });
-  const categories = useQuery({
-    queryKey: ["courseCategory"],
-    queryFn: async () => {
-      const snap = await getDocs(collection(getDb(), collections.courseCategory));
-      return snap.docs
-        .map((d) => ({
-          id: d.id,
-          name: String(d.get("name") || d.id),
-          status: String(d.get("status") || ""),
-        }))
-        .filter((c) => !c.status || /active|publish/i.test(c.status));
-    },
-  });
-
   const books = storeEbooks(courses.data ?? []);
   const featured = books.filter((book) => placementOf(book) === "Featured");
-  const explore = topic ? books.filter((c) => c.courseCategoryRef?.id === topic) : books;
+  // Start on the student's own university/field, but never on an empty list.
+  const selection =
+    filter ?? (filterCoursesByTaxonomy(books, profileSelection).length ? profileSelection : EMPTY_SELECTION);
+  const filtered = Boolean(selection.country || selection.university || selection.category || selection.topic);
+  const explore = filterCoursesByTaxonomy(books, selection);
 
   const authorIds = [...new Set([...featured, ...explore].map((c) => c.authorRef?.id).filter(Boolean))] as string[];
   const authors = useQuery({
@@ -234,34 +234,7 @@ export default function StorePage() {
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto hide-scrollbar">
-            <button
-              type="button"
-              onClick={() => setTopic("")}
-              className={cn(
-                "flex shrink-0 items-center gap-2 rounded-[27px] px-3 py-2 text-[14px]",
-                !topic ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
-              )}
-            >
-              <span className="size-4">
-                <HomeIcon src="/home/shapes.svg" />
-              </span>
-              {t("all")}
-            </button>
-            {(categories.data ?? []).map((cat) => (
-              <button
-                key={cat.id}
-                type="button"
-                onClick={() => setTopic(cat.id)}
-                className={cn(
-                  "flex shrink-0 items-center gap-2 rounded-[27px] px-3 py-2 text-[14px]",
-                  topic === cat.id ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
-                )}
-              >
-                {cat.name}
-              </button>
-            ))}
-          </div>
+          <TaxonomyPicker value={selection} onChange={setFilter} />
 
           {exploreItems.length ? (
             view === "list" ? (
@@ -300,7 +273,7 @@ export default function StorePage() {
               icon="/profile/book.svg"
               title={t("emptyStoreTitle")}
               body={t("emptyStoreBody")}
-              cta={topic ? { onClick: () => setTopic(""), label: t("viewAll") } : { href: "/", label: t("explore") }}
+              cta={filtered ? { onClick: () => setFilter(EMPTY_SELECTION), label: t("viewAll") } : { href: "/", label: t("explore") }}
             />
           )}
         </section>

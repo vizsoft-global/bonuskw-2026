@@ -116,6 +116,11 @@ export const core = {
     offlineTitle: "You're offline",
     offlineBody: "Check your connection and try again. Downloaded lessons stay available in My Space.",
     retry: "Try again",
+    category: "Category",
+    grade: "Grade",
+    subject: "Subject",
+    highSchool: "High school",
+    selectGrade: "Select your grade",
   },
   ar: {
     appName: "بونص أكاديمي",
@@ -234,5 +239,10 @@ export const core = {
     offlineTitle: "أنت غير متصل",
     offlineBody: "تحقق من الاتصال وحاول مرة أخرى. الدروس المحمّلة تبقى متاحة في مساحتي.",
     retry: "حاول مرة أخرى",
+    category: "الفئة",
+    grade: "الصف",
+    subject: "المادة",
+    highSchool: "ثانوية",
+    selectGrade: "اختر صفك",
   },
 } as const;

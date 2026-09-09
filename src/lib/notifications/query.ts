@@ -1,34 +1,53 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { collection, getDocs, limit, query } from "firebase/firestore";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { asDate } from "@/lib/format";
+import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 
 export type NotificationItem = {
   id: string;
+  title: string;
   text: string;
   createdAt: Date | null;
 };
 
-export function useAnnouncements() {
+/**
+ * The student's inbox: push notifications addressed to them (admin "Send
+ * notification", EMI reminders) plus broadcasts sent with no recipient list.
+ * Announcements were retired in favour of stories and popups.
+ */
+export function useUserNotifications() {
+  const { user } = useAuth();
+  const uid = user?.uid ?? "";
   return useQuery({
-    queryKey: ["announcements"],
-    staleTime: 5 * 60_000,
+    queryKey: ["notifications", uid],
+    enabled: Boolean(uid),
+    staleTime: 60_000,
     queryFn: async () => {
-      const snap = await getDocs(query(collection(getDb(), collections.announcement), limit(30)));
+      // Equality only (no orderBy) so no composite index is needed; sorted below.
+      const snap = await getDocs(
+        query(
+          collection(getDb(), collections.ff_push_notifications),
+          where("user_refs", "in", [`users/${uid}`, ""]),
+          limit(60),
+        ),
+      );
       return snap.docs
         .map((doc) => {
-          const title = String(doc.get("title") || "");
-          const bio = String(doc.get("bio") || doc.get("body") || doc.get("message") || "");
+          const title = String(doc.get("notification_title") || "");
+          const text = String(doc.get("notification_text") || "");
           return {
             id: doc.id,
-            text: bio || title,
-            createdAt: asDate(doc.get("createdAt") || doc.get("created_at") || doc.get("date") || doc.get("timestamp")),
+            title,
+            text: text || title,
+            createdAt: asDate(doc.get("created_at") || doc.get("timestamp")),
           } satisfies NotificationItem;
         })
-        .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
+        .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
+        .slice(0, 30);
     },
   });
 }
