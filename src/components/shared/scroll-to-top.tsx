@@ -37,7 +37,8 @@ function isPageScroller(el: HTMLElement) {
 export function ScrollToTop({ raised, className }: { raised?: boolean; className?: string }) {
   const { t } = useI18n();
   const pathname = usePathname();
-  const scrollerRef = useRef<Scroller>(window);
+  // `window` is not available during server prerendering; the effect sets it.
+  const scrollerRef = useRef<Scroller | null>(null);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
@@ -76,9 +77,8 @@ export function ScrollToTop({ raised, className }: { raised?: boolean; className
       aria-label={t("backToTop")}
       title={t("backToTop")}
       onClick={() => {
-        const scroller = scrollerRef.current;
-        if (scroller === window) window.scrollTo({ top: 0, behavior: "smooth" });
-        else scroller.scrollTo({ top: 0, behavior: "smooth" });
+        const scroller = scrollerRef.current ?? window;
+        scroller.scrollTo({ top: 0, behavior: "smooth" });
       }}
       className={cn(
         "fixed end-4 z-40 grid size-11 place-items-center rounded-full border border-white/15 bg-[#1c1c1c]/92 text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#2a2a2a] lg:end-8 lg:bottom-8",
