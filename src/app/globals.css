@@ -129,6 +129,42 @@
   }
 }
 
+/*
+ * Installed (standalone) PWA: the page draws under the status bar and home
+ * indicator (viewport-fit=cover), so chrome pads by the safe-area insets.
+ * In a normal browser tab the insets are 0 and the design values win.
+ */
+@utility pt-safe-header {
+  padding-top: max(60px, calc(env(safe-area-inset-top, 0px) + 20px));
+}
+@utility pb-safe-nav {
+  padding-bottom: max(30px, calc(env(safe-area-inset-bottom, 0px) + 8px));
+}
+@utility pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@utility mb-safe {
+  margin-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Native-feeling standalone mode: no rubber-band scroll on the shell, no text-size zoom. */
+@media (display-mode: standalone) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    overscroll-behavior-y: none;
+  }
+  body {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  input,
+  textarea,
+  [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+}
+
 /* Design V2 uses hardcoded dark hexes. Remap them when the theme class is light. */
 html:not(.dark) .bg-\[\#050505\],
 html:not(.dark) .bg-\[\#0b0b0c\],

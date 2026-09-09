@@ -14,6 +14,9 @@ export function Toaster() {
       theme={resolvedTheme === "light" ? "light" : "dark"}
       dir={dir}
       position="top-center"
+      // Keep toasts clear of the status bar when installed to the home screen.
+      offset="max(16px, calc(env(safe-area-inset-top, 0px) + 8px))"
+      mobileOffset="max(16px, calc(env(safe-area-inset-top, 0px) + 8px))"
       richColors
       closeButton
       toastOptions={{

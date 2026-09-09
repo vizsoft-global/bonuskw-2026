@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb, getFirebaseApp } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
+import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 
 const PUSH_KEY = "ba_push_enabled";
 const LANG_SHEET_KEY = "ba_open_lang";
@@ -24,6 +25,10 @@ export function ProfileHub() {
   const [langOpen, setLangOpen] = useState(false);
   const [pushOn, setPushOn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
+  const install = useInstallPrompt();
+  // Only phones/tablets that are not yet running from the home screen.
+  const showInstall =
+    install.ready && !install.installed && install.platform !== "desktop" && install.platform !== "unknown";
 
   useEffect(() => {
     setPushOn(window.localStorage.getItem(PUSH_KEY) === "1");
@@ -179,6 +184,9 @@ export function ProfileHub() {
               </button>
             </span>
           </div>
+          {showInstall ? (
+            <MenuRow icon="/profile/phone-02.svg" label={t("installRowTitle")} onClick={install.show} />
+          ) : null}
           <MenuRow href="/profile/terms" icon="/profile/file.svg" label={t("terms")} last active={path === "/profile/terms"} />
         </div>
         <MenuRow icon="/profile/logout.svg" label={t("logout")} onClick={() => void logout()} last />

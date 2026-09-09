@@ -31,10 +31,15 @@ const nextConfig: NextConfig = {
   async headers() {
     return [
       {
-        source: "/((?!_next/static|_next/image|favicon.ico|icon.png|sw.js).*)",
+        source: "/((?!_next/static|_next/image|favicon.ico|icon.png|icons/|sw.js).*)",
         headers: [
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, max-age=0" },
         ],
+      },
+      {
+        // Home-screen icons rarely change; let devices keep them.
+        source: "/icons/:path*",
+        headers: [{ key: "Cache-Control", value: "public, max-age=604800, stale-while-revalidate=86400" }],
       },
     ];
   },

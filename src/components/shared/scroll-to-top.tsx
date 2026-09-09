@@ -23,7 +23,7 @@ function isWindowTarget(target: EventTarget | null) {
 
 function scrollTopOf(scroller: Scroller) {
   if (scroller === window) return window.scrollY || document.documentElement.scrollTop || 0;
-  return scroller.scrollTop;
+  return scroller instanceof HTMLElement ? scroller.scrollTop : 0;
 }
 
 function isPageScroller(el: HTMLElement) {

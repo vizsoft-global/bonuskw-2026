@@ -19,6 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
 import { CustomPopupHost } from "@/components/home/custom-popup";
+import { InstallPrompt } from "@/components/system/install-prompt";
 import { HomeIcon } from "@/components/home/icon";
 import { Avatar } from "@/components/layout/avatar";
 import { BackButton } from "@/components/layout/back-button";
@@ -52,6 +53,7 @@ function isBarePath(path: string) {
     path.startsWith("/onboarding") ||
     path.startsWith("/verify") ||
     path.startsWith("/session-ended") ||
+    path.startsWith("/offline") ||
     path.startsWith("/stories")
   );
 }
@@ -328,6 +330,7 @@ function AppChrome({ children }: { children: ReactNode }) {
       <div className="relative min-h-dvh overflow-x-hidden bg-[#050505] text-[#fafafa]">
         <CatalogWarmup />
         <CustomPopupHost />
+        <InstallPrompt />
         <HeaderGlow />
 
         <header className="relative z-40 overflow-visible lg:sticky lg:top-0 lg:bg-[#050505]">
@@ -394,7 +397,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           </div>
 
           {isSearch ? (
-            <div className="relative px-[15px] pb-2.5 pt-[60px] lg:hidden">
+            <div className="relative px-[15px] pb-2.5 pt-safe-header lg:hidden">
               <div className="flex min-h-12 items-center gap-2.5">
                 <BackButton />
                 <span className="h-5 w-px shrink-0 bg-white/20" />
@@ -415,7 +418,7 @@ function AppChrome({ children }: { children: ReactNode }) {
               </div>
             </div>
           ) : isChrome ? (
-            <div className="relative overflow-hidden rounded-b-[18px] bg-[#141414] px-[15px] pb-5 pt-[60px] lg:hidden">
+            <div className="relative overflow-hidden rounded-b-[18px] bg-[#141414] px-[15px] pb-5 pt-safe-header lg:hidden">
               <div
                 className="pointer-events-none absolute start-[84px] -top-10 h-[231px] w-[409px] rounded-full opacity-[0.14] blur-[50px]"
                 style={{ background: GLOW }}
@@ -453,7 +456,7 @@ function AppChrome({ children }: { children: ReactNode }) {
               <div ref={bindExtra} className="relative empty:hidden empty:pt-0 pt-[15px]" />
             </div>
           ) : (
-            <div className="relative px-[15px] pb-3 pt-[60px] lg:hidden">
+            <div className="relative px-[15px] pb-3 pt-safe-header lg:hidden">
               <PageToolbar title={pageTitle} actionsRef={bindActions} />
             </div>
           )}
@@ -480,7 +483,7 @@ function AppChrome({ children }: { children: ReactNode }) {
 
         <nav
           className={cn(
-            "fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t border-white/10 bg-[rgba(22,22,22,0.7)] px-10 pb-[30px] pt-2.5 backdrop-blur-[20px] transition-[transform,opacity] duration-200 ease-out lg:hidden",
+            "fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t border-white/10 bg-[rgba(22,22,22,0.7)] px-10 pb-safe-nav pt-2.5 backdrop-blur-[20px] transition-[transform,opacity] duration-200 ease-out lg:hidden",
             showTabBar ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0",
           )}
           aria-hidden={!showTabBar}

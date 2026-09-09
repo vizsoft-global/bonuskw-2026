@@ -152,7 +152,7 @@ function PopupDialog({ popup, onClose }: { popup: CustomPopup; onClose: () => vo
   }, [onClose, slides.length]);
 
   return (
-    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-4 sm:items-center" role="presentation">
+    <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/70 p-4 pb-[max(16px,env(safe-area-inset-bottom))] sm:items-center" role="presentation">
       <button type="button" className="absolute inset-0" aria-label={t("close")} onClick={onClose} />
       <div
         role="dialog"

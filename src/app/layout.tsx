@@ -17,13 +17,32 @@ export const metadata: Metadata = {
   title: "Bonus Academy",
   description: "Courses, lessons and ebooks for Bonus Academy students.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.png" },
+  applicationName: "Bonus Academy",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    // iOS reads this tag (not the manifest) for the home-screen icon.
+    apple: "/icons/apple-touch-icon.png",
+  },
+  // Home-screen launches open full screen with a translucent status bar.
+  appleWebApp: {
+    capable: true,
+    title: "Bonus Academy",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: { telephone: false },
+  // Next emits the standard `mobile-web-app-capable`; older iOS only reads the Apple one.
+  other: { "apple-mobile-web-app-capable": "yes" },
 };
 
 export const viewport: Viewport = {
   themeColor: "#0B0B0C",
   width: "device-width",
   initialScale: 1,
+  // Draw under the notch / home indicator; safe-area insets handle spacing.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -244,7 +244,7 @@ export function StoryViewer({
         className={
           embedded
             ? "flex w-full flex-col items-center px-[15px] py-[24px] lg:px-0"
-            : "flex flex-col items-center px-[15px] pt-[60px] lg:px-0 lg:pt-0"
+            : "flex flex-col items-center px-[15px] pt-safe-header lg:px-0 lg:pt-0"
         }
       >
         <div className="flex w-full max-w-[384px] flex-col items-center gap-[15px] lg:gap-[25px]">
