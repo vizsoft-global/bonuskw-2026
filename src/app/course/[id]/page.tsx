@@ -8,32 +8,28 @@ import { CourseHeaderActions } from "@/components/course/header-actions";
 import { CourseCover, CourseInfo } from "@/components/course/hero";
 import { EnrollCta } from "@/components/course/enroll-cta";
 import { InstructorCard } from "@/components/course/instructor-card";
-import { LessonAccordion } from "@/components/course/lesson-accordion";
-import { fileNameFromUrl, fileTypeFromUrl, ResourceRow } from "@/components/course/resource-row";
-import { CourseTabs, type CourseTab } from "@/components/course/tabs";
+import { CourseOutline } from "@/components/course/outline";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
-import { HomeIcon } from "@/components/home/icon";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
-import { getBatch, getCourse, listChapters, listLessons, listQuizzes } from "@/lib/catalog/queries";
+import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { enrolmentBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
-import { lessonAccess } from "@/lib/course/entitlement";
-import { isLessonLocked, isQuizLocked } from "@/lib/course/locks";
+import { buildOutline, outlineCounts } from "@/lib/course/outline";
+import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import type { LessonDoc, LessonFile, UserDoc } from "@/lib/types/firestore";
+import type { UserDoc } from "@/lib/types/firestore";
 
 export default function CoursePage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
-  const [tab, setTab] = useState<CourseTab>("lessons");
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
@@ -44,11 +40,9 @@ export default function CoursePage() {
   });
   const chapters = useQuery({ queryKey: ["chapters", id], queryFn: () => listChapters(id) });
   const lessons = useQuery({ queryKey: ["lessons", id], queryFn: () => listLessons(id) });
-  const quizzes = useQuery({
-    queryKey: ["quizzes", id],
-    queryFn: () => listQuizzes(id),
-    enabled: tab === "tests",
-  });
+  const quizzes = useQuery({ queryKey: ["quizzes", id], queryFn: () => listQuizzes(id) });
+  const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
+  const subscription = useCourseSubscription(id, user?.uid);
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
     enabled: Boolean(course.data?.authorRef?.id),
@@ -162,40 +156,17 @@ export default function CoursePage() {
   const seconds = lessons.data?.reduce((sum, lesson) => sum + Number(lesson.videoDuration || 0), 0) || 0;
   const hours = Math.round(seconds / 3600);
   const language = courseLanguage(c);
-  const resources = (lessons.data ?? []).flatMap((lesson) =>
-    ((lesson.lesson_file_list as LessonFile[] | undefined) ?? []).map((file, i) => {
-      const url = file.lesson_file_link || "";
-      return {
-        key: `${lesson.id}-${i}`,
-        name: url ? fileNameFromUrl(url) : "File",
-        type: url ? fileTypeFromUrl(url) : "FILE",
-      };
-    }),
-  );
-  const lessonRows = lessons.data ?? [];
-  const lessonsByChapter = new Map<string, typeof lessonRows>();
-  for (const lesson of lessonRows) {
-    const chapterId = (lesson.chapterRef as { id?: string } | undefined)?.id;
-    if (!chapterId) continue;
-    const bucket = lessonsByChapter.get(chapterId);
-    if (bucket) bucket.push(lesson);
-    else lessonsByChapter.set(chapterId, [lesson]);
-  }
-  const chapterRows = (chapters.data ?? []).map((chapter) => ({
-    id: chapter.id,
-    name: chapter.name,
-    sellable: chapter.sellable,
-    price: chapter.price,
-    lessons: (lessonsByChapter.get(chapter.id) ?? []).map((lesson) => ({
-      id: lesson.id,
-      name: lesson.name,
-      image: lesson.image,
-      videoDuration: lesson.videoDuration,
-      locked:
-        lessonAccess({ lesson: lesson as LessonDoc, chapter: chapter as never }) === "locked" ||
-        isLessonLocked(lesson as LessonDoc),
-    })),
-  }));
+  // One outline in the instructor's order: chapters with lessons and their
+  // attachments, tests and standalone files. No separate resources tab.
+  const outline = buildOutline({
+    chapters: chapters.data ?? [],
+    lessons: lessons.data ?? [],
+    quizzes: quizzes.data ?? [],
+    resources: resources.data ?? [],
+    subscription: subscription.data ?? null,
+  });
+  const counts = outlineCounts(outline);
+  const enrolled = subscription.data?.status === "Ongoing";
 
   return (
     <AppShell compactHeader title={title} actions={actions}>
@@ -248,45 +219,21 @@ export default function CoursePage() {
         />
       ) : null}
 
-      <CourseTabs
-        tab={tab}
-        onTab={setTab}
-        counts={{
-          lessons: lessons.data?.length || 0,
-          resources: resources.length,
-          tests: quizzes.data?.length || 0,
-        }}
-        labels={{
-          lessons: t("chaptersLessons"),
-          resources: t("resources"),
-          tests: t("tests"),
-        }}
+      <div className="mt-6 flex items-center gap-2 border-b border-white/10 pb-2.5">
+        <span className="text-[13px] font-medium text-[#fafafa]">{t("courseContent")}</span>
+        <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#fafafa]">
+          {counts.lessons} {t("lessons")}
+          {counts.files ? ` · ${counts.files} ${t("attachments").toLowerCase()}` : ""}
+          {counts.tests ? ` · ${counts.tests} ${t("tests").toLowerCase()}` : ""}
+        </span>
+      </div>
+      <CourseOutline
+        items={outline}
+        locale={locale}
+        labels={{ download: t("download"), test: t("test"), questions: t("questions"), chapter: t("chapters") }}
+        onLesson={enrolled ? (lessonId) => router.push(`/course/${id}/learn?lesson=${lessonId}`) : undefined}
+        onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
       />
-
-      {tab === "lessons" ? <LessonAccordion chapters={chapterRows} locale={locale} /> : null}
-      {tab === "resources" ? (
-        <div className="divide-y divide-white/10">
-          {resources.map((file) => (
-            <ResourceRow key={file.key} name={file.name} type={file.type} />
-          ))}
-        </div>
-      ) : null}
-      {tab === "tests" ? (
-        <div className="divide-y divide-white/10">
-          {(quizzes.data ?? []).map((quiz) => (
-            <div key={quiz.id} className="flex items-center gap-3 py-2.5">
-              <span className="min-w-0 flex-1 truncate text-[13px] font-medium text-[#fafafa]">
-                {String(quiz.name || t("tests"))}
-              </span>
-              {isQuizLocked(quiz as never) ? (
-                <span className="size-4 shrink-0">
-                  <HomeIcon src="/course/lock.svg" />
-                </span>
-              ) : null}
-            </div>
-          ))}
-        </div>
-      ) : null}
     </AppShell>
   );
 }

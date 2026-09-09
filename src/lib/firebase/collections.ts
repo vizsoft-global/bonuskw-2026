@@ -70,6 +70,8 @@ export const collections = {
   promotionUsage: "promotionUsage",
   /** Course outline tests (MCQ). Public questions; answer key is separate. */
   quiz: "quiz",
+  /** Files placed directly in a course outline. */
+  courseResources: "courseResources",
   /** Staff-only correct option indexes, keyed by quizId. */
   quizAnswerKey: "quizAnswerKey",
   /** Latest score per student per quiz (`{quizId}_{uid}`). */

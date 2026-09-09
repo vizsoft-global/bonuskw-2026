@@ -6,7 +6,9 @@ import { useRouter } from "next/navigation";
 import { HomeIcon } from "@/components/home/icon";
 import { useI18n } from "@/lib/i18n/locale";
 import { markSeen } from "@/lib/stories/seen";
-import { STORY_MS, storyKey, storySegments, storyThumb, type StorySegment } from "@/lib/stories/media";
+import { VIDEO_CAP_MS, storyKey, storySegments, storyThumb, type StorySegment } from "@/lib/stories/media";
+import { FileThumb } from "@/components/course/outline";
+import type { ResourceKind } from "@/lib/course/resource-kind";
 import type { SettingsStory } from "@/lib/types/firestore";
 
 export function StoryViewer({
@@ -34,6 +36,7 @@ export function StoryViewer({
   const [epoch, setEpoch] = useState(0);
   const progressRef = useRef(0);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const pressRef = useRef<{ t: number; x: number } | null>(null);
   const nextRef = useRef<() => void>(() => {});
   const advancingRef = useRef(false);
@@ -125,13 +128,15 @@ export function StoryViewer({
   }, [close, goNext, goPrev]);
 
   useEffect(() => {
-    if (paused || !segment || segment.kind !== "image") return;
-    const origin = performance.now() - progressRef.current * STORY_MS;
+    // Images and files run on the story's own timer; video and audio follow playback.
+    if (paused || !segment || (segment.kind !== "image" && segment.kind !== "file")) return;
+    const durationMs = segment.durationMs;
+    const origin = performance.now() - progressRef.current * durationMs;
     let raf = 0;
     let done = false;
     const tick = (now: number) => {
       if (done) return;
-      const p = Math.min(1, (now - origin) / STORY_MS);
+      const p = Math.min(1, (now - origin) / durationMs);
       progressRef.current = p;
       setProgress(p);
       if (p >= 1) {
@@ -149,11 +154,20 @@ export function StoryViewer({
   }, [paused, segment, storyIndex, segmentIndex, epoch]);
 
   useEffect(() => {
-    const el = videoRef.current;
-    if (!el || segment?.kind !== "video") return;
-    el.muted = muted;
-    if (paused) el.pause();
-    else void el.play().catch(() => {});
+    if (segment?.kind === "video") {
+      const el = videoRef.current;
+      if (!el) return;
+      el.muted = muted;
+      if (paused) el.pause();
+      else void el.play().catch(() => {});
+      return;
+    }
+    if (segment?.kind === "audio") {
+      const el = audioRef.current;
+      if (!el) return;
+      if (paused) el.pause();
+      else void el.play().catch(() => {});
+    }
   }, [muted, paused, segment, storyIndex, segmentIndex]);
 
   useEffect(() => {
@@ -166,14 +180,17 @@ export function StoryViewer({
     }
   }, [segmentIndex, stories, storyIndex]);
 
-  function onVideoTime() {
-    const el = videoRef.current;
-    if (!el) return;
-    const cap = Math.min(el.duration && Number.isFinite(el.duration) ? el.duration : 30, 30);
-    const p = cap ? Math.min(1, el.currentTime / cap) : 0;
+  function onMediaTime(el: HTMLMediaElement | null) {
+    if (!el || !segment) return;
+    // Audio uses the story duration; video runs to its own length, capped.
+    const capSec =
+      segment.kind === "video"
+        ? Math.min(el.duration && Number.isFinite(el.duration) ? el.duration : VIDEO_CAP_MS / 1000, VIDEO_CAP_MS / 1000)
+        : Math.min(el.duration && Number.isFinite(el.duration) ? el.duration : segment.durationMs / 1000, segment.durationMs / 1000);
+    const p = capSec ? Math.min(1, el.currentTime / capSec) : 0;
     progressRef.current = p;
     setProgress(p);
-    if (el.currentTime >= 30) advance();
+    if (el.currentTime >= capSec) advance();
   }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -277,12 +294,59 @@ export function StoryViewer({
                 ref={videoRef}
                 key={segment.url}
                 src={segment.url}
+                poster={segment.poster}
                 playsInline
                 muted={muted}
                 className="h-full w-full object-cover"
-                onTimeUpdate={onVideoTime}
+                onTimeUpdate={() => onMediaTime(videoRef.current)}
                 onEnded={() => advance()}
               />
+            ) : segment.kind === "audio" ? (
+              <div className="relative h-full w-full">
+                {segment.poster ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={segment.poster} alt="" className="h-full w-full object-cover" />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-b from-[#1d1d1d] to-[#050505]" />
+                )}
+                <audio
+                  ref={audioRef}
+                  key={segment.url}
+                  src={segment.url}
+                  onTimeUpdate={() => onMediaTime(audioRef.current)}
+                  onEnded={() => advance()}
+                />
+                <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center">
+                  <span className="rounded-full bg-black/60 px-3 py-1.5 text-[12px] font-medium text-white">
+                    {segment.name || t("story")}
+                  </span>
+                </div>
+              </div>
+            ) : segment.kind === "file" ? (
+              <div className="relative h-full w-full">
+                {segment.poster ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={segment.poster} alt="" className="h-full w-full object-cover opacity-60" />
+                ) : (
+                  <div className="h-full w-full bg-gradient-to-b from-[#1d1d1d] to-[#050505]" />
+                )}
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
+                  <FileThumb kind={fileKind(segment)} className="h-24 w-32" />
+                  <p className="line-clamp-2 text-center text-[14px] font-medium text-white">
+                    {segment.name || t("story")}
+                  </p>
+                  <a
+                    href={segment.url}
+                    target="_blank"
+                    rel="noreferrer"
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="rounded-full bg-white px-4 py-2 text-[13px] font-semibold text-black"
+                  >
+                    {t("download")}
+                  </a>
+                </div>
+              </div>
             ) : (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={segment.url} alt="" className="h-full w-full object-cover" />
@@ -319,6 +383,12 @@ export function StoryViewer({
       </div>
     </div>
   );
+}
+
+function fileKind(segment: StorySegment): ResourceKind {
+  const name = `${segment.name ?? ""} ${segment.url}`.toLowerCase();
+  if (/\.pdf(\?|$)/.test(name)) return "pdf";
+  return "file";
 }
 
 function clamp(index: number, length: number) {

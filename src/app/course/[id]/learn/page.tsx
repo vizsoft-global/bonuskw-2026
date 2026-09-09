@@ -1,43 +1,69 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams, useSearchParams } from "next/navigation";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, serverTimestamp } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
 import { AppShell } from "@/components/layout/app-shell";
+import { CourseOutline, FileTile } from "@/components/course/outline";
+import { QuizPlayer } from "@/components/course/quiz-player";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { getCourse, listChapters, listLessons, listQuizzes } from "@/lib/catalog/queries";
-import { getDb, getFns } from "@/lib/firebase/client";
+import { getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
+import { buildOutline } from "@/lib/course/outline";
+import { useCourseSubscription } from "@/lib/course/use-subscription";
+import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
+import type { QuizDoc } from "@/lib/types/firestore";
 
-export default function LearnPage() {
+function LearnBody() {
   const { id } = useParams<{ id: string }>();
   const params = useSearchParams();
+  const router = useRouter();
   const { user } = useAuth();
-  const { t } = useI18n();
+  const { t, locale } = useI18n();
   const lessons = useQuery({ queryKey: ["lessons", id], queryFn: () => listLessons(id) });
   const chapters = useQuery({ queryKey: ["chapters", id], queryFn: () => listChapters(id) });
   const quizzes = useQuery({ queryKey: ["quizzes", id], queryFn: () => listQuizzes(id) });
+  const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
+  const subscription = useCourseSubscription(id, user?.uid);
+
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
+  const [quizId, setQuizId] = useState(params.get("quiz") || "");
   const [otp, setOtp] = useState<{ otp?: string; playbackInfo?: string; provider?: string; uid?: string } | null>(null);
   const [otpBusy, setOtpBusy] = useState(false);
-  const [score, setScore] = useState<string>("");
   const [review, setReview] = useState(5);
 
+  const outline = useMemo(
+    () =>
+      buildOutline({
+        chapters: chapters.data ?? [],
+        lessons: lessons.data ?? [],
+        quizzes: quizzes.data ?? [],
+        resources: resources.data ?? [],
+        subscription: subscription.data ?? null,
+      }),
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data],
+  );
+
+  // Fall back to the first lesson until one is chosen; no effect needed.
   const lesson = (lessons.data ?? []).find((item) => item.id === lessonId) || lessons.data?.[0];
+  const activeQuiz = quizId ? ((quizzes.data ?? []).find((q) => q.id === quizId) as (QuizDoc & { id: string }) | undefined) : undefined;
+  const lessonFiles = useMemo(() => {
+    for (const item of outline) {
+      if (item.kind !== "chapter") continue;
+      const hit = item.lessons.find((l) => l.id === lesson?.id);
+      if (hit) return hit.files;
+    }
+    return [];
+  }, [outline, lesson?.id]);
 
   useEffect(() => {
-    if (lesson && !lessonId) setLessonId(lesson.id);
-  }, [lesson, lessonId]);
-
-  useEffect(() => {
-    if (!user || !lesson) return;
+    if (!user || !lesson || quizId) return;
     let last = 0;
     const tick = window.setInterval(() => {
       void user.getIdToken().then((token) =>
@@ -57,7 +83,7 @@ export default function LearnPage() {
       last += 15;
     }, 15000);
     return () => window.clearInterval(tick);
-  }, [user, lesson, id]);
+  }, [user, lesson, id, quizId]);
 
   async function play() {
     if (!user || !lesson) return;
@@ -75,12 +101,6 @@ export default function LearnPage() {
     }
   }
 
-  async function submitQuiz(quizId: string) {
-    const fn = httpsCallable(getFns(), "submitQuizAttempt");
-    const result = await fn({ quizId, answers: {} });
-    setScore(JSON.stringify(result.data));
-  }
-
   async function leaveReview() {
     if (!user) return;
     await addDoc(collection(getDb(), collections.review), {
@@ -92,6 +112,19 @@ export default function LearnPage() {
     });
   }
 
+  function openLesson(nextId: string) {
+    setQuizId("");
+    setLessonId(nextId);
+    setOtp(null);
+    router.replace(`/course/${id}/learn?lesson=${nextId}`);
+  }
+
+  function openQuiz(nextId: string) {
+    setQuizId(nextId);
+    setOtp(null);
+    router.replace(`/course/${id}/learn?quiz=${nextId}`);
+  }
+
   const src =
     otp?.provider === "vdocipher" && otp.otp
       ? `https://player.vdocipher.com/v2/?otp=${otp.otp}&playbackInfo=${otp.playbackInfo}`
@@ -99,65 +132,79 @@ export default function LearnPage() {
         ? `https://${process.env.NEXT_PUBLIC_CF_STREAM_DOMAIN || "customer.cloudflarestream.com"}/${otp.uid}/iframe`
         : "";
 
+  const loading = lessons.isPending || course.isPending || chapters.isPending;
+
   return (
-    <AppShell loading={lessons.isPending || course.isPending} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
-      {(lessons.data ?? []).length ? (
-      <div className="grid gap-4 lg:grid-cols-[1.4fr_0.7fr]">
-        <div className="lg:sticky lg:top-24">
-          <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
-            {src ? (
-              <iframe title={String(lesson?.name || "Lesson")} src={src} className="h-full w-full" allow="fullscreen" />
-            ) : otpBusy ? (
-              <div className="grid h-full w-full place-items-center">
-                <Loader size="page" />
+    <AppShell loading={loading} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
+      {outline.length ? (
+        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.7fr]">
+          <div className="lg:sticky lg:top-24">
+            {activeQuiz ? (
+              <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
+                <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
+                {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
+                  <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
+                ) : (
+                  <QuizPlayer key={activeQuiz.id} quiz={activeQuiz} onExit={() => lesson && openLesson(lesson.id)} />
+                )}
               </div>
             ) : (
-              <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
-                {t("start")}
-              </button>
+              <>
+                <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
+                  {src ? (
+                    <iframe title={String(lesson?.name || "Lesson")} src={src} className="h-full w-full" allow="fullscreen" />
+                  ) : otpBusy ? (
+                    <div className="grid h-full w-full place-items-center">
+                      <Loader size="page" />
+                    </div>
+                  ) : (
+                    <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
+                      {t("start")}
+                    </button>
+                  )}
+                </div>
+                <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
+                {lessonFiles.length ? (
+                  <div className="mt-3 rounded-[14px] border border-white/10 p-2">
+                    <p className="px-2 pb-1 text-[12px] font-medium text-[#999]">{t("attachments")}</p>
+                    {lessonFiles.map((file) => (
+                      <FileTile key={file.id} file={file} downloadLabel={t("download")} compact />
+                    ))}
+                  </div>
+                ) : null}
+              </>
             )}
           </div>
-          <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
-        </div>
-        <aside className="overflow-y-auto rounded-[16px] border border-line p-3 lg:max-h-[70vh] lg:rounded-3xl">
-          {(chapters.data ?? []).map((chapter) => (
-            <div key={chapter.id} className="mb-3">
-              <p className="text-sm font-medium">{String(chapter.name)}</p>
-              {(lessons.data ?? [])
-                .filter((item) => (item.chapterRef as { id?: string } | undefined)?.id === chapter.id)
-                .map((item) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => {
-                      setLessonId(item.id);
-                      setOtp(null);
-                    }}
-                    className={`mt-1 block min-h-11 w-full rounded-xl px-2 py-2.5 text-start text-sm ${item.id === lesson?.id ? "bg-primary/15" : ""}`}
-                  >
-                    {String(item.name)}
-                  </button>
-                ))}
-            </div>
-          ))}
-          {(quizzes.data ?? []).map((quiz) => (
-            <button key={quiz.id} type="button" className="mt-2 text-sm text-primary" onClick={() => void submitQuiz(quiz.id)}>
-              {String(quiz.name || t("tests"))}
+          <aside className="overflow-y-auto rounded-[16px] border border-line p-3 lg:max-h-[70vh] lg:rounded-3xl">
+            <CourseOutline
+              items={outline}
+              locale={locale}
+              compact
+              activeId={quizId || lesson?.id}
+              labels={{ download: t("download"), test: t("test"), questions: t("questions"), chapter: t("chapters") }}
+              onLesson={openLesson}
+              onQuiz={openQuiz}
+            />
+            <label className="mt-4 block text-sm">
+              {t("rating")}
+              <input type="number" min={1} max={5} value={review} onChange={(e) => setReview(Number(e.target.value))} className="ms-2 w-16 bg-transparent" />
+            </label>
+            <button type="button" className="mt-2 text-sm" onClick={() => void leaveReview()}>
+              {t("finish")}
             </button>
-          ))}
-          {score ? <p className="mt-2 text-xs">{score}</p> : null}
-          <label className="mt-4 block text-sm">
-            {t("rating")}
-            <input type="number" min={1} max={5} value={review} onChange={(e) => setReview(Number(e.target.value))} className="ms-2 w-16 bg-transparent" />
-          </label>
-          <button type="button" className="mt-2 text-sm" onClick={() => void leaveReview()}>
-            {t("finish")}
-          </button>
-        </aside>
-      </div>
+          </aside>
+        </div>
       ) : (
         <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
       )}
     </AppShell>
+  );
+}
+
+export default function LearnPage() {
+  return (
+    <Suspense fallback={<div className="min-h-dvh bg-[#050505]" />}>
+      <LearnBody />
+    </Suspense>
   );
 }

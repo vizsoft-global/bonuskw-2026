@@ -90,6 +90,18 @@ export async function listQuizzes(courseId: string) {
     .sort((a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0));
 }
 
+export async function listResources(courseId: string) {
+  const snap = await getDocs(
+    query(
+      collection(getDb(), collections.courseResources),
+      where("courseRef", "==", doc(getDb(), collections.course, courseId)),
+    ),
+  );
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as Row)
+    .sort((a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0));
+}
+
 export function exploreCourses(
   courses: Array<CourseDoc & { id: string }>,
   profile?: Pick<UserDoc, "branchRef"> | null,

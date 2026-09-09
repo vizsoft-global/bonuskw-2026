@@ -471,6 +471,24 @@ export type QuizQuestion = {
   score: number;
 };
 
+/** A downloadable file sitting in the course outline. Collection: `courseResources`. */
+export type CourseResourceDoc = {
+  courseRef?: DocumentReference;
+  serialNumber?: number;
+  name?: string;
+  description?: string;
+  url?: string;
+  storagePath?: string;
+  contentType?: string;
+  bytes?: number;
+  /** "pdf" | "image" | "audio" | "video" | "file" */
+  kind?: string;
+  /** Unlocked when true or unset. */
+  status?: boolean;
+  emiIndex?: number;
+  created_at?: Timestamp | Date;
+};
+
 export type QuizDoc = {
   name?: string;
   description?: string;
@@ -659,18 +677,44 @@ export type AdminNavigationDoc = {
   updatedAt?: Timestamp | Date;
 };
 
+/** One media segment inside a story. */
+export type StoryMedia = {
+  url?: string;
+  /** "image" | "video" | "audio" | "file" */
+  type?: string;
+  kind?: string;
+  name?: string;
+  bytes?: number;
+  contentType?: string;
+  /** Poster shown behind audio / file segments. */
+  poster?: string;
+  /** Seconds this segment stays on screen (images/audio/files). */
+  durationSec?: number;
+};
+
 export type SettingsStory = {
+  /** Display title. `name` mirrors it for the Flutter app. */
   title?: string;
+  name?: string;
+  /** Thumbnail / poster; also the media for image stories. */
   image?: string;
   images?: string[];
   video?: string;
+  /** Legacy Flutter field for video stories. */
+  video_url?: string;
   videos?: string[];
-  media?: Array<string | { url?: string; type?: string }>;
+  media?: Array<string | StoryMedia>;
   status?: string;
   startDate?: Timestamp | Date;
   endDate?: Timestamp | Date;
+  /** "image" | "video" | "audio" | "file" */
   type?: string;
   linkedRef?: DocumentReference;
+  redirect_url?: string;
+  /** Default seconds per segment. */
+  durationSec?: number;
+  created_at?: Timestamp | Date;
+  id?: string;
 };
 
 export type SettingsDoc = {
