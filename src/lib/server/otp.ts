@@ -5,9 +5,46 @@ import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { collections } from "@/lib/firebase/collections";
 
 const TTL_MS = 5 * 60 * 1000;
+const PHONE_COOLDOWN_MS = 30_000;
+const IP_WINDOW_MS = 60 * 60 * 1000;
+const IP_MAX_PER_WINDOW = 5;
+const MAX_ATTEMPTS = 5;
+const E164 = /^\+[1-9]\d{6,14}$/;
+
+export type OtpChannel = "whatsapp" | "sms";
+
+export type OtpErrorCode =
+  | "invalid_phone"
+  | "rate_limited"
+  | "send_failed"
+  | "not_requested"
+  | "expired"
+  | "too_many_attempts"
+  | "invalid_code";
+
+export class OtpError extends Error {
+  code: OtpErrorCode;
+  status: number;
+  constructor(code: OtpErrorCode, message: string, status = 400) {
+    super(message);
+    this.name = "OtpError";
+    this.code = code;
+    this.status = status;
+  }
+}
+
+const ipMemory = new Map<string, { count: number; windowStart: number }>();
+
+export function isE164(phone: string) {
+  return E164.test(phone);
+}
 
 function hashCode(phone: string, code: string) {
   return createHash("sha256").update(`${phone}:${code}`).digest("hex");
+}
+
+function ipKey(ip: string) {
+  return `ip_${createHash("sha256").update(ip).digest("hex").slice(0, 32)}`;
 }
 
 function safeEqual(a: string, b: string) {
@@ -17,16 +54,61 @@ function safeEqual(a: string, b: string) {
   return timingSafeEqual(left, right);
 }
 
-export async function sendGatewayOtp(phone: string, channel: "whatsapp" | "sms") {
+function bumpMemory(ip: string) {
+  const now = Date.now();
+  const entry = ipMemory.get(ip);
+  if (!entry || now - entry.windowStart > IP_WINDOW_MS) {
+    ipMemory.set(ip, { count: 1, windowStart: now });
+    return true;
+  }
+  entry.count += 1;
+  return entry.count <= IP_MAX_PER_WINDOW;
+}
+
+async function enforceIpLimit(ip: string) {
+  if (!ip) return;
+  const db = getAdminDb();
+  const ref = db.collection(collections.otpRequests).doc(ipKey(ip));
+  let allowed = true;
+  try {
+    await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      const now = Date.now();
+      const windowStart = (snap.get("windowStart")?.toDate?.() as Date | undefined)?.getTime();
+      const count = Number(snap.get("count") ?? 0);
+      if (!snap.exists || !windowStart || now - windowStart > IP_WINDOW_MS) {
+        tx.set(ref, { kind: "ip", count: 1, windowStart: new Date(now), updatedAt: new Date(now) });
+        return;
+      }
+      if (count >= IP_MAX_PER_WINDOW) {
+        allowed = false;
+        return;
+      }
+      tx.update(ref, { count: FieldValue.increment(1), updatedAt: new Date(now) });
+    });
+  } catch {
+    allowed = bumpMemory(ip);
+  }
+  if (!allowed) {
+    throw new OtpError("rate_limited", "Too many codes requested from this network. Try again later.", 429);
+  }
+}
+
+export async function sendGatewayOtp(phone: string, channel: OtpChannel, ip = "") {
+  if (!isE164(phone)) throw new OtpError("invalid_phone", "Enter a valid mobile number.");
+  await enforceIpLimit(ip);
+
   const db = getAdminDb();
   const ref = db.collection(collections.otpRequests).doc(phone.replace(/\D/g, ""));
   const existing = await ref.get();
   const sentAt = existing.get("sentAt")?.toDate?.() as Date | undefined;
-  if (sentAt && Date.now() - sentAt.getTime() < 30_000) {
-    throw new Error("Wait a few seconds before requesting another code.");
+  if (sentAt && Date.now() - sentAt.getTime() < PHONE_COOLDOWN_MS) {
+    throw new OtpError("rate_limited", "Wait a few seconds before requesting another code.", 429);
   }
+
   const code = String(randomInt(100000, 999999));
   await ref.set({
+    kind: "phone",
     phone,
     channel,
     hash: hashCode(phone, code),
@@ -41,33 +123,41 @@ export async function sendGatewayOtp(phone: string, channel: "whatsapp" | "sms")
       : `Bonus Academy verification code: ${code}`;
   const endpoint =
     process.env.OTP_GATEWAY_URL ?? "https://proxy.vizsoft.in/https://backend.vizsoft.in/send_sms";
-  const res = await fetch(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message,
-      to_numbers: [phone],
-      channel,
-    }),
-  });
-  if (!res.ok) {
-    throw new Error("Could not send the code. Try Firebase SMS or another network.");
+  let ok = false;
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, to_numbers: [phone], channel }),
+    });
+    ok = res.ok;
+  } catch {
+    ok = false;
+  }
+  if (!ok) {
+    await ref.delete().catch(() => undefined);
+    throw new OtpError("send_failed", "Could not send the code. Try another channel.", 502);
   }
 }
 
 export async function verifyGatewayOtp(phone: string, code: string) {
+  if (!isE164(phone)) throw new OtpError("invalid_phone", "Enter a valid mobile number.");
+  const cleanCode = code.replace(/\D/g, "");
+  if (cleanCode.length !== 6) throw new OtpError("invalid_code", "Invalid code");
+
   const db = getAdminDb();
-  const id = phone.replace(/\D/g, "");
-  const ref = db.collection(collections.otpRequests).doc(id);
+  const ref = db.collection(collections.otpRequests).doc(phone.replace(/\D/g, ""));
   const snap = await ref.get();
-  if (!snap.exists) throw new Error("Request a code first");
+  if (!snap.exists) throw new OtpError("not_requested", "Request a code first");
   const data = snap.data() ?? {};
   const expires = data.expiresAt?.toDate?.() as Date | undefined;
-  if (!expires || expires.getTime() < Date.now()) throw new Error("Code expired");
-  if ((data.attempts ?? 0) >= 5) throw new Error("Too many attempts");
-  if (!safeEqual(String(data.hash ?? ""), hashCode(phone, code.trim()))) {
+  if (!expires || expires.getTime() < Date.now()) throw new OtpError("expired", "Code expired");
+  if ((data.attempts ?? 0) >= MAX_ATTEMPTS) {
+    throw new OtpError("too_many_attempts", "Too many attempts", 429);
+  }
+  if (!safeEqual(String(data.hash ?? ""), hashCode(phone, cleanCode))) {
     await ref.update({ attempts: FieldValue.increment(1) });
-    throw new Error("Invalid code");
+    throw new OtpError("invalid_code", "Invalid code");
   }
   await ref.delete();
   return issueTokenForPhone(phone);
@@ -87,8 +177,13 @@ export async function issueTokenForPhone(phone: string, currentUid?: string) {
     uid = match.docs[0].id;
   }
   if (!uid) {
-    const created = await auth.createUser({ phoneNumber: phone });
-    uid = created.uid;
+    try {
+      const existing = await auth.getUserByPhoneNumber(phone);
+      uid = existing.uid;
+    } catch {
+      const created = await auth.createUser({ phoneNumber: phone });
+      uid = created.uid;
+    }
   } else {
     try {
       await auth.getUser(uid);
@@ -97,24 +192,24 @@ export async function issueTokenForPhone(phone: string, currentUid?: string) {
     }
   }
 
-  await db
-    .collection(collections.users)
-    .doc(uid)
-    .set(
-      {
-        uid,
-        phone_number: phone,
-        phoneVerified: true,
-        userRole: "Student",
-        created_time: FieldValue.serverTimestamp(),
-      },
-      { merge: true },
-    );
+  const userRef = db.collection(collections.users).doc(uid);
+  const existing = await userRef.get();
+  await userRef.set(
+    {
+      uid,
+      phone_number: phone,
+      phoneVerified: true,
+      userRole: existing.get("userRole") ?? "Student",
+      ...(existing.exists ? {} : { created_time: FieldValue.serverTimestamp() }),
+    },
+    { merge: true },
+  );
 
   return auth.createCustomToken(uid);
 }
 
 export async function legacyLinkToken(currentUid: string, phone: string) {
+  if (!isE164(phone)) return null;
   const db = getAdminDb();
   const match = await db
     .collection(collections.users)

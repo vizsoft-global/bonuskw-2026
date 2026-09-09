@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { BrandLogo } from "@/components/layout/brand";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 
@@ -33,7 +34,7 @@ function LoginForm() {
     <main className="grid min-h-dvh lg:grid-cols-2">
       <section className="grid place-items-center px-6 py-16">
         <div className="glass w-full max-w-md rounded-3xl p-6">
-          <p className="text-sm text-muted">{t("appName")}</p>
+          <BrandLogo className="mb-1" />
           <h1 className="mt-2 text-2xl font-semibold">
             {mode === "signup" ? t("createAccount") : t("welcomeBack")}
           </h1>

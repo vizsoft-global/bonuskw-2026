@@ -1,19 +1,39 @@
-"use client";
-
-import { useMainSettings } from "@/lib/settings/use-settings";
 import { cn } from "@/lib/utils";
 
-/** Four-point star mark used while the uploaded logo loads or is missing. */
-export function BrandMark({ className }: { className?: string }) {
+const LOCKUP = "/brand/logo-lockup.png";
+const STACKED = "/brand/logo-stacked.png";
+
+/** Official Bonus Academy mark. White artwork is masked so it follows light/dark text color. */
+function LogoArt({
+  src,
+  label,
+  className,
+}: {
+  src: string;
+  label: string;
+  className?: string;
+}) {
   return (
-    <svg viewBox="0 0 64 64" aria-hidden className={cn("size-8", className)} fill="none">
-      <path
-        d="M32 4c1.6 14.4 9.6 22.4 24 24-14.4 1.6-22.4 9.6-24 24-1.6-14.4-9.6-22.4-24-24 14.4-1.6 22.4-9.6 24-24Z"
-        fill="currentColor"
-      />
-      <path d="M32 18v28M18 32h28" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+    <span
+      role="img"
+      aria-label={label}
+      className={cn("inline-block bg-text", className)}
+      style={{
+        WebkitMaskImage: `url(${src})`,
+        maskImage: `url(${src})`,
+        WebkitMaskRepeat: "no-repeat",
+        maskRepeat: "no-repeat",
+        WebkitMaskPosition: "center",
+        maskPosition: "center",
+        WebkitMaskSize: "contain",
+        maskSize: "contain",
+      }}
+    />
   );
+}
+
+export function BrandMark({ className }: { className?: string }) {
+  return <LogoArt src={LOCKUP} label="Bonus Academy" className={cn("h-8 w-[6.2rem]", className)} />;
 }
 
 export function BrandLogo({
@@ -25,25 +45,15 @@ export function BrandLogo({
   withText?: boolean;
   size?: "sm" | "md" | "lg";
 }) {
-  const settings = useMainSettings();
-  const logo = settings.data?.logo;
-  const dim = size === "lg" ? "size-16" : size === "sm" ? "size-7" : "size-9";
-  return (
-    <span className={cn("inline-flex items-center gap-2", className)}>
-      {logo ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={logo} alt="Bonus Academy" className={cn(dim, "object-contain")} />
-      ) : (
-        <BrandMark className={cn(dim, "text-text")} />
-      )}
-      {withText ? (
-        <span className="leading-none">
-          <span className={cn("block font-serif font-bold tracking-wide", size === "lg" ? "text-2xl" : "text-base")}>
-            BONUS
-          </span>
-          <span className="block text-[9px] uppercase tracking-[0.3em] text-muted">Academy</span>
-        </span>
-      ) : null}
-    </span>
-  );
+  if (!withText) {
+    return <BrandMark className={className} />;
+  }
+  const dim =
+    size === "lg"
+      ? "h-48 w-[8.6rem]"
+      : size === "sm"
+        ? "h-7 w-[5.4rem]"
+        : "h-9 w-[7rem]";
+  const src = size === "lg" ? STACKED : LOCKUP;
+  return <LogoArt src={src} label="Bonus Academy" className={cn(dim, className)} />;
 }

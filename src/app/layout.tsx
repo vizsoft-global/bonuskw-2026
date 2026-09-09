@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   title: "Bonus Academy",
   description: "Courses, lessons and ebooks for Bonus Academy students.",
   manifest: "/manifest.webmanifest",
-  icons: { icon: "/icon.svg" },
+  icons: { icon: "/icon.png" },
 };
 
 export const viewport: Viewport = {

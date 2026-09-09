@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { collection, doc, getDoc, getDocs } from "firebase/firestore";
+import { BrandLogo } from "@/components/layout/brand";
 import { AppShell } from "@/components/layout/app-shell";
 import { CourseCard, PrimaryButton, StatChip } from "@/components/shared/ui";
 import { useAuth } from "@/lib/auth/auth-provider";
@@ -37,7 +38,7 @@ export default function HomePage() {
     return (
       <main className="grid min-h-dvh place-items-center bg-bg px-6 text-center">
         <div>
-          <p className="text-2xl font-semibold">{t("appName")}</p>
+          <BrandLogo size="lg" className="mx-auto" />
           <p className="mt-2 text-muted">{t("splash")}</p>
           {!splash && ready && !user ? (
             <div className="mt-8 flex flex-col gap-3">
