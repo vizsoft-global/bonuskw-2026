@@ -71,7 +71,7 @@ export default function StorePage() {
     enabled: Boolean(user),
     queryFn: async () => {
       const snap = await getDoc(doc(getDb(), collections.userStats, user!.uid));
-      return snap.data() as { streakDays?: number; studySeconds?: number } | undefined;
+      return (snap.data() as { streakDays?: number; studySeconds?: number } | undefined) ?? null;
     },
   });
   const subs = useQuery({

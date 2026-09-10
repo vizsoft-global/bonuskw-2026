@@ -13,6 +13,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { canPurchase } from "@/lib/auth/purchase-access";
+import { EnrolledCta, StaffViewOnlyNotice } from "@/components/course/enrolled-cta";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { enrolmentBlock } from "@/lib/course/enrol";
@@ -206,6 +208,7 @@ export default function CoursePage() {
   });
   const counts = outlineCounts(outline);
   const enrolled = subscription.data?.status === "Ongoing";
+  const staffViewer = Boolean(user) && !canPurchase(profile);
 
   return (
     <AppShell compactHeader title={title} actions={actions}>
@@ -224,25 +227,46 @@ export default function CoursePage() {
             seeMore={t("seeMore")}
             seeLess={t("seeLess")}
           />
-          <EnrollCta
-            chapters={chapters.data?.length || 0}
-            lessons={lessons.data?.length || 0}
-            hours={hours}
-            chaptersLabel={t("chapters")}
-            lessonsLabel={t("lessons")}
-            hoursLabel={t("hrs")}
-            price={formatKwdLocale(c.price, locale)}
-            enrollLabel={t("enrollNow")}
-            emiPrice={t("emiMonths")
-              .replace("{amount}", formatKwdLocale(emiPlan(c)[0], locale))
-              .replace("{n}", String(courseEmiCount(c)))}
-            emiLabel={t("payInEmi")}
-            secure={t("secure")}
-            block={block}
-            busy={busy}
-            onEnroll={() => void addCart("Full payment")}
-            onEmi={() => void addCart("EMI")}
-          />
+          {enrolled ? (
+            <EnrolledCta
+              chapters={chapters.data?.length || 0}
+              lessons={lessons.data?.length || 0}
+              hours={hours}
+              chaptersLabel={t("chapters")}
+              lessonsLabel={t("lessons")}
+              hoursLabel={t("hrs")}
+              title={t("youAreEnrolled")}
+              label={t("continueLearning")}
+              onContinue={() => router.push(`/course/${id}/learn`)}
+            />
+          ) : staffViewer ? (
+            <StaffViewOnlyNotice
+              title={t("staffViewOnlyTitle")}
+              body={t("staffViewOnlyBody")}
+              price={formatKwdLocale(c.price, locale)}
+            />
+          ) : (
+            <EnrollCta
+              chapters={chapters.data?.length || 0}
+              lessons={lessons.data?.length || 0}
+              hours={hours}
+              chaptersLabel={t("chapters")}
+              lessonsLabel={t("lessons")}
+              hoursLabel={t("hrs")}
+              price={formatKwdLocale(c.price, locale)}
+              enrollLabel={t("enrollNow")}
+              emiPrice={t("emiMonths")
+                .replace("{amount}", formatKwdLocale(emiPlan(c)[0], locale))
+                .replace("{n}", String(courseEmiCount(c)))}
+              emiLabel={t("payInEmi")}
+              secure={t("secure")}
+              block={block}
+              busy={busy}
+              showEmi={Boolean(c.emiPaymentStatus)}
+              onEnroll={() => void addCart("Full payment")}
+              onEmi={() => void addCart("EMI")}
+            />
+          )}
           {cartError ? <p className="mt-2 text-center text-[12px] text-[#f24822]">{cartError}</p> : null}
         </div>
       </div>
@@ -278,7 +302,11 @@ export default function CoursePage() {
         }}
         onLesson={enrolled ? (lessonId) => router.push(`/course/${id}/learn?lesson=${lessonId}`) : undefined}
         onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
-        onBuyChapter={c.coursePaymentType === "Free" ? undefined : (chapterId) => void addChapterToCart(chapterId)}
+        onBuyChapter={
+          c.coursePaymentType === "Free" || staffViewer || enrolled
+            ? undefined
+            : (chapterId) => void addChapterToCart(chapterId)
+        }
       />
     </AppShell>
   );

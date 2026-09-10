@@ -135,6 +135,10 @@ export const design = {
     lessons: "Lessons",
     hours: "Hours",
     enrollNow: "Enroll Now",
+    youAreEnrolled: "You're enrolled",
+    staffViewOnlyTitle: "Viewing as an instructor",
+    staffViewOnlyBody:
+      "Instructor and admin accounts can browse every course exactly as students see it, but cannot enrol or purchase. Use a student account to buy.",
     buyChapter: "Buy chapter",
     minShort: "min",
     addToCart: "Add to cart",
@@ -416,6 +420,10 @@ export const design = {
     lessons: "الدروس",
     hours: "ساعات",
     enrollNow: "سجّل الآن",
+    youAreEnrolled: "أنت مسجّل",
+    staffViewOnlyTitle: "تعرض كمدرّب",
+    staffViewOnlyBody:
+      "حسابات المدرّبين والمشرفين يمكنها تصفح جميع الدورات كما يراها الطلاب، لكن لا يمكنها التسجيل أو الشراء. استخدم حساب طالب للشراء.",
     buyChapter: "اشترِ الفصل",
     minShort: "د",
     addToCart: "أضف إلى السلة",

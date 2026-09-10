@@ -82,7 +82,10 @@ export default function MySpacePage() {
   const stats = useQuery({
     queryKey: ["stats", uid],
     enabled: Boolean(uid),
-    queryFn: async () => (await getDoc(doc(getDb(), collections.userStats, uid!))).data(),
+    queryFn: async () =>
+      ((await getDoc(doc(getDb(), collections.userStats, uid!))).data() as
+        | { streakDays?: number; studySeconds?: number }
+        | undefined) ?? null,
   });
   const courses = useQuery({
     queryKey: ["my-subs", uid],

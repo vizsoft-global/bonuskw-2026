@@ -7,6 +7,8 @@ import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, updat
 import { CourseHeaderActions } from "@/components/course/header-actions";
 import { CourseCover, CourseInfo } from "@/components/course/hero";
 import { EnrollCta } from "@/components/course/enroll-cta";
+import { StaffViewOnlyNotice } from "@/components/course/enrolled-cta";
+import { canPurchase } from "@/lib/auth/purchase-access";
 import { InstructorCard } from "@/components/course/instructor-card";
 import { ResourceRow } from "@/components/course/resource-row";
 import { ExploreGridCard, exploreRailClass, type ExploreItem } from "@/components/home/explore-card";
@@ -223,16 +225,24 @@ export default function EbookPage() {
             seeMore={t("seeMore")}
             seeLess={t("seeLess")}
           />
-          <EnrollCta
-            stats={ctaStats}
-            price={formatKwdLocale(data.price, locale)}
-            enrollLabel={t("addToCart")}
-            secure={t("secure")}
-            block={owned.data ? t("purchased") : undefined}
-            busy={busy}
-            showEmi={false}
-            onEnroll={() => void addEbook(data)}
-          />
+          {Boolean(user) && !owned.data && !canPurchase(profile) ? (
+            <StaffViewOnlyNotice
+              title={t("staffViewOnlyTitle")}
+              body={t("staffViewOnlyBody")}
+              price={formatKwdLocale(data.price, locale)}
+            />
+          ) : (
+            <EnrollCta
+              stats={ctaStats}
+              price={formatKwdLocale(data.price, locale)}
+              enrollLabel={t("addToCart")}
+              secure={t("secure")}
+              block={owned.data ? t("purchased") : undefined}
+              busy={busy}
+              showEmi={false}
+              onEnroll={() => void addEbook(data)}
+            />
+          )}
           {cartError ? <p className="mt-2 text-center text-[12px] text-[#f24822]">{cartError}</p> : null}
         </div>
       </div>

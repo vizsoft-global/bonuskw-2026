@@ -3,7 +3,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { collections } from "@/lib/firebase/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
-import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
+import type { BatchDoc, CourseDoc, UserDoc } from "@/lib/types/firestore";
+import { canPurchase } from "@/lib/auth/purchase-access";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,14 @@ export async function POST(req: NextRequest) {
   if (!body.courseId) return NextResponse.json({ error: "courseId required" }, { status: 400 });
 
   const db = getAdminDb();
+  // Staff accounts browse only; see purchase-access.ts.
+  const profile = (await db.collection(collections.users).doc(user.uid).get()).data() as UserDoc | undefined;
+  if (!canPurchase(profile)) {
+    return NextResponse.json(
+      { error: "Instructor and admin accounts cannot enrol", code: "staff-account" },
+      { status: 403 },
+    );
+  }
   const courseRef = db.collection(collections.course).doc(body.courseId);
   const courseSnap = await courseRef.get();
   if (!courseSnap.exists) return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -31,7 +40,7 @@ export async function POST(req: NextRequest) {
     .get();
   if (!existing.empty) return NextResponse.json({ ok: true, already: true });
 
-  let batchesRef = course.batchesRef
+  const batchesRef = course.batchesRef
     ? db.collection(collections.batches).doc(course.batchesRef.id)
     : null;
   if (batchesRef) {

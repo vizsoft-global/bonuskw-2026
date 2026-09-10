@@ -57,8 +57,13 @@ export function ProfileHub() {
   const stats = useQuery({
     queryKey: ["stats", user?.uid],
     enabled: Boolean(user),
-    queryFn: async () => (await getDoc(doc(getDb(), collections.userStats, user!.uid))).data(),
+    queryFn: async () =>
+      ((await getDoc(doc(getDb(), collections.userStats, user!.uid))).data() as
+        | { streakDays?: number; studySeconds?: number }
+        | undefined) ?? null,
   });
+  // Same key and shape as My Zone (`snap.docs` of Ongoing subscriptions) so the
+  // two screens share one cache entry instead of clobbering each other.
   const courses = useQuery({
     queryKey: ["my-subs", user?.uid],
     enabled: Boolean(user),
@@ -69,13 +74,14 @@ export function ProfileHub() {
           where("userRef", "==", doc(getDb(), collections.users, user!.uid)),
         ),
       );
-      return snap.docs.filter((d) => d.get("status") === "Ongoing").length;
+      return snap.docs.filter((d) => d.get("status") === "Ongoing");
     },
   });
 
   const name = profile?.display_name || t("profile");
   const subtitle = [branch.data, university.data].filter(Boolean).join(" • ");
   const hours = Math.round((Number(stats.data?.studySeconds) || 0) / 3600);
+  const enrolledCount = Array.isArray(courses.data) ? courses.data.length : 0;
 
   async function togglePush() {
     if (pushBusy) return;
@@ -116,7 +122,7 @@ export function ProfileHub() {
               <HomeIcon src="/profile/book.svg" />
             </span>
             <p className="text-[12px] font-medium text-[#fafafa]">
-              {courses.data ?? 0} {t("coursesUnit")}
+              {enrolledCount} {t("coursesUnit")}
             </p>
           </div>
         </div>

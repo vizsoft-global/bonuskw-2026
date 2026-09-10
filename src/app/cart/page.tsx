@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { canPurchase } from "@/lib/auth/purchase-access";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
@@ -23,7 +24,8 @@ type CreateResponse = {
 };
 
 export default function CartPage() {
-  const { user } = useAuth();
+  const { user, profile } = useAuth();
+  const staffViewer = Boolean(user) && !canPurchase(profile);
   const { t, locale } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<CartState>({ lines: [], savedForLater: [] });
@@ -149,7 +151,7 @@ export default function CartPage() {
   const emiEligible = cart.lines.filter((l) => l.kind === "course" && l.emiAvailable !== false);
   const allEmi = emiEligible.length > 0 && emiEligible.every((l) => l.paymentType === "EMI");
   const dueLabel = formatKwdLocale(due, locale);
-  const canPay = accept && !busy && !redirecting && cart.lines.length > 0;
+  const canPay = accept && !busy && !redirecting && cart.lines.length > 0 && !staffViewer;
   const lineLabels = {
     fullPay: t("fullPay"),
     emi: t("emi"),
@@ -170,6 +172,12 @@ export default function CartPage() {
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
       </label>
+      {staffViewer ? (
+        <p className="rounded-[10px] bg-white/[0.06] p-3 text-[12px] leading-relaxed text-[#999]">
+          <span className="block font-semibold text-[#fafafa]">{t("staffViewOnlyTitle")}</span>
+          {t("staffViewOnlyBody")}
+        </p>
+      ) : null}
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
       <div className="flex flex-col items-center gap-2.5">
         {busy || redirecting ? (
