@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { collections } from "@/lib/firebase/collections";
 import { getAdminDb, getAdminStorage } from "@/lib/firebase/admin";
 import { clientIp, verifyIdToken } from "@/lib/server/auth";
+import { signedGatewayUrl } from "@/lib/server/files-gateway";
 import type { CourseDoc } from "@/lib/types/firestore";
 
 export const runtime = "nodejs";
@@ -33,10 +34,16 @@ export async function POST(req: NextRequest) {
   const file = course?.ebookFiles?.find((f) => f.id === body.fileId);
   if (!file?.storagePath) return NextResponse.json({ error: "File missing" }, { status: 404 });
 
-  const [url] = await getAdminStorage()
-    .bucket()
-    .file(file.storagePath)
-    .getSignedUrl({ action: "read", expires: Date.now() + 10 * 60 * 1000 });
+  // New files sit in Cloudflare R2 behind the signed gateway; legacy ones in Firebase Storage.
+  const url =
+    file.provider === "r2"
+      ? await signedGatewayUrl(file.storagePath)
+      : (
+          await getAdminStorage()
+            .bucket()
+            .file(file.storagePath)
+            .getSignedUrl({ action: "read", expires: Date.now() + 10 * 60 * 1000 })
+        )[0];
 
   await db.collection(collections.ebookDownloads).add({
     courseRef,

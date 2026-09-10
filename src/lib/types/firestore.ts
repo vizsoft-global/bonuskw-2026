@@ -50,8 +50,12 @@ export type EbookFileDoc = {
   name: string;
   /** "pdf" | "video" | "file" */
   kind: string;
-  /** Firebase Storage object path; the student app mints a per-buyer download from it. */
+  /**
+   * Object key. `provider: "r2"` files live behind the Cloudflare files gateway
+   * (signed per-buyer links); older ones are Firebase Storage paths.
+   */
   storagePath: string;
+  provider?: "r2" | "firebase";
   contentType?: string;
   bytes?: number;
   uploadedAt?: Timestamp | Date;
