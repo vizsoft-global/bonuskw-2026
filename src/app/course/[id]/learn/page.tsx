@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, serverTimestamp } from "firebase/firestore";
@@ -18,6 +18,7 @@ import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc } from "@/lib/types/firestore";
+import { VideoTracker } from "@/lib/analytics/video-tracker";
 
 function LearnBody() {
   const { id } = useParams<{ id: string }>();
@@ -34,7 +35,8 @@ function LearnBody() {
 
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
-  const [otp, setOtp] = useState<{ otp?: string; playbackInfo?: string; provider?: string; uid?: string } | null>(null);
+  const [otp, setOtp] = useState<{ otp?: string; playbackInfo?: string; provider?: string; uid?: string; videoDocId?: string | null } | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [otpBusy, setOtpBusy] = useState(false);
   const [review, setReview] = useState(5);
 
@@ -85,6 +87,33 @@ function LearnBody() {
     }, 15000);
     return () => window.clearInterval(tick);
   }, [user, lesson, id, quizId]);
+
+  // Playback analytics: pauses, seeks, buffering, watched time, estimated bandwidth.
+  useEffect(() => {
+    if (!user || !lesson || !otp?.provider || quizId) return;
+    const iframe = iframeRef.current;
+    if (!iframe) return;
+    const tracker = new VideoTracker(
+      {
+        courseId: id,
+        lessonId: lesson.id,
+        chapterId: (lesson.chapterRef as { id?: string } | undefined)?.id,
+        videoDocId: otp.videoDocId ?? undefined,
+        provider: otp.provider === "stream" ? "stream" : "vdocipher",
+        durationSec: Number(lesson.videoDuration || 0) || undefined,
+        locale,
+      },
+      () => user.getIdToken(),
+    );
+    const start = () => void tracker.attach(iframe);
+    if (iframe.contentWindow && iframe.dataset.loaded === "1") start();
+    else iframe.addEventListener("load", start, { once: true });
+    return () => {
+      iframe.removeEventListener("load", start);
+      tracker.detach();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- re-attach only when the video changes
+  }, [user, lesson?.id, otp?.provider, otp?.otp, otp?.uid, quizId]);
 
   async function play() {
     if (!user || !lesson) return;
@@ -153,7 +182,17 @@ function LearnBody() {
               <>
                 <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
                   {src ? (
-                    <iframe title={String(lesson?.name || "Lesson")} src={src} className="h-full w-full" allow="fullscreen" />
+                    <iframe
+                      ref={iframeRef}
+                      key={src}
+                      title={String(lesson?.name || "Lesson")}
+                      src={src}
+                      className="h-full w-full"
+                      allow="fullscreen; autoplay; encrypted-media"
+                      onLoad={(e) => {
+                        e.currentTarget.dataset.loaded = "1";
+                      }}
+                    />
                   ) : otpBusy ? (
                     <div className="grid h-full w-full place-items-center">
                       <Loader size="page" />

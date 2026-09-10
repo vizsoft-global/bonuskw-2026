@@ -77,4 +77,9 @@ export const collections = {
   deviceFlags: "deviceFlags",
   /** Student web: generated invoice PDFs. */
   invoices: "invoices",
+  /** Playback analytics written by the student app's /api/analytics/video. */
+  videoSessions: "videoSessions",
+  videoStats: "videoStats",
+  courseStats: "courseStats",
+  videoDaily: "videoDaily",
 } as const;

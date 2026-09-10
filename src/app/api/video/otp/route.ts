@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   if (video?.provider === "stream" && video.cfId) {
     return NextResponse.json({
       provider: "stream",
+      videoDocId: videoRef?.id ?? null,
       uid: video.cfId,
       domain: process.env.NEXT_PUBLIC_CF_STREAM_DOMAIN || "",
     });
@@ -70,5 +71,10 @@ export async function POST(req: NextRequest) {
   if (!res.ok || !json.otp) {
     return NextResponse.json({ error: "Could not start playback" }, { status: 502 });
   }
-  return NextResponse.json({ provider: "vdocipher", otp: json.otp, playbackInfo: json.playbackInfo });
+  return NextResponse.json({
+    provider: "vdocipher",
+    videoDocId: videoRef?.id ?? null,
+    otp: json.otp,
+    playbackInfo: json.playbackInfo,
+  });
 }
