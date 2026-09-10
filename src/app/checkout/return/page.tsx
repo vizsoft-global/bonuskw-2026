@@ -14,6 +14,8 @@ type StatusResponse = {
   gatewayStatus?: string | null;
   chargeId?: string | null;
   error?: string;
+  invoiceUrl?: string | null;
+  failure?: string | null;
 };
 
 type Outcome = "checking" | "paid" | "failed" | "pending";
@@ -30,9 +32,14 @@ function ReturnBody() {
   const orderId = params.get("orderId") || "";
   // Tap appends `tap_id` (the charge id) when it redirects back itself.
   const chargeId = params.get("chargeId") || params.get("tap_id") || "";
+  // MyFatoorah appends `paymentId` (and `Id`) to the callback / error URLs.
+  const paymentId = params.get("paymentId") || "";
+  const bounced = params.get("failed") === "1";
+  const [invoiceUrl, setInvoiceUrl] = useState<string>("");
+  const [failure, setFailure] = useState<string>("");
 
   useEffect(() => {
-    if (!user || (!orderId && !chargeId)) return;
+    if (!user || (!orderId && !chargeId && !paymentId)) return;
     let polls = 0;
     let stopped = false;
     let timer: number | undefined;
@@ -45,11 +52,14 @@ function ReturnBody() {
         const query = new URLSearchParams();
         if (orderId) query.set("orderId", orderId);
         if (chargeId) query.set("chargeId", chargeId);
+        if (paymentId) query.set("paymentId", paymentId);
         const res = await fetch(`/api/checkout/status?${query.toString()}`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const json = (await res.json()) as StatusResponse;
         if (json.gatewayStatus) setGateway(json.gatewayStatus);
+        if (json.invoiceUrl) setInvoiceUrl(json.invoiceUrl);
+        if (json.failure) setFailure(json.failure);
         if (json.status === "Paid" || json.status === "CAPTURED") {
           setOutcome("paid");
           // The purchased lines are fulfilled; empty the cart so the next
@@ -63,6 +73,12 @@ function ReturnBody() {
           return;
         }
         if (json.status === "Failed" || res.status === 409) {
+          setOutcome("failed");
+          return;
+        }
+        // MyFatoorah sent the student back after a declined attempt: the
+        // invoice is still open, so offer a retry instead of polling on.
+        if (bounced || json.gatewayStatus === "ATTEMPT_FAILED") {
           setOutcome("failed");
           return;
         }
@@ -81,7 +97,7 @@ function ReturnBody() {
       stopped = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [user, orderId, chargeId]);
+  }, [user, orderId, chargeId, paymentId, bounced]);
 
   const title =
     outcome === "paid"
@@ -95,7 +111,9 @@ function ReturnBody() {
     outcome === "paid"
       ? t("paymentSuccessBody")
       : outcome === "failed"
-        ? t("paymentFailedBody")
+        ? invoiceUrl
+          ? t("attemptFailedBody")
+          : t("paymentFailedBody")
         : outcome === "pending"
           ? t("paymentPendingBody")
           : "";
@@ -105,7 +123,9 @@ function ReturnBody() {
       <div className="glass rounded-3xl p-5">
         <p className="text-2xl font-semibold">{title}</p>
         {body ? <p className="mt-2 text-sm text-muted">{body}</p> : null}
-        {gateway && outcome !== "paid" ? (
+        {failure && outcome !== "paid" ? (
+          <p className="mt-1 text-xs text-muted">{failure}</p>
+        ) : gateway && outcome !== "paid" ? (
           <p className="mt-1 text-xs text-muted">{gateway}</p>
         ) : null}
         <div className="mt-5 flex flex-wrap gap-2">
@@ -119,8 +139,20 @@ function ReturnBody() {
               </Link>
             </>
           ) : null}
+          {outcome === "failed" && invoiceUrl ? (
+            <a href={invoiceUrl} className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+              {t("retryPayment")}
+            </a>
+          ) : null}
           {outcome === "failed" ? (
-            <Link href="/cart" className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
+            <Link
+              href="/cart"
+              className={
+                invoiceUrl
+                  ? "rounded-full border border-line px-5 py-3 text-sm font-medium"
+                  : "rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white"
+              }
+            >
               {t("tryAgain")}
             </Link>
           ) : null}

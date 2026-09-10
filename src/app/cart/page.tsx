@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { LineCard, PayCta, SavedCard } from "@/components/cart/line-card";
-import { PaymentMethod, type PaymentSource } from "@/components/cart/payment-method";
+import { PaymentMethods } from "@/components/cart/payment-method";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
@@ -12,21 +12,13 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import {
-  buildTapCheckoutConfig,
-  loadTapCheckout,
-  type CheckoutSdkPayload,
-  type TapCheckoutPaymentMethod,
-} from "@/lib/payments/tap-checkout";
-
-const TAP_ELEMENT_ID = "tap-checkout-sdk";
 
 type CreateResponse = {
   orderId?: string;
   free?: boolean;
+  /** MyFatoorah hosted payment page for this order. */
   redirectUrl?: string | null;
   url?: string | null;
-  sdk?: CheckoutSdkPayload;
   error?: string;
 };
 
@@ -42,25 +34,11 @@ export default function CartPage() {
   } | null>(null);
   const [coupon, setCoupon] = useState("");
   const [ready, setReady] = useState(false);
-  const [source, setSource] = useState<PaymentSource>("src_kw.knet");
   const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  // Tap Checkout SDK is embedded on this page; `paying` means its popup is open.
-  const [paying, setPaying] = useState(false);
-  const unmountRef = useRef<(() => void) | null>(null);
-
-  // Warm the SDK while the student is still reviewing the cart.
-  useEffect(() => {
-    void loadTapCheckout().catch(() => undefined);
-  }, []);
-
-  const teardown = useCallback(() => {
-    unmountRef.current?.();
-    unmountRef.current = null;
-  }, []);
-
-  useEffect(() => teardown, [teardown]);
+  // True while the browser is being handed to MyFatoorah's hosted page.
+  const [redirecting, setRedirecting] = useState(false);
 
   useEffect(() => {
     if (!user) return;
@@ -115,19 +93,21 @@ export default function CartPage() {
   }
 
   async function pay() {
-    if (!user || !accept || !cart.lines.length || busy || paying) return;
+    if (!user || !accept || !cart.lines.length || busy) return;
     setBusy(true);
     setError("");
     try {
       const latest = await loadCart(user.uid);
       const token = await user.getIdToken();
-      // MyFatoorah is not wired yet; Tap handles K-Net and cards through one SDK.
-      const tapSource = source === "src_card" ? "src_card" : "src_kw.knet";
+      // The server creates a Pending order and a MyFatoorah invoice, then we
+      // hand the browser to the hosted page. MyFatoorah brings the student back
+      // to /checkout/return, which confirms the payment with the server.
       const res = await fetch("/api/checkout/create", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          mode: "sdk",
+          mode: "hosted",
+          language: locale === "ar" ? "ar" : "en",
           lines: latest.lines.map((line) => ({
             kind: line.kind,
             courseId: line.courseId,
@@ -136,7 +116,6 @@ export default function CartPage() {
             paymentType: line.paymentType,
           })),
           couponCode: latest.couponCode,
-          source: tapSource,
           redirectUrl: `${window.location.origin}/checkout/return`,
         }),
       });
@@ -145,49 +124,16 @@ export default function CartPage() {
         setError(json.error || t("paymentFailed"));
         return;
       }
-      if (json.free || !json.sdk) {
-        // Zero-due order was fulfilled on the server, or the API fell back to
-        // the hosted page. Either way there is nothing to embed.
-        const next = json.redirectUrl || json.url;
-        if (next) window.location.href = next;
-        else router.push(`/checkout/return?orderId=${encodeURIComponent(json.orderId || "")}`);
+      const next = json.redirectUrl || json.url;
+      if (json.free || !next) {
+        router.push(`/checkout/return?orderId=${encodeURIComponent(json.orderId || "")}`);
         return;
       }
-
-      const sdkPayload = json.sdk;
-      const thisOrderId = json.orderId || sdkPayload.orderRef;
-      const methods: "ALL" | TapCheckoutPaymentMethod[] =
-        tapSource === "src_kw.knet" ? ["KNET"] : ["VISA", "MASTERCARD", "AMEX", "MADA"];
-
-      const sdk = await loadTapCheckout();
-      teardown();
-      setPaying(true);
-      const { unmount } = sdk.renderCheckout(
-        TAP_ELEMENT_ID,
-        buildTapCheckoutConfig({
-          sdk: sdkPayload,
-          language: locale === "ar" ? "ar" : "en",
-          paymentMethods: methods,
-          onSuccess: ({ chargeId }) => {
-            teardown();
-            router.push(
-              `/checkout/return?orderId=${encodeURIComponent(thisOrderId)}&chargeId=${encodeURIComponent(chargeId)}`,
-            );
-          },
-          onError: (err) => {
-            setError(err?.message || err?.description || t("paymentFailed"));
-          },
-          onClose: () => {
-            teardown();
-            setPaying(false);
-          },
-        }),
-      );
-      unmountRef.current = unmount;
+      setRedirecting(true);
+      window.location.href = next;
     } catch (err) {
       setError(err instanceof Error ? err.message : t("paymentFailed"));
-      teardown();
-      setPaying(false);
+      setRedirecting(false);
     } finally {
       setBusy(false);
     }
@@ -203,7 +149,7 @@ export default function CartPage() {
   const emiEligible = cart.lines.filter((l) => l.kind === "course" && l.emiAvailable !== false);
   const allEmi = emiEligible.length > 0 && emiEligible.every((l) => l.paymentType === "EMI");
   const dueLabel = formatKwdLocale(due, locale);
-  const canPay = accept && !busy && cart.lines.length > 0;
+  const canPay = accept && !busy && !redirecting && cart.lines.length > 0;
   const lineLabels = {
     fullPay: t("fullPay"),
     emi: t("emi"),
@@ -214,35 +160,18 @@ export default function CartPage() {
 
   const checkoutBlock = (
     <div className="flex flex-col gap-[25px] rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
-      <PaymentMethod
-        source={source}
-        onSource={setSource}
-        labels={{ title: t("paymentMethod"), knet: t("knet"), card: t("card"), myFatoorah: t("myFatoorah") }}
-      />
+      <PaymentMethods title={t("paymentMethod")} hint={t("hostedPaymentHint")} />
       <label className="flex items-center gap-2 text-[12px] text-[#999]">
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
       </label>
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
-      {/* Tap Checkout SDK mounts its popup here while a payment is in progress. */}
-      <div id={TAP_ELEMENT_ID} className={paying ? "min-h-[420px] overflow-hidden rounded-[12px] bg-white" : "hidden"} />
       <div className="flex flex-col items-center gap-2.5">
-        {busy ? (
-          <div className="grid h-[49px] w-full place-items-center">
+        {busy || redirecting ? (
+          <div className="grid h-[49px] w-full place-items-center gap-1 text-[12px] text-[#999]">
             <Loader size="inline" />
+            {redirecting ? <span>{t("redirectingToPayment")}</span> : null}
           </div>
-        ) : paying ? (
-          <button
-            type="button"
-            onClick={() => {
-              teardown();
-              setPaying(false);
-              setError("");
-            }}
-            className="h-[49px] w-full rounded-[12px] border border-white/20 text-[12px] font-medium text-[#fafafa]"
-          >
-            {t("changePaymentMethod")}
-          </button>
         ) : (
           <PayCta amount={dueLabel} label={t("proceed")} disabled={!canPay} onPay={() => void pay()} />
         )}

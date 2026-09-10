@@ -1,74 +1,43 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-
-export const PAYMENT_SOURCES = [
-  { id: "src_kw.knet", logo: "/cart/knet.png" },
-  { id: "src_card", logo: "/cart/visa.svg" },
-  { id: "myfatoorah", logo: "/cart/myfatoorah.png" },
+/**
+ * Payment happens on MyFatoorah's hosted page, which offers every method the
+ * account has enabled (KNET, Visa/Mastercard, Apple Pay…). This block just
+ * shows what to expect — there is nothing to select here any more.
+ */
+const LOGOS = [
+  { id: "knet", logo: "/cart/knet.png", alt: "KNET" },
+  { id: "card", logo: "/cart/visa.svg", alt: "Visa / Mastercard" },
+  { id: "myfatoorah", logo: "/cart/myfatoorah.png", alt: "MyFatoorah", fill: true },
 ] as const;
 
-export type PaymentSource = (typeof PAYMENT_SOURCES)[number]["id"];
-
-export function PaymentMethod({
-  source,
-  onSource,
-  labels,
-}: {
-  source: PaymentSource;
-  onSource: (id: PaymentSource) => void;
-  labels: { title: string; knet: string; card: string; myFatoorah: string };
-}) {
-  const items: Array<{ id: PaymentSource; logo: string; label: string; fill?: boolean }> = [
-    { id: "src_kw.knet", logo: "/cart/knet.png", label: labels.knet },
-    { id: "src_card", logo: "/cart/visa.svg", label: labels.card },
-    { id: "myfatoorah", logo: "/cart/myfatoorah.png", label: labels.myFatoorah, fill: true },
-  ];
-
+export function PaymentMethods({ title, hint }: { title: string; hint: string }) {
   return (
     <div className="flex w-full flex-col gap-2.5">
-      <p className="text-[14px] font-medium text-[#999]">{labels.title}</p>
-      <div className="flex flex-col gap-1.5">
-        {items.map((item) => {
-          const selected = source === item.id;
-          return (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => onSource(item.id)}
-              className="flex w-full items-center justify-between rounded-[12px] py-1.5 pe-2.5"
-            >
-              <span className="flex min-w-0 items-center gap-2.5">
-                <span
-                  className={cn(
-                    "relative h-[35px] w-[56px] shrink-0 overflow-hidden rounded-[8px]",
-                    item.fill ? "bg-[#0018ff]" : "bg-[#141414] p-1.5",
-                  )}
-                >
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.logo}
-                    alt=""
-                    className={cn(
-                      "h-full w-full object-center",
-                      item.fill ? "object-cover" : "object-contain",
-                    )}
-                  />
-                </span>
-                <span className="text-[14px] font-medium text-[#fafafa]">{item.label}</span>
-              </span>
-              <span
-                className={cn(
-                  "grid size-4 shrink-0 place-items-center rounded-full border",
-                  selected ? "border-[#f24822]" : "border-[#3c3c3c]",
-                )}
-              >
-                {selected ? <span className="size-2 rounded-full bg-[#f24822]" /> : null}
-              </span>
-            </button>
-          );
-        })}
+      <p className="text-[14px] font-medium text-[#999]">{title}</p>
+      <div className="flex items-center gap-2">
+        {LOGOS.map((item) => (
+          <span
+            key={item.id}
+            title={item.alt}
+            className={
+              "relative h-[35px] w-[56px] shrink-0 overflow-hidden rounded-[8px] " +
+              ("fill" in item && item.fill ? "bg-[#0018ff]" : "bg-[#141414] p-1.5")
+            }
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={item.logo}
+              alt={item.alt}
+              className={
+                "h-full w-full object-center " +
+                ("fill" in item && item.fill ? "object-cover" : "object-contain")
+              }
+            />
+          </span>
+        ))}
       </div>
+      <p className="text-[12px] text-[#999]">{hint}</p>
     </div>
   );
 }
