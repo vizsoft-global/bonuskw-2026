@@ -114,6 +114,7 @@ export function FileTile({
 function TestRow({
   name,
   questionCount,
+  timeLimitMin,
   locked,
   label,
   questionsLabel,
@@ -122,6 +123,7 @@ function TestRow({
 }: {
   name: string;
   questionCount: number;
+  timeLimitMin?: number | null;
   locked: boolean;
   label: string;
   questionsLabel: string;
@@ -145,6 +147,7 @@ function TestRow({
         <span className="block truncate text-[13px] font-medium text-[#fafafa]">{name}</span>
         <span className="text-[11px] text-[#999]">
           {questionCount} {questionsLabel}
+          {timeLimitMin ? ` · ${timeLimitMin} min` : ""}
         </span>
       </span>
       {locked ? (
@@ -279,6 +282,7 @@ export function CourseOutline({
               <TestRow
                 name={item.name}
                 questionCount={item.questionCount}
+                timeLimitMin={item.timeLimitMin}
                 locked={item.locked}
                 label={`${labels.test} ${testNumber}`}
                 questionsLabel={labels.questions}

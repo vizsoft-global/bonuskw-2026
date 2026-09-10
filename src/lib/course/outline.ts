@@ -62,7 +62,15 @@ export type OutlineItem =
       locked: boolean;
       lessons: OutlineLesson[];
     }
-  | { kind: "quiz"; id: string; name: string; questionCount: number; locked: boolean; passPercent?: number }
+  | {
+      kind: "quiz";
+      id: string;
+      name: string;
+      questionCount: number;
+      locked: boolean;
+      passPercent?: number;
+      timeLimitMin?: number | null;
+    }
   | { kind: "file"; id: string; file: OutlineFile };
 
 type Sub = Pick<
@@ -155,6 +163,7 @@ export function buildOutline(input: {
         name: localName(q as Translatable, locale, "Test"),
         questionCount: Number(q.questionCount ?? q.questions?.length ?? 0),
         passPercent: q.passPercent,
+        timeLimitMin: q.timeLimitMin ?? null,
         locked: q.status === false || !enrolled,
       },
     });

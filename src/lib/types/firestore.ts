@@ -503,6 +503,8 @@ export type QuizDoc = {
   status?: boolean;
   /** Optional pass threshold as a percent of totalScore. */
   passPercent?: number;
+  /** Optional time limit in minutes; the player auto-submits at zero. */
+  timeLimitMin?: number | null;
   questions?: QuizQuestion[];
   questionCount?: number;
   totalScore?: number;
