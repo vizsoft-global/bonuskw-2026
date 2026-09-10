@@ -24,4 +24,4 @@ export const ALGOLIA_APP_ID =
 
 export const ADMIN_API_BASE =
   process.env.NEXT_PUBLIC_ADMIN_API_BASE ??
-  "https://bonus-admin-beta.vercel.app";
+  "https://admin.bonuskw.com";
