@@ -160,7 +160,12 @@ export default function CartPage() {
 
   const checkoutBlock = (
     <div className="flex flex-col gap-[25px] rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
-      <PaymentMethods title={t("paymentMethod")} hint={t("hostedPaymentHint")} />
+      <PaymentMethods
+        title={t("paymentMethod")}
+        hint={t("hostedPaymentHint")}
+        testTitle={t("testModeBanner")}
+        copyLabel={t("copyCardNumber")}
+      />
       <label className="flex items-center gap-2 text-[12px] text-[#999]">
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
