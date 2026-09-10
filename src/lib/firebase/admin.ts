@@ -13,6 +13,33 @@ export class AdminConfigError extends Error {
   }
 }
 
+type ServiceAccount = { project_id?: string; client_email?: string; private_key?: string };
+
+/**
+ * Accepts the raw JSON object, or the same JSON stored as a quoted string
+ * (how the Vercel dashboard often ends up saving it), with either real or
+ * escaped newlines in the private key.
+ */
+function parseServiceAccount(raw: string): ServiceAccount {
+  let value: unknown = raw.trim();
+  for (let i = 0; i < 3 && typeof value === "string"; i += 1) {
+    const text = value as string;
+    try {
+      value = JSON.parse(text);
+    } catch {
+      try {
+        value = JSON.parse(text.replace(/\r?\n/g, "\\n"));
+      } catch {
+        break;
+      }
+    }
+  }
+  if (!value || typeof value !== "object") {
+    throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON");
+  }
+  return value as ServiceAccount;
+}
+
 function initAdmin(): App {
   if (app) return app;
   const existing = getApps()[0];
@@ -27,11 +54,10 @@ function initAdmin(): App {
     throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON is not configured");
   }
 
-  const parsed = JSON.parse(json) as {
-    project_id?: string;
-    client_email?: string;
-    private_key?: string;
-  };
+  const parsed = parseServiceAccount(json);
+  if (!parsed.client_email || !parsed.private_key) {
+    throw new AdminConfigError("FIREBASE_SERVICE_ACCOUNT_JSON is missing client_email/private_key");
+  }
   app = initializeApp({
     credential: cert({
       projectId: parsed.project_id ?? projectId,
