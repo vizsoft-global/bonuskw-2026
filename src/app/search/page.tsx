@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpDown, Clock, Shapes, Star, X } from "lucide-react";
-import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
+import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { HomeIcon } from "@/components/home/icon";
 import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -27,6 +27,15 @@ import {
 } from "@/lib/search/recents";
 import type { CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+
+function normalizeSearch(value: unknown) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
 
 function FilterSelect({
   value,
@@ -93,6 +102,22 @@ export default function SearchPage() {
   }
 
   const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses });
+  // Instructor names so "ahmed" also finds every course Dr Ahmed teaches.
+  const instructors = useQuery({
+    queryKey: ["search-instructors"],
+    staleTime: 10 * 60_000,
+    queryFn: async () => {
+      const snap = await getDocs(
+        query(collection(getDb(), collections.users), where("userRole", "==", "Instructor")),
+      );
+      const out: Record<string, string> = {};
+      for (const d of snap.docs) {
+        const data = d.data() as { display_name?: string; firstName?: string; lastName?: string };
+        out[d.id] = data.display_name || `${data.firstName ?? ""} ${data.lastName ?? ""}`.trim();
+      }
+      return out;
+    },
+  });
   const remote = useQuery({
     queryKey: ["algolia", q, rating, sort],
     enabled: q.length > 1,
@@ -104,10 +129,26 @@ export default function SearchPage() {
 
   const results = useMemo(() => {
     const base = (courses.data ?? []).filter((c) => !c.trashed);
-    const text = q.toLowerCase();
+    // Wild match: case/accent-insensitive, every typed word must appear in the
+    // course name (any language), subtitle, SKU or instructor name.
+    const words = normalizeSearch(q).split(" ").filter(Boolean);
     let rows = base.filter((c) => {
-      const name = localizedField(c.name, c.nameManualTranslate, c.nameAutoTranslate, locale).toLowerCase();
-      return !text || name.includes(text) || (c.subtitle || "").toLowerCase().includes(text);
+      if (!words.length) return true;
+      const hay = normalizeSearch(
+        [
+          c.name,
+          c.nameManualTranslate?.en,
+          c.nameManualTranslate?.ar,
+          c.nameAutoTranslate?.en,
+          c.nameAutoTranslate?.ar,
+          c.subtitle,
+          c.sku,
+          c.authorRef?.id ? instructors.data?.[c.authorRef.id] : "",
+        ]
+          .filter(Boolean)
+          .join(" "),
+      );
+      return words.every((w) => hay.includes(w));
     });
     if (rating) rows = rows.filter((c) => (c.totalRatting || 0) >= rating);
     if (topic) rows = rows.filter((c) => c.branchRef?.id === topic);
@@ -117,7 +158,7 @@ export default function SearchPage() {
       return 0;
     });
     return rows;
-  }, [courses.data, q, rating, sort, topic, locale]);
+  }, [courses.data, instructors.data, q, rating, sort, topic]);
 
   // Topics that at least one course is filed under, shown by name.
   const topicIds = new Set((courses.data ?? []).map((c) => c.branchRef?.id).filter(Boolean));
