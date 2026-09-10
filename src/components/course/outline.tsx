@@ -170,14 +170,17 @@ export function CourseOutline({
   labels,
   onLesson,
   onQuiz,
+  onBuyChapter,
   activeId,
   compact,
 }: {
   items: OutlineItem[];
   locale: Locale;
-  labels: { download: string; test: string; questions: string; chapter: string };
+  labels: { download: string; test: string; questions: string; chapter: string; buyChapter?: string };
   onLesson?: (lessonId: string) => void;
   onQuiz?: (quizId: string) => void;
+  /** Adds a sellable, still-locked chapter to the cart. */
+  onBuyChapter?: (chapterId: string) => void;
   /** Currently playing lesson or open quiz (learn page). */
   activeId?: string;
   /** Sidebar layout: single-column rows instead of tiles. */
@@ -255,10 +258,15 @@ export function CourseOutline({
                     </div>
                   ),
                 )}
-                {item.sellable && !compact ? (
-                  <p className="col-span-full text-[12px] text-[#0c5eff]">
-                    {formatKwdLocale(Number(item.price), locale)}
-                  </p>
+                {item.sellable && item.locked && !compact ? (
+                  <button
+                    type="button"
+                    onClick={onBuyChapter ? () => onBuyChapter(item.id) : undefined}
+                    disabled={!onBuyChapter}
+                    className="col-span-full inline-flex w-fit items-center gap-1.5 rounded-full border border-[#0c5eff]/40 bg-[#0c5eff]/10 px-3 py-1.5 text-[12px] font-medium text-[#0c5eff] hover:bg-[#0c5eff]/20 disabled:opacity-60"
+                  >
+                    {labels.buyChapter ?? "Buy chapter"} · {formatKwdLocale(Number(item.price), locale)}
+                  </button>
                 ) : null}
               </div>
             </section>

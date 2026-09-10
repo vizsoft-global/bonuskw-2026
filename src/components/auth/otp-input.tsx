@@ -27,7 +27,10 @@ export function OtpInput({
             refs.current[i] = el;
           }}
           value={chars[i] ?? ""}
+          type="tel"
           inputMode="numeric"
+          pattern="[0-9]*"
+          autoComplete={i === 0 ? "one-time-code" : "off"}
           maxLength={1}
           aria-label={`Digit ${i + 1}`}
           placeholder="-"

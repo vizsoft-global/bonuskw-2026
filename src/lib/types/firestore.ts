@@ -679,6 +679,8 @@ export type SettingsStory = {
   /** Display title. `name` mirrors it for the Flutter app. */
   title?: string;
   name?: string;
+  /** Caption written in the admin; shown over the media while the story plays. */
+  description?: string;
   /** Thumbnail / poster; also the media for image stories. */
   image?: string;
   images?: string[];

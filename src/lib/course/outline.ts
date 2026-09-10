@@ -3,6 +3,7 @@ import { paidInstallments } from "@/lib/course/entitlement";
 import { isChapterLocked, isLessonLocked } from "@/lib/course/locks";
 import { fileNameFromUrl } from "@/components/course/resource-row";
 import { resourceKind, type ResourceKind } from "@/lib/course/resource-kind";
+import { localizedField, type Locale } from "@/lib/i18n/content";
 import type {
   ChapterDoc,
   CourseResourceDoc,
@@ -13,6 +14,24 @@ import type {
 } from "@/lib/types/firestore";
 
 type Row = { id: string; [key: string]: unknown };
+
+type Translatable = {
+  name?: string;
+  nameManualTranslate?: { ar?: string; en?: string };
+  nameAutoTranslate?: { ar?: string; en?: string };
+};
+
+/** Chapter/lesson/test names in the student's language when a translation is stored. */
+function localName(doc: Translatable, locale: Locale, fallback: string) {
+  return (
+    localizedField(
+      typeof doc.name === "string" ? doc.name : undefined,
+      doc.nameManualTranslate,
+      doc.nameAutoTranslate,
+      locale,
+    ) || fallback
+  );
+}
 
 export type OutlineFile = {
   id: string;
@@ -65,7 +84,10 @@ export function buildOutline(input: {
   subscription?: Sub;
   /** Enrolment through a chapter purchase, by chapter id. */
   purchasedChapterIds?: Set<string>;
+  /** Language for chapter/lesson/test names; English when omitted. */
+  locale?: Locale;
 }): OutlineItem[] {
+  const locale: Locale = input.locale ?? "en";
   const paid = paidInstallments(input.subscription ?? null);
   const enrolled = Boolean(input.subscription && input.subscription.status === "Ongoing");
   const purchased = input.purchasedChapterIds ?? new Set<string>();
@@ -102,7 +124,7 @@ export function buildOutline(input: {
         });
       return {
         id: row.id,
-        name: String(lesson.name || "Lesson"),
+        name: localName(lesson as Translatable, locale, "Lesson"),
         image: typeof lesson.image === "string" ? lesson.image : undefined,
         videoDuration: Number(lesson.videoDuration || 0),
         locked: !lessonOpen && lesson.lessonStatus !== "Unlock",
@@ -114,7 +136,7 @@ export function buildOutline(input: {
       item: {
         kind: "chapter",
         id: chapter.id,
-        name: String(c.name || "Chapter"),
+        name: localName(c as Translatable, locale, "Chapter"),
         sellable: Boolean(c.sellable),
         price: typeof c.price === "number" ? c.price : undefined,
         locked: !chapterOpen,
@@ -130,7 +152,7 @@ export function buildOutline(input: {
       item: {
         kind: "quiz",
         id: quiz.id,
-        name: String(q.name || "Test"),
+        name: localName(q as Translatable, locale, "Test"),
         questionCount: Number(q.questionCount ?? q.questions?.length ?? 0),
         passPercent: q.passPercent,
         locked: q.status === false || !enrolled,

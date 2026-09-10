@@ -124,19 +124,45 @@ export async function sendGatewayOtp(phone: string, channel: OtpChannel, ip = ""
   const endpoint =
     process.env.OTP_GATEWAY_URL ?? "https://proxy.vizsoft.in/https://backend.vizsoft.in/send_sms";
   let ok = false;
+  let detail = "";
   try {
     const res = await fetch(endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        // The Vizsoft proxy expects these, same as the admin's SMS route.
+        origin: "https://proxy.vizsoft.in",
+        "x-requested-with": "https://backend.vizsoft.in",
+      },
       body: JSON.stringify({ message, to_numbers: [phone], channel }),
     });
-    ok = res.ok;
-  } catch {
+    const text = await res.text();
+    let body: { status?: unknown; message?: unknown } = {};
+    try {
+      body = JSON.parse(text) as typeof body;
+    } catch {
+      /* non-JSON gateway reply */
+    }
+    // The gateway answers 200 with `status: "error"` for provider failures.
+    ok = res.ok && body.status !== "error" && body.status !== false;
+    if (!ok) {
+      detail = typeof body.message === "string" ? body.message : text.slice(0, 200);
+      console.error(`[otp] ${channel} send failed for ${phone}: HTTP ${res.status} ${detail}`);
+    }
+  } catch (err) {
     ok = false;
+    detail = err instanceof Error ? err.message : "network error";
+    console.error(`[otp] ${channel} gateway unreachable: ${detail}`);
   }
   if (!ok) {
     await ref.delete().catch(() => undefined);
-    throw new OtpError("send_failed", "Could not send the code. Try another channel.", 502);
+    throw new OtpError(
+      "send_failed",
+      channel === "whatsapp"
+        ? "WhatsApp delivery is unavailable right now. Try SMS or wait a moment."
+        : "SMS delivery is unavailable right now. Try WhatsApp or wait a moment.",
+      502,
+    );
   }
 }
 

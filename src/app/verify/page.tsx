@@ -27,6 +27,9 @@ function VerifyForm() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [showFallback, setShowFallback] = useState(false);
+  /** Which sender issued the code being typed; verification must match it. */
+  const [channel, setChannel] = useState<"firebase" | "whatsapp" | "sms">("firebase");
+  const [notice, setNotice] = useState("");
   const [phone] = useState(
     () => (typeof window !== "undefined" ? window.sessionStorage.getItem("ba_phone") || "" : ""),
   );
@@ -44,10 +47,28 @@ function VerifyForm() {
     setBusy(true);
     setError("");
     try {
-      await confirmSms(code);
+      if (channel === "firebase") await confirmSms(code);
+      else await confirmFallback(phone, code);
       await done();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Invalid code");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend(via: "firebase" | "whatsapp" | "sms") {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      if (via === "firebase") await sendSms(phone);
+      else await sendFallback(phone, via);
+      setChannel(via);
+      setCode("");
+      setNotice(t("codeResent"));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not send code");
     } finally {
       setBusy(false);
     }
@@ -80,16 +101,16 @@ function VerifyForm() {
           <OtpInput value={code} onChange={setCode} />
           <button
             type="button"
-            className="text-[14px] font-medium text-white underline"
-            onClick={() =>
-              void sendSms(phone).catch((err: Error) => setError(err.message))
-            }
+            disabled={busy}
+            className="text-[14px] font-medium text-white underline disabled:opacity-60"
+            onClick={() => void resend("firebase")}
           >
             {t("resendCode")}
           </button>
         </div>
         <div className="flex flex-col gap-2.5">
           {error ? <p className="text-sm text-accent">{error}</p> : null}
+          {notice && !error ? <p className="text-sm text-white/70">{notice}</p> : null}
           <CtaButton loading={busy} disabled={busy || code.replace(/\D/g, "").length < 6} onClick={() => void verify()}>
             {t("verifyContinue")}
           </CtaButton>
@@ -97,19 +118,17 @@ function VerifyForm() {
             <div className="flex flex-col gap-2">
               <button
                 type="button"
-                className="text-sm text-white/60"
-                onClick={() => void sendFallback(phone, "whatsapp").catch((err: Error) => setError(err.message))}
+                disabled={busy}
+                className="text-sm text-white/60 disabled:opacity-60"
+                onClick={() => void resend("whatsapp")}
               >
                 {t("whatsapp")}
               </button>
               <button
                 type="button"
-                className="text-sm text-white/40"
-                onClick={() =>
-                  void sendFallback(phone, "sms")
-                    .then(() => confirmFallback(phone, code).then(done))
-                    .catch((err: Error) => setError(err.message))
-                }
+                disabled={busy}
+                className="text-sm text-white/40 disabled:opacity-60"
+                onClick={() => void resend("sms")}
               >
                 {t("smsFallback")}
               </button>

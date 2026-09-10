@@ -1,6 +1,7 @@
 "use client";
 
 import { HomeIcon } from "@/components/home/icon";
+import { useI18n } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 export function LessonRow({
@@ -14,6 +15,7 @@ export function LessonRow({
   duration?: number;
   locked: boolean;
 }) {
+  const { t } = useI18n();
   const mins = duration && Number.isFinite(duration) ? Math.max(1, Math.round(duration / 60)) : 0;
 
   return (
@@ -40,7 +42,7 @@ export function LessonRow({
         <span className="size-3 shrink-0">
           <HomeIcon src="/course/clock.svg" />
         </span>
-        {mins} min
+        {mins} {t("minShort")}
       </span>
     </div>
   );

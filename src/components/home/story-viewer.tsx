@@ -256,7 +256,7 @@ export function StoryViewer({
                   <img src={storyThumb(story)} alt="" className="h-full w-full object-cover" />
                 ) : null}
               </span>
-              <p className="min-w-0 truncate text-[16px] font-semibold text-[#fafafa]">
+              <p className="min-w-0 truncate text-[16px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
                 {story.title || t("story")}
               </p>
             </div>
@@ -351,6 +351,14 @@ export function StoryViewer({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={segment.url} alt="" className="h-full w-full object-cover" />
             )}
+
+            {story.description?.trim() ? (
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-12">
+                <p className="line-clamp-4 whitespace-pre-line text-[14px] leading-5 text-white drop-shadow">
+                  {story.description.trim()}
+                </p>
+              </div>
+            ) : null}
 
             {segment.kind === "video" ? (
               <button

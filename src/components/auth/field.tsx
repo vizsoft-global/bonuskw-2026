@@ -27,10 +27,12 @@ export function Field({
           ) : null}
           <input
             value={value}
-            onChange={(e) => onChange(e.target.value)}
+            onChange={(e) => onChange(phone ? e.target.value.replace(/\D/g, "") : e.target.value)}
             placeholder={placeholder}
-            type={type}
+            type={phone ? "tel" : type}
             inputMode={phone ? "numeric" : undefined}
+            pattern={phone ? "[0-9]*" : undefined}
+            maxLength={phone ? 12 : undefined}
             autoComplete={autoComplete}
             className={cn(
               "min-w-0 flex-1 bg-transparent font-medium text-white outline-none placeholder:text-white/30",

@@ -114,6 +114,44 @@ export default function CoursePage() {
     }
   }
 
+  /** Single-chapter purchase: same cart flow as the course, one chapter line. */
+  async function addChapterToCart(chapterId: string) {
+    if (!ready) return;
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    const c = course.data;
+    const chapter = chapters.data?.find((row) => row.id === chapterId) as
+      | { name?: string; price?: number }
+      | undefined;
+    if (!c || !chapter) return;
+    setBusy(true);
+    setCartError("");
+    try {
+      const cart = await loadCart(user.uid);
+      await saveCart(
+        user.uid,
+        upsertLine(cart, {
+          kind: "chapter",
+          courseId: id,
+          chapterId,
+          paymentType: "Full payment",
+          title: `${c.name ?? ""} › ${chapter.name ?? ""}`.trim(),
+          image: c.image,
+          price: Number(chapter.price) || 0,
+          ...(batch.data?.name ? { batch: batch.data.name } : {}),
+          addedAt: Date.now(),
+        }),
+      );
+      router.push("/cart");
+    } catch (err) {
+      setCartError(err instanceof Error ? err.message : "Could not add to cart");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function share() {
     const url = window.location.href;
     try {
@@ -164,6 +202,7 @@ export default function CoursePage() {
     quizzes: quizzes.data ?? [],
     resources: resources.data ?? [],
     subscription: subscription.data ?? null,
+    locale,
   });
   const counts = outlineCounts(outline);
   const enrolled = subscription.data?.status === "Ongoing";
@@ -230,9 +269,16 @@ export default function CoursePage() {
       <CourseOutline
         items={outline}
         locale={locale}
-        labels={{ download: t("download"), test: t("test"), questions: t("questions"), chapter: t("chapters") }}
+        labels={{
+          download: t("download"),
+          test: t("test"),
+          questions: t("questions"),
+          chapter: t("chapters"),
+          buyChapter: t("buyChapter"),
+        }}
         onLesson={enrolled ? (lessonId) => router.push(`/course/${id}/learn?lesson=${lessonId}`) : undefined}
         onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
+        onBuyChapter={c.coursePaymentType === "Free" ? undefined : (chapterId) => void addChapterToCart(chapterId)}
       />
     </AppShell>
   );

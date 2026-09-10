@@ -46,8 +46,9 @@ function LearnBody() {
         quizzes: quizzes.data ?? [],
         resources: resources.data ?? [],
         subscription: subscription.data ?? null,
+        locale,
       }),
-    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data],
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, locale],
   );
 
   // Fall back to the first lesson until one is chosen; no effect needed.
