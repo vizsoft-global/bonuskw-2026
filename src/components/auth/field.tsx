@@ -8,6 +8,8 @@ export function Field({
   phone,
   type = "text",
   autoComplete,
+  trailing,
+  onSubmit,
 }: {
   label: string;
   value: string;
@@ -16,29 +18,39 @@ export function Field({
   phone?: boolean;
   type?: string;
   autoComplete?: string;
+  /** Small control shown at the end of the value row (e.g. show password). */
+  trailing?: React.ReactNode;
+  /** Enter key. */
+  onSubmit?: () => void;
 }) {
   return (
-    <label className="flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/20 p-[15px]">
-      <span className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <span className="text-[14px] text-white/60">{label}</span>
-        <span className="flex items-baseline gap-1">
+    <label className="flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/20 px-[15px] py-3.5 focus-within:border-white/50">
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="text-[13px] text-white/60">{label}</span>
+        {/* Prefix and digits share one line box so they sit on the same centre line. */}
+        <span className="flex h-8 items-center gap-1.5" dir={phone || type === "email" ? "ltr" : undefined}>
           {phone ? (
-            <span className="text-[24px] font-medium text-white">+965</span>
+            <span className="text-[24px] font-medium leading-none text-white">+965</span>
           ) : null}
           <input
             value={value}
             onChange={(e) => onChange(phone ? e.target.value.replace(/\D/g, "") : e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && onSubmit) onSubmit();
+            }}
             placeholder={placeholder}
             type={phone ? "tel" : type}
-            inputMode={phone ? "numeric" : undefined}
+            dir={phone || type === "email" ? "ltr" : undefined}
+            inputMode={phone ? "numeric" : type === "email" ? "email" : undefined}
             pattern={phone ? "[0-9]*" : undefined}
-            maxLength={phone ? 12 : undefined}
+            maxLength={phone ? 8 : undefined}
             autoComplete={autoComplete}
             className={cn(
-              "min-w-0 flex-1 bg-transparent font-medium text-white outline-none placeholder:text-white/30",
-              phone ? "text-[24px]" : "text-[14px]",
+              "h-8 min-w-0 flex-1 bg-transparent p-0 font-medium leading-none text-white outline-none placeholder:text-white/30",
+              phone ? "text-[24px] tracking-wide" : "text-[16px]",
             )}
           />
+          {trailing}
         </span>
       </span>
     </label>

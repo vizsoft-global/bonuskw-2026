@@ -144,7 +144,7 @@ function PayBody() {
 
 export default function DuesPayPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-[#050505]" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-app-top" />}>
       <PayBody />
     </Suspense>
   );

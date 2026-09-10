@@ -327,13 +327,13 @@ function AppChrome({ children }: { children: ReactNode }) {
 
   return (
     <ShellContext.Provider value={ctx}>
-      <div className="relative min-h-dvh overflow-x-hidden bg-[#050505] text-[#fafafa]">
+      <div className="relative min-h-dvh overflow-x-hidden bg-app-top text-[#fafafa]">
         <CatalogWarmup />
         <CustomPopupHost />
         <InstallPrompt />
         <HeaderGlow />
 
-        <header className="relative z-40 overflow-visible lg:sticky lg:top-0 lg:bg-[#050505]">
+        <header className="relative z-40 overflow-visible lg:sticky lg:top-0 lg:bg-app-top">
           <DesktopGlow />
           <div className="relative hidden items-center justify-between px-[30px] py-[15px] lg:flex">
             <div className="flex items-center gap-8">
@@ -418,7 +418,7 @@ function AppChrome({ children }: { children: ReactNode }) {
               </div>
             </div>
           ) : isChrome ? (
-            <div className="relative overflow-hidden rounded-b-[18px] bg-[#141414] px-[15px] pb-5 pt-safe-header lg:hidden">
+            <div className="relative overflow-hidden rounded-b-[18px] bg-app-top px-[15px] pb-5 pt-safe-header lg:hidden">
               <div
                 className="pointer-events-none absolute start-[84px] -top-10 h-[231px] w-[409px] rounded-full opacity-[0.14] blur-[50px]"
                 style={{ background: GLOW }}

@@ -3,6 +3,7 @@ import { IBM_Plex_Sans_Arabic, Inter } from "next/font/google";
 import { Providers } from "@/components/providers";
 import { AppFrame } from "@/components/layout/app-shell";
 import { PwaRegister } from "@/components/system/pwa-register";
+import { ThemeColorSync } from "@/components/system/theme-color-sync";
 import { VersionGuard } from "@/components/system/version-guard";
 import "./globals.css";
 
@@ -38,7 +39,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#0B0B0C",
+  // Fallbacks before ThemeColorSync runs; must match `--app-top`.
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#f6f6f8" },
+    { media: "(prefers-color-scheme: dark)", color: "#050505" },
+    { color: "#050505" },
+  ],
   width: "device-width",
   initialScale: 1,
   // Draw under the notch / home indicator; safe-area insets handle spacing.
@@ -51,6 +57,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <Providers>
           <VersionGuard />
+          <ThemeColorSync />
           <PwaRegister />
           <div id="ba-recaptcha" />
           <AppFrame>{children}</AppFrame>

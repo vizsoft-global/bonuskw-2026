@@ -31,7 +31,7 @@ export default function OfflinePage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-[#050505] px-6 text-center text-[#fafafa] pt-safe-header pb-safe">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-app-top px-6 text-center text-[#fafafa] pt-safe-header pb-safe">
       <Image src="/icons/icon-192.png" alt="" width={72} height={72} className="size-[72px] rounded-2xl" priority />
       <span className="mt-6 grid size-12 place-items-center rounded-full bg-white/10 text-[#ff4a1c]">
         <WifiOff className="size-6" />

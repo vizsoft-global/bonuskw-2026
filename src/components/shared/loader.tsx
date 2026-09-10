@@ -27,7 +27,7 @@ export function Loader({
 
 export function PageLoader({ full }: { full?: boolean }) {
   return (
-    <div className={cn("grid place-items-center", full ? "fixed inset-0 z-[80] min-h-dvh bg-[#050505]" : "min-h-[40vh]")}>
+    <div className={cn("grid place-items-center", full ? "fixed inset-0 z-[80] min-h-dvh bg-app-top" : "min-h-[40vh]")}>
       <Loader size={full ? "splash" : "page"} />
     </div>
   );

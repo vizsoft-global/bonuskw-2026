@@ -4,7 +4,7 @@ import { Loader } from "@/components/shared/loader";
 
 export function Splash() {
   return (
-    <main className="fixed inset-0 z-[80] grid min-h-dvh place-items-center overflow-hidden bg-[#050505]">
+    <main className="fixed inset-0 z-[80] grid min-h-dvh place-items-center overflow-hidden bg-app-top">
       <div className="pointer-events-none absolute inset-0 opacity-60">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img

@@ -3,6 +3,7 @@ import { createHash, randomInt, timingSafeEqual } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { collections } from "@/lib/firebase/collections";
+import { findLegacyUserByPhone } from "@/lib/server/phone";
 
 const TTL_MS = 5 * 60 * 1000;
 const PHONE_COOLDOWN_MS = 30_000;
@@ -192,15 +193,12 @@ export async function verifyGatewayOtp(phone: string, code: string) {
 export async function issueTokenForPhone(phone: string, currentUid?: string) {
   const db = getAdminDb();
   const auth = getAdminAuth();
-  const match = await db
-    .collection(collections.users)
-    .where("phone_number", "==", phone)
-    .limit(1)
-    .get();
+  // Legacy Flutter accounts stored the number in several spellings; match all.
+  const legacy = await findLegacyUserByPhone(db, phone);
 
   let uid = currentUid;
-  if (!match.empty) {
-    uid = match.docs[0].id;
+  if (legacy) {
+    uid = legacy.id;
   }
   if (!uid) {
     try {
@@ -223,7 +221,9 @@ export async function issueTokenForPhone(phone: string, currentUid?: string) {
   await userRef.set(
     {
       uid,
-      phone_number: phone,
+      // Keep the legacy spelling if one exists; add the canonical form beside it.
+      ...(existing.get("phone_number") ? {} : { phone_number: phone }),
+      phoneE164: phone,
       phoneVerified: true,
       userRole: existing.get("userRole") ?? "Student",
       ...(existing.exists ? {} : { created_time: FieldValue.serverTimestamp() }),
@@ -234,15 +234,17 @@ export async function issueTokenForPhone(phone: string, currentUid?: string) {
   return auth.createCustomToken(uid);
 }
 
+/**
+ * After a Firebase phone sign-in created (or reused) an Auth user, find the
+ * legacy Firestore account that owns the number and mint a token for it so the
+ * student lands on their enrollments instead of an empty profile.
+ */
 export async function legacyLinkToken(currentUid: string, phone: string) {
   if (!isE164(phone)) return null;
   const db = getAdminDb();
-  const match = await db
-    .collection(collections.users)
-    .where("phone_number", "==", phone)
-    .limit(5)
-    .get();
-  const legacy = match.docs.find((doc) => doc.id !== currentUid);
+  const legacy = await findLegacyUserByPhone(db, phone, currentUid);
   if (!legacy) return null;
+  // Stamp the canonical number so the next lookup is a single indexed hit.
+  await legacy.ref.set({ phoneE164: phone, phoneVerified: true }, { merge: true }).catch(() => undefined);
   return getAdminAuth().createCustomToken(legacy.id);
 }

@@ -24,7 +24,7 @@ export function AuthShell({
   const router = useRouter();
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[#050505] text-white">
+    <div className="relative min-h-dvh overflow-hidden bg-app-top text-white">
       <div className="pointer-events-none absolute -end-16 -top-40 size-[613px] lg:end-[-8%] lg:top-[12%] lg:size-[900px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/glow.svg" alt="" className="size-full max-w-none" />
@@ -38,8 +38,8 @@ export function AuthShell({
         />
       </div>
 
-      <header className="relative z-10 flex h-[94px] items-end px-[15px] pb-2.5 lg:hidden">
-        <div className="flex w-full items-center justify-between">
+      <header className="relative z-10 flex items-end px-[15px] pb-2.5 pt-safe lg:hidden">
+        <div className="flex h-14 w-full items-center justify-between">
           {showBack ? (
             <button
               type="button"
@@ -53,7 +53,8 @@ export function AuthShell({
           ) : (
             <span className="size-6" />
           )}
-          {headerLink}
+          {headerLink ?? <BrandLogo size="nav" />}
+          <span className="size-6" />
         </div>
       </header>
 

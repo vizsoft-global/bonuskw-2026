@@ -215,7 +215,7 @@ export function StoryViewer({
       return null;
     }
     return (
-      <main className="grid min-h-dvh place-items-center bg-[#050505] text-[#999]">
+      <main className="grid min-h-dvh place-items-center bg-app-top text-[#999]">
         {t("empty")}
       </main>
     );
@@ -226,7 +226,7 @@ export function StoryViewer({
       className={
         embedded
           ? "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
-          : "relative min-h-dvh overflow-clip bg-[#050505] text-[#fafafa]"
+          : "relative min-h-dvh overflow-clip bg-app-top text-[#fafafa]"
       }
       onClick={embedded ? (e) => e.target === e.currentTarget && close() : undefined}
       role={embedded ? "dialog" : undefined}

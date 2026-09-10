@@ -4,33 +4,50 @@ import { collections } from "@/lib/firebase/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
 import { isE164 } from "@/lib/server/otp";
+import { findLegacyUserByPhone, toE164 } from "@/lib/server/phone";
 
 export const runtime = "nodejs";
 
 const SOCIAL_PROVIDERS = new Set(["google.com", "apple.com"]);
 
+/**
+ * Creates or completes `users/{uid}` for the signed-in Firebase user. When a
+ * phone is supplied (phone sign-in, or a phone linked during onboarding) it is
+ * recorded only if no other student already owns that number.
+ */
 export async function POST(req: NextRequest) {
   const user = await verifyIdToken(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { phone?: unknown };
   const bodyPhone = typeof body.phone === "string" && isE164(body.phone) ? body.phone : "";
-  const phone = bodyPhone || user.phone_number || "";
+  const phone = toE164(bodyPhone || user.phone_number || "") ?? "";
   const provider = user.firebase?.sign_in_provider ?? "";
   const social = SOCIAL_PROVIDERS.has(provider);
 
   try {
-    const ref = getAdminDb().collection(collections.users).doc(user.uid);
+    const db = getAdminDb();
+    const ref = db.collection(collections.users).doc(user.uid);
     const snap = await ref.get();
     const patch: Record<string, unknown> = { uid: user.uid };
+    let phoneConflict = false;
+
+    if (phone) {
+      const owner = await findLegacyUserByPhone(db, phone, user.uid);
+      if (owner) {
+        phoneConflict = true;
+      } else if (!snap.exists || !snap.get("phone_number") || toE164(snap.get("phone_number")) === phone) {
+        if (!snap.get("phone_number")) patch.phone_number = phone;
+        patch.phoneE164 = phone;
+        patch.phoneVerified = true;
+      }
+    } else if (snap.exists && snap.get("phone_number") && !snap.get("phoneE164")) {
+      const canonical = toE164(snap.get("phone_number"));
+      if (canonical) patch.phoneE164 = canonical;
+    }
 
     if (!snap.exists) {
       patch.userRole = "Student";
       patch.created_time = FieldValue.serverTimestamp();
-      patch.phone_number = phone;
-      patch.phoneVerified = Boolean(phone);
-    } else if (phone && !snap.get("phone_number")) {
-      patch.phone_number = phone;
-      patch.phoneVerified = true;
     }
 
     if (social || !snap.exists) {
@@ -41,7 +58,7 @@ export async function POST(req: NextRequest) {
     }
 
     await ref.set(patch, { merge: true });
-    return NextResponse.json({ ok: true, created: !snap.exists });
+    return NextResponse.json({ ok: true, created: !snap.exists, phoneConflict });
   } catch {
     return NextResponse.json({ error: "Could not save profile" }, { status: 500 });
   }

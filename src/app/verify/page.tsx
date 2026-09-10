@@ -1,11 +1,12 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { AuthHeaderLink, AuthHeading, AuthShell } from "@/components/auth/auth-shell";
+import { Suspense, useState } from "react";
+import { useRouter } from "next/navigation";
+import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CtaButton } from "@/components/auth/cta-button";
 import { OtpInput } from "@/components/auth/otp-input";
 import { PageLoader } from "@/components/shared/loader";
+import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 
@@ -19,14 +20,11 @@ function maskPhone(phone: string) {
 
 function VerifyForm() {
   const { t } = useI18n();
-  const { confirmSms, sendSms, sendFallback, confirmFallback, needsOnboarding } = useAuth();
+  const { confirmSms, sendSms, sendFallback, confirmFallback } = useAuth();
   const router = useRouter();
-  const params = useSearchParams();
-  const mode = params.get("mode") === "signup" ? "signup" : "login";
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
   /** Which sender issued the code being typed; verification must match it. */
   const [channel, setChannel] = useState<"firebase" | "whatsapp" | "sms">("firebase");
   const [notice, setNotice] = useState("");
@@ -34,24 +32,16 @@ function VerifyForm() {
     () => (typeof window !== "undefined" ? window.sessionStorage.getItem("ba_phone") || "" : ""),
   );
 
-  useEffect(() => {
-    const id = window.setTimeout(() => setShowFallback(true), 30000);
-    return () => window.clearTimeout(id);
-  }, []);
-
-  async function done() {
-    router.replace(needsOnboarding ? "/onboarding" : "/");
-  }
-
   async function verify() {
     setBusy(true);
     setError("");
     try {
-      if (channel === "firebase") await confirmSms(code);
-      else await confirmFallback(phone, code);
-      await done();
+      // The result carries the fresh profile state, so the redirect never
+      // reads a stale `needsOnboarding` from before the sign-in.
+      const result = channel === "firebase" ? await confirmSms(code) : await confirmFallback(phone, code);
+      router.replace(result.needsOnboarding ? "/onboarding" : "/");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Invalid code");
+      setError(authErrorMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -68,72 +58,63 @@ function VerifyForm() {
       setCode("");
       setNotice(t("codeResent"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not send code");
+      setError(authErrorMessage(err, t));
     } finally {
       setBusy(false);
     }
   }
 
+  const ready = code.replace(/\D/g, "").length === 6;
+
   return (
-    <AuthShell
-      headerLink={
-        mode === "signup" ? (
-          <AuthHeaderLink prefix={t("haveAccountLogin")} action={t("logInLink")} href="/login" />
-        ) : (
-          <AuthHeaderLink
-            prefix={t("noAccountSignup")}
-            action={t("signupLink")}
-            href="/login?mode=signup"
-          />
-        )
-      }
-    >
-      <div className="flex flex-col gap-[43px]">
+    <AuthShell>
+      <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2.5">
           <AuthHeading>{t("verifyPhone")}</AuthHeading>
           <p className="text-[14px] text-white/60">
             {t("codeSentTo")}
             <br />
-            {phone ? maskPhone(phone) : ""}
+            <span className="font-medium text-white" dir="ltr">
+              {phone ? maskPhone(phone) : ""}
+            </span>
           </p>
         </div>
-        <div className="flex flex-col items-end gap-2.5">
+        <div className="flex flex-col gap-3">
           <OtpInput value={code} onChange={setCode} />
-          <button
-            type="button"
-            disabled={busy}
-            className="text-[14px] font-medium text-white underline disabled:opacity-60"
-            onClick={() => void resend("firebase")}
-          >
-            {t("resendCode")}
-          </button>
-        </div>
-        <div className="flex flex-col gap-2.5">
           {error ? <p className="text-sm text-accent">{error}</p> : null}
           {notice && !error ? <p className="text-sm text-white/70">{notice}</p> : null}
-          <CtaButton loading={busy} disabled={busy || code.replace(/\D/g, "").length < 6} onClick={() => void verify()}>
+          <CtaButton loading={busy} disabled={busy || !ready} onClick={() => void verify()}>
             {t("verifyContinue")}
           </CtaButton>
-          {showFallback ? (
-            <div className="flex flex-col gap-2">
-              <button
-                type="button"
-                disabled={busy}
-                className="text-sm text-white/60 disabled:opacity-60"
-                onClick={() => void resend("whatsapp")}
-              >
-                {t("whatsapp")}
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                className="text-sm text-white/40 disabled:opacity-60"
-                onClick={() => void resend("sms")}
-              >
-                {t("smsFallback")}
-              </button>
-            </div>
-          ) : null}
+        </div>
+        <div className="flex flex-col gap-2 rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
+          <p className="text-[13px] text-white/60">{t("didntGetCode")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
+              onClick={() => void resend("firebase")}
+            >
+              {t("resendFirebase")}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
+              onClick={() => void resend("whatsapp")}
+            >
+              {t("sendViaWhatsapp")}
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
+              onClick={() => void resend("sms")}
+            >
+              {t("sendViaSms")}
+            </button>
+          </div>
         </div>
       </div>
     </AuthShell>

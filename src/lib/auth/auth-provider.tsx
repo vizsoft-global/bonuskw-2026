@@ -9,7 +9,10 @@ import {
   useState,
 } from "react";
 import {
+  linkWithPhoneNumber,
   onAuthStateChanged,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
   signInWithPhoneNumber,
   signInWithPopup,
   signInWithCustomToken,
@@ -30,18 +33,29 @@ import { normalizePhone } from "@/lib/utils";
 import { heartbeat, getStoredSessionId, startSession, setStoredSessionId } from "./session-client";
 import type { UserDoc } from "@/lib/types/firestore";
 
+/** Where to send the student after a successful sign-in. */
+export type SignInResult = { needsOnboarding: boolean };
+
 type AuthState = {
   user: User | null;
   profile: (UserDoc & { id: string }) | null;
   ready: boolean;
   needsOnboarding: boolean;
+  /** Signed in (Google / Apple / email) but no verified phone on the profile yet. */
+  needsPhone: boolean;
   kicked: boolean;
   sendSms: (phone: string) => Promise<void>;
-  confirmSms: (code: string) => Promise<void>;
+  confirmSms: (code: string) => Promise<SignInResult>;
   sendFallback: (phone: string, channel: "whatsapp" | "sms") => Promise<void>;
-  confirmFallback: (phone: string, code: string) => Promise<void>;
-  signInGoogle: () => Promise<void>;
-  signInApple: () => Promise<void>;
+  confirmFallback: (phone: string, code: string) => Promise<SignInResult>;
+  signInGoogle: () => Promise<SignInResult>;
+  signInApple: () => Promise<SignInResult>;
+  signInEmail: (email: string, password: string) => Promise<SignInResult>;
+  resetPassword: (email: string) => Promise<void>;
+  /** Onboarding: send a code to attach a phone to the signed-in account. */
+  sendLinkSms: (phone: string) => Promise<void>;
+  /** Onboarding: confirm the code and save the phone on the profile. Throws on conflict. */
+  confirmLinkSms: (code: string) => Promise<void>;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -53,6 +67,18 @@ let verifier: RecaptchaVerifier | null = null;
 function needsAcademic(profile: UserDoc | null) {
   // High-school students pick a grade (categoryRef) instead of a field (branchRef).
   return !profile?.countryRef || !profile.universityRef || !(profile.branchRef || profile.categoryRef);
+}
+
+function lacksPhone(profile: UserDoc | null) {
+  return !profile?.phone_number?.trim();
+}
+
+function computeNeedsOnboarding(profile: UserDoc | null) {
+  return needsAcademic(profile) || lacksPhone(profile);
+}
+
+async function bearer(user: User) {
+  return { "Content-Type": "application/json", Authorization: `Bearer ${await user.getIdToken(true)}` };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -93,8 +119,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         else setProfile(null);
       });
     } catch {
-      setReady(true);
       window.clearTimeout(failSafe);
+      // Defer so we don't setState synchronously inside the effect body.
+      window.setTimeout(() => {
+        if (!cancelled) setReady(true);
+      }, 0);
     }
     return () => {
       cancelled = true;
@@ -136,55 +165,62 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return verifier;
   };
 
-  const afterSignIn = useCallback(async (signed: User, phone?: string) => {
-    const token = await signed.getIdToken();
-    if (phone) {
-      const link = await fetch("/api/auth/legacy-link", {
+  /**
+   * Resolves the Firestore profile for a fresh Firebase session. Phone sign-ins
+   * first try to land on the legacy account that owns the number (Flutter app
+   * users), otherwise the profile is created / completed for this uid.
+   */
+  const afterSignIn = useCallback(
+    async (signed: User, phone?: string): Promise<SignInResult> => {
+      const token = await signed.getIdToken();
+      if (phone) {
+        const link = await fetch("/api/auth/legacy-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+          body: JSON.stringify({ phone }),
+        });
+        const json = (await link.json().catch(() => ({}))) as { customToken?: string };
+        if (json.customToken) {
+          const linked = await signInWithCustomToken(getFirebaseAuth(), json.customToken);
+          const profile = await loadProfile(linked.user.uid);
+          return { needsOnboarding: computeNeedsOnboarding(profile) };
+        }
+      }
+      await fetch("/api/auth/ensure-profile", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
         body: JSON.stringify({ phone }),
       });
-      const json = (await link.json()) as { customToken?: string };
-      if (json.customToken) {
-        const linked = await signInWithCustomToken(getFirebaseAuth(), json.customToken);
-        await loadProfile(linked.user.uid);
-        return;
-      }
-    }
-    await fetch("/api/auth/ensure-profile", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({ phone }),
-    });
-    await loadProfile(signed.uid);
-  }, [loadProfile]);
+      const profile = await loadProfile(signed.uid);
+      return { needsOnboarding: computeNeedsOnboarding(profile) };
+    },
+    [loadProfile],
+  );
 
   const value = useMemo<AuthState>(
     () => ({
       user,
       profile,
       ready,
-      needsOnboarding: Boolean(user && profile && needsAcademic(profile)),
+      needsOnboarding: Boolean(user && profile && computeNeedsOnboarding(profile)),
+      needsPhone: Boolean(user && profile && lacksPhone(profile)),
       kicked,
       sendSms: async (phone) => {
         const normalized = normalizePhone(phone);
-        confirmation = await signInWithPhoneNumber(
-          getFirebaseAuth(),
-          normalized,
-          ensureVerifier(),
-        );
+        try {
+          confirmation = await signInWithPhoneNumber(getFirebaseAuth(), normalized, ensureVerifier());
+        } catch (err) {
+          // A failed reCAPTCHA leaves the widget unusable; rebuild it next time.
+          verifier?.clear();
+          verifier = null;
+          throw err;
+        }
         window.sessionStorage.setItem("ba_phone", normalized);
       },
       confirmSms: async (code) => {
         if (!confirmation) throw new Error("Request a code first");
         const cred = await confirmation.confirm(code);
-        await afterSignIn(cred.user, window.sessionStorage.getItem("ba_phone") ?? undefined);
+        return afterSignIn(cred.user, window.sessionStorage.getItem("ba_phone") ?? undefined);
       },
       sendFallback: async (phone, channel) => {
         const normalized = normalizePhone(phone);
@@ -207,15 +243,57 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const json = (await res.json()) as { customToken?: string; error?: string };
         if (!res.ok || !json.customToken) throw new Error(json.error || "Invalid code");
         const cred = await signInWithCustomToken(getFirebaseAuth(), json.customToken);
-        await afterSignIn(cred.user, normalized);
+        return afterSignIn(cred.user, normalized);
       },
       signInGoogle: async () => {
         const cred = await signInWithPopup(getFirebaseAuth(), googleProvider);
-        await afterSignIn(cred.user);
+        return afterSignIn(cred.user);
       },
       signInApple: async () => {
         const cred = await signInWithPopup(getFirebaseAuth(), appleProvider);
-        await afterSignIn(cred.user);
+        return afterSignIn(cred.user);
+      },
+      signInEmail: async (email, password) => {
+        const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+        return afterSignIn(cred.user);
+      },
+      resetPassword: async (email) => {
+        await sendPasswordResetEmail(getFirebaseAuth(), email.trim());
+      },
+      sendLinkSms: async (phone) => {
+        const current = getFirebaseAuth().currentUser;
+        if (!current) throw new Error("Sign in first");
+        const normalized = normalizePhone(phone);
+        try {
+          confirmation = await linkWithPhoneNumber(current, normalized, ensureVerifier());
+        } catch (err) {
+          verifier?.clear();
+          verifier = null;
+          throw err;
+        }
+        window.sessionStorage.setItem("ba_phone", normalized);
+      },
+      confirmLinkSms: async (code) => {
+        const current = getFirebaseAuth().currentUser;
+        if (!current) throw new Error("Sign in first");
+        if (!confirmation) throw new Error("Request a code first");
+        const phone = window.sessionStorage.getItem("ba_phone") ?? "";
+        await confirmation.confirm(code);
+        // The phone is now on the Auth user; record it on the profile unless
+        // another student already owns that number.
+        const res = await fetch("/api/auth/ensure-profile", {
+          method: "POST",
+          headers: await bearer(current),
+          body: JSON.stringify({ phone }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { phoneConflict?: boolean; error?: string };
+        if (!res.ok) throw new Error(json.error || "Could not save phone");
+        if (json.phoneConflict) {
+          const conflict = new Error("phone-conflict") as Error & { code: string };
+          conflict.code = "profile/phone-conflict";
+          throw conflict;
+        }
+        await loadProfile(current.uid);
       },
       refreshProfile: async () => {
         if (user) await loadProfile(user.uid);
@@ -226,7 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setKicked(false);
       },
     }),
-    [user, profile, ready, kicked, afterSignIn],
+    [user, profile, ready, kicked, afterSignIn, loadProfile],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

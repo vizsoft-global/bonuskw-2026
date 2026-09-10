@@ -172,7 +172,7 @@ function ReturnBody() {
 
 export default function CheckoutReturnPage() {
   return (
-    <Suspense fallback={<div className="min-h-dvh bg-[#050505]" />}>
+    <Suspense fallback={<div className="min-h-dvh bg-app-top" />}>
       <ReturnBody />
     </Suspense>
   );

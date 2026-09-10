@@ -21,7 +21,7 @@ function Viewer() {
     });
   }, []);
 
-  if (!items) return <main className="min-h-dvh bg-[#050505]" />;
+  if (!items) return <main className="min-h-dvh bg-app-top" />;
   if (!items.length) return <EmptyHome />;
   return <StoryViewer stories={items} startIndex={startIndex} />;
 }
@@ -31,12 +31,12 @@ function EmptyHome() {
   useEffect(() => {
     router.replace("/");
   }, [router]);
-  return <main className="min-h-dvh bg-[#050505]" />;
+  return <main className="min-h-dvh bg-app-top" />;
 }
 
 export default function StoriesPage() {
   return (
-    <Suspense fallback={<main className="min-h-dvh bg-[#050505]" />}>
+    <Suspense fallback={<main className="min-h-dvh bg-app-top" />}>
       <Viewer />
     </Suspense>
   );

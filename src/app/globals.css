@@ -4,6 +4,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  /* Topmost surface + PWA status / title bar. Keep in sync with ThemeColorSync. */
+  --app-top: #f6f6f8;
   --bg: #f6f6f8;
   --bg-elevated: #ffffff;
   --surface: rgba(255, 255, 255, 0.82);
@@ -33,7 +35,9 @@
 }
 
 .dark {
-  --bg: #0b0b0c;
+  /* Same as the app shell so the status bar never reads as a separate strip. */
+  --app-top: #050505;
+  --bg: #050505;
   --bg-elevated: #141416;
   --surface: rgba(22, 22, 24, 0.78);
   --surface-solid: #141416;
@@ -61,6 +65,7 @@
 }
 
 @theme inline {
+  --color-app-top: var(--app-top);
   --color-bg: var(--bg);
   --color-elevated: var(--bg-elevated);
   --color-surface: var(--surface-solid);
@@ -137,6 +142,12 @@
 @utility pt-safe-header {
   padding-top: max(60px, calc(env(safe-area-inset-top, 0px) + 20px));
 }
+@utility pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+@utility bg-app-top {
+  background-color: var(--app-top);
+}
 @utility pb-safe-nav {
   padding-bottom: max(30px, calc(env(safe-area-inset-bottom, 0px) + 8px));
 }
@@ -166,10 +177,11 @@
 }
 
 /* Design V2 uses hardcoded dark hexes. Remap them when the theme class is light. */
+html:not(.dark) .bg-app-top,
 html:not(.dark) .bg-\[\#050505\],
 html:not(.dark) .bg-\[\#0b0b0c\],
 html:not(.dark) .lg\:bg-\[\#050505\] {
-  background-color: #f7f7f8;
+  background-color: #f6f6f8;
 }
 html:not(.dark) .bg-\[\#141414\],
 html:not(.dark) .bg-\[\#1a1a1a\],

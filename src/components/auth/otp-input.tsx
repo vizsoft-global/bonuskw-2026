@@ -31,18 +31,27 @@ export function OtpInput({
           inputMode="numeric"
           pattern="[0-9]*"
           autoComplete={i === 0 ? "one-time-code" : "off"}
-          maxLength={1}
           aria-label={`Digit ${i + 1}`}
           placeholder="-"
           onChange={(e) => {
-            const char = e.target.value.replace(/\D/g, "").slice(-1);
+            const typed = e.target.value.replace(/\D/g, "");
             const next = chars.split("");
-            if (!char) {
+            while (next.length < length) next.push("");
+            if (!typed) {
               next[i] = "";
               setDigits(next.join(""));
               return;
             }
-            next[i] = char;
+            // SMS autofill and fast typing can drop several digits into one
+            // box; spread them across the following boxes.
+            if (typed.length > 1) {
+              const fill = typed.slice(0, length - i);
+              for (let k = 0; k < fill.length; k += 1) next[i + k] = fill[k];
+              setDigits(next.join(""));
+              refs.current[Math.min(i + fill.length, length - 1)]?.focus();
+              return;
+            }
+            next[i] = typed;
             setDigits(next.join(""));
             refs.current[i + 1]?.focus();
           }}

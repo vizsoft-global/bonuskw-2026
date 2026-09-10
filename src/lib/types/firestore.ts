@@ -10,6 +10,8 @@ export type UserDoc = {
   uid?: string;
   created_time?: Timestamp | Date;
   phone_number?: string;
+  /** Canonical +965… form of `phone_number`; used for sign-in matching. */
+  phoneE164?: string;
   lastActive?: Timestamp | Date;
   status?: string;
   userRole?: UserRole;
