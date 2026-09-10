@@ -1,13 +1,11 @@
 "use client";
 
 /**
- * Payment happens on MyFatoorah's hosted page, which offers every method the
- * account has enabled (KNET, Visa/Mastercard, Apple Pay…). This block just
- * shows what to expect — there is nothing to select here any more.
+ * Payment happens on MyFatoorah's hosted page; the account is KNET-only. This
+ * block just shows what to expect — there is nothing to select here any more.
  */
 const LOGOS = [
   { id: "knet", logo: "/cart/knet.png", alt: "KNET" },
-  { id: "card", logo: "/cart/visa.svg", alt: "Visa / Mastercard" },
   { id: "myfatoorah", logo: "/cart/myfatoorah.png", alt: "MyFatoorah", fill: true },
 ] as const;
 
