@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/lib/auth/auth-provider";
 import { CartProvider } from "@/lib/cart/cart-provider";
+import { LiveCatalog } from "@/lib/catalog/live-catalog";
 import { LocaleProvider } from "@/lib/i18n/locale";
 
 export function Providers({ children }: { children: React.ReactNode }) {
@@ -16,7 +17,10 @@ export function Providers({ children }: { children: React.ReactNode }) {
           queries: {
             staleTime: 30_000,
             gcTime: 5 * 60_000,
-            refetchOnWindowFocus: false,
+            // Returning to the app (tab focus / PWA resume) refetches anything
+            // older than staleTime so enrolments and course changes show up.
+            refetchOnWindowFocus: true,
+            refetchOnReconnect: true,
             retry: 1,
           },
         },
@@ -28,6 +32,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
         <QueryClientProvider client={client}>
           <AuthProvider>
             <CartProvider>
+              <LiveCatalog />
               {children}
               <Toaster />
             </CartProvider>
