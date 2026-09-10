@@ -48,6 +48,11 @@ export async function POST(req: NextRequest) {
     if (!snap.exists) {
       patch.userRole = "Student";
       patch.created_time = FieldValue.serverTimestamp();
+    } else {
+      const existingRole = String(snap.get("userRole") ?? "").trim();
+      if (!existingRole || existingRole.toLowerCase() === "user") {
+        patch.userRole = "Student";
+      }
     }
 
     if (social || !snap.exists) {
