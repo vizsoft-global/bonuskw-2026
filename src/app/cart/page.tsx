@@ -160,14 +160,27 @@ export default function CartPage() {
     remove: t("remove"),
   };
 
+  // A coupon that covers the whole price: the server fulfils the order without
+  // touching the payment gateway, so the payment section is not shown.
+  const freeCheckout = Boolean(quote) && due <= 0 && cart.lines.length > 0;
+
   const checkoutBlock = (
     <div className="flex flex-col gap-[25px] rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
-      <PaymentMethods
-        title={t("paymentMethod")}
-        hint={t("hostedPaymentHint")}
-        testTitle={t("testModeBanner")}
-        copyLabel={t("copyCardNumber")}
-      />
+      {freeCheckout ? (
+        <div className="flex items-start gap-3 rounded-[12px] bg-[#1f9d4d]/15 p-3">
+          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#1f9d4d] text-[11px] font-bold text-white">
+            ✓
+          </span>
+          <p className="text-[12px] leading-relaxed text-[#cfe9d6]">{t("freeCheckoutHint")}</p>
+        </div>
+      ) : (
+        <PaymentMethods
+          title={t("paymentMethod")}
+          hint={t("hostedPaymentHint")}
+          testTitle={t("testModeBanner")}
+          copyLabel={t("copyCardNumber")}
+        />
+      )}
       <label className="flex items-center gap-2 text-[12px] text-[#999]">
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
@@ -186,9 +199,14 @@ export default function CartPage() {
             {redirecting ? <span>{t("redirectingToPayment")}</span> : null}
           </div>
         ) : (
-          <PayCta amount={dueLabel} label={t("proceed")} disabled={!canPay} onPay={() => void pay()} />
+          <PayCta
+            amount={dueLabel}
+            label={freeCheckout ? t("freeCheckout") : t("proceed")}
+            disabled={!canPay}
+            onPay={() => void pay()}
+          />
         )}
-        <p className="text-center text-[10px] text-[#999]">{t("secure")}</p>
+        {freeCheckout ? null : <p className="text-center text-[10px] text-[#999]">{t("secure")}</p>}
       </div>
     </div>
   );
