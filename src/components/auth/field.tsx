@@ -26,9 +26,13 @@ export function Field({
   return (
     <label className="flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/20 px-[15px] py-3.5 focus-within:border-white/50">
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className="text-[13px] text-white/60">{label}</span>
-        {/* Prefix and digits share one line box so they sit on the same centre line. */}
-        <span className="flex h-8 items-center gap-1.5" dir={phone || type === "email" ? "ltr" : undefined}>
+        <span className={cn("text-[13px] text-white/60", phone && "text-center")}>{label}</span>
+        {/* Prefix and digits share one line box so they sit on the same centre line.
+            Phone: the whole "+965 …" group is centred in the field. */}
+        <span
+          className={cn("flex h-8 items-center gap-1.5", phone && "justify-center")}
+          dir={phone || type === "email" ? "ltr" : undefined}
+        >
           {phone ? (
             <span className="text-[24px] font-medium leading-none text-white">+965</span>
           ) : null}
@@ -46,8 +50,9 @@ export function Field({
             maxLength={phone ? 8 : undefined}
             autoComplete={autoComplete}
             className={cn(
-              "h-8 min-w-0 flex-1 bg-transparent p-0 font-medium leading-none text-white outline-none placeholder:text-white/30",
-              phone ? "text-[24px] tracking-wide" : "text-[16px]",
+              "h-8 min-w-0 bg-transparent p-0 font-medium leading-none text-white outline-none placeholder:text-white/30",
+              // Fixed width for 8 digits so the group stays centred while typing.
+              phone ? "w-[9.5ch] text-[24px] tracking-wide" : "flex-1 text-[16px]",
             )}
           />
           {trailing}
