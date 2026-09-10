@@ -4,6 +4,20 @@ import { getDeviceId, deviceLabel } from "@/lib/device";
 
 const SESSION_KEY = "ba_session_id";
 
+export type OtherSession = {
+  id: string;
+  label: string;
+  os: string;
+  browser: string;
+  location: string;
+  lastSeenAt: string | null;
+  live: boolean;
+};
+
+export type StartSessionOutcome =
+  | { status: "started"; sessionId: string }
+  | { status: "conflict"; sessions: OtherSession[] };
+
 export function getStoredSessionId() {
   return window.localStorage.getItem(SESSION_KEY);
 }
@@ -13,7 +27,7 @@ export function setStoredSessionId(id: string | null) {
   else window.localStorage.setItem(SESSION_KEY, id);
 }
 
-export async function startSession(idToken: string) {
+export async function startSession(idToken: string, opts: { force?: boolean } = {}): Promise<StartSessionOutcome> {
   const device = deviceLabel();
   const res = await fetch("/api/session/start", {
     method: "POST",
@@ -25,12 +39,20 @@ export async function startSession(idToken: string) {
       deviceId: getDeviceId(),
       ...device,
       userAgent: navigator.userAgent,
+      force: Boolean(opts.force),
     }),
   });
-  const json = (await res.json()) as { sessionId?: string; error?: string };
+  const json = (await res.json().catch(() => ({}))) as {
+    sessionId?: string;
+    conflict?: OtherSession[];
+    error?: string;
+  };
+  if (res.status === 409 && Array.isArray(json.conflict)) {
+    return { status: "conflict", sessions: json.conflict };
+  }
   if (!res.ok || !json.sessionId) throw new Error(json.error || "Session failed");
   setStoredSessionId(json.sessionId);
-  return json.sessionId;
+  return { status: "started", sessionId: json.sessionId };
 }
 
 export async function heartbeat(idToken: string, sessionId: string) {

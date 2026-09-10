@@ -126,7 +126,38 @@ export async function evaluateDeviceFlags(uid: string, currentCity: string) {
   return { flagged: true as const, deviceCount: devices.size };
 }
 
-export async function startSession(identity: SessionIdentity, input: StartSessionInput) {
+/** Another device's session as shown in the "already signed in" prompt. */
+export type ConflictingSession = {
+  id: string;
+  label: string;
+  os: string;
+  browser: string;
+  location: string;
+  /** ISO time of the last heartbeat (or login), null when unknown. */
+  lastSeenAt: string | null;
+  /** Heartbeat within the live window — someone is probably using it right now. */
+  live: boolean;
+};
+
+/** Heartbeats arrive every 5 minutes; treat anything newer than this as in use. */
+const LIVE_WINDOW_MS = 15 * 60 * 1000;
+
+export type StartSessionResult =
+  | { ok: true; sessionId: string }
+  | { ok: false; conflict: ConflictingSession[] };
+
+/**
+ * Starts a session for this device. If the account already has an active
+ * session on a *different* device the caller must pass `force` to take over;
+ * the previous device is then signed out (its `sessions` doc flips to
+ * isActive:false, which the client listens for). The same device signing in
+ * again never conflicts.
+ */
+export async function startSession(
+  identity: SessionIdentity,
+  input: StartSessionInput,
+  opts: { force?: boolean } = {},
+): Promise<StartSessionResult> {
   const db = getAdminDb();
   const userRef = db.collection(collections.users).doc(identity.uid);
   const contact = identity.email || identity.phone || "";
@@ -138,8 +169,37 @@ export async function startSession(identity: SessionIdentity, input: StartSessio
     .where("isActive", "==", true)
     .get();
 
+  const others = active.docs.filter((doc) => String(doc.get("uniqueId") ?? "") !== input.deviceId);
+  if (others.length && !opts.force) {
+    const now = Date.now();
+    const conflict: ConflictingSession[] = others
+      .map((doc) => {
+        const os = String(doc.get("os") ?? "");
+        const browser = String(doc.get("browser") ?? "");
+        const seen =
+          toDate(doc.get("lastSeenAt") as DateLike) ?? toDate(doc.get("loginDateTime") as DateLike);
+        return {
+          id: doc.id,
+          label: String(doc.get("device") ?? "") || [browser, os].filter(Boolean).join(" on ") || "Device",
+          os,
+          browser,
+          location: String(doc.get("location") ?? ""),
+          lastSeenAt: seen?.toISOString() ?? null,
+          live: Boolean(seen && now - seen.getTime() < LIVE_WINDOW_MS),
+        };
+      })
+      .sort((a, b) => (b.lastSeenAt ?? "").localeCompare(a.lastSeenAt ?? ""));
+    return { ok: false, conflict };
+  }
+
   const batch = db.batch();
-  active.docs.forEach((doc) => batch.update(doc.ref, { isActive: false }));
+  active.docs.forEach((doc) =>
+    batch.update(doc.ref, {
+      isActive: false,
+      endedAt: FieldValue.serverTimestamp(),
+      ...(others.some((o) => o.id === doc.id) ? { endedBy: "takeover", endedFrom: model } : {}),
+    }),
+  );
 
   const sessionRef = db.collection(collections.sessions).doc();
   batch.set(sessionRef, {
@@ -181,7 +241,7 @@ export async function startSession(identity: SessionIdentity, input: StartSessio
   } catch (err) {
     console.error("evaluateDeviceFlags failed", err instanceof Error ? err.message : err);
   }
-  return sessionRef.id;
+  return { ok: true, sessionId: sessionRef.id };
 }
 
 async function ownedSession(uid: string, sessionId: string) {

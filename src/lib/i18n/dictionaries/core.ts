@@ -80,6 +80,16 @@ export const core = {
     logout: "Log out",
     sessionEnded: "Your account was signed in on another device.",
     signInAgain: "Sign in again",
+    sessionConflictTitle: "Already signed in on another device",
+    sessionConflictBodyLive:
+      "Your account is being used on another device right now. Continue here to sign that device out, or keep it and sign out of this one.",
+    sessionConflictBodyIdle:
+      "Your account is still signed in on another device. Continue here to sign that device out, or keep it and sign out of this one.",
+    sessionActiveNow: "Active now",
+    sessionIdle: "Idle",
+    sessionUseThisDevice: "Continue on this device",
+    sessionKeepOther: "Keep the other device, sign out here",
+    sessionConflictHint: "Only one device can be signed in at a time.",
     updateRequired: "A new version is available. Refreshing…",
     empty: "Nothing here yet",
     next: "Next",
@@ -203,6 +213,16 @@ export const core = {
     logout: "تسجيل الخروج",
     sessionEnded: "تم تسجيل الدخول من جهاز آخر.",
     signInAgain: "سجّل الدخول مجددًا",
+    sessionConflictTitle: "حسابك مسجّل الدخول على جهاز آخر",
+    sessionConflictBodyLive:
+      "حسابك مستخدم الآن على جهاز آخر. تابع هنا لتسجيل خروج ذلك الجهاز، أو احتفظ به وسجّل الخروج من هذا الجهاز.",
+    sessionConflictBodyIdle:
+      "حسابك ما زال مسجّل الدخول على جهاز آخر. تابع هنا لتسجيل خروج ذلك الجهاز، أو احتفظ به وسجّل الخروج من هذا الجهاز.",
+    sessionActiveNow: "نشط الآن",
+    sessionIdle: "غير نشط",
+    sessionUseThisDevice: "المتابعة على هذا الجهاز",
+    sessionKeepOther: "الاحتفاظ بالجهاز الآخر وتسجيل الخروج هنا",
+    sessionConflictHint: "يمكن تسجيل الدخول من جهاز واحد فقط في الوقت نفسه.",
     updateRequired: "يتوفر إصدار جديد. جارٍ التحديث…",
     empty: "لا يوجد شيء هنا بعد",
     next: "التالي",

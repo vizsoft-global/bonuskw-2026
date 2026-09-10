@@ -6,6 +6,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import {
@@ -30,7 +31,14 @@ import {
 } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { normalizePhone } from "@/lib/utils";
-import { heartbeat, getStoredSessionId, startSession, setStoredSessionId } from "./session-client";
+import {
+  heartbeat,
+  getStoredSessionId,
+  startSession,
+  setStoredSessionId,
+  type OtherSession,
+} from "./session-client";
+import { SessionConflictDialog } from "@/components/auth/session-conflict-dialog";
 import type { UserDoc } from "@/lib/types/firestore";
 
 /** Where to send the student after a successful sign-in. */
@@ -86,6 +94,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<(UserDoc & { id: string }) | null>(null);
   const [ready, setReady] = useState(false);
   const [kicked, setKicked] = useState(false);
+  /** Other devices holding an active session; non-null shows the take-over prompt. */
+  const [conflict, setConflict] = useState<OtherSession[] | null>(null);
+  const [takingOver, setTakingOver] = useState(false);
+  // Bumped after a forced take-over so the session effect runs again.
+  const [sessionAttempt, setSessionAttempt] = useState(0);
+  const forceNext = useRef(false);
 
   const loadProfile = useCallback(async (uid: string) => {
     try {
@@ -116,7 +130,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setReady(true);
         window.clearTimeout(failSafe);
         if (next) void loadProfile(next.uid);
-        else setProfile(null);
+        else {
+          setProfile(null);
+          setConflict(null);
+        }
       });
     } catch {
       window.clearTimeout(failSafe);
@@ -134,11 +151,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    let cancelled = false;
     let stopSession: (() => void) | undefined;
     let beat: number | undefined;
     void (async () => {
-      const token = await user.getIdToken();
-      const sessionId = await startSession(token);
+      const force = forceNext.current;
+      forceNext.current = false;
+      let outcome: Awaited<ReturnType<typeof startSession>>;
+      try {
+        const token = await user.getIdToken();
+        outcome = await startSession(token, { force });
+      } catch {
+        // Network hiccup: keep the student signed in; the next load retries.
+        return;
+      } finally {
+        if (!cancelled) setTakingOver(false);
+      }
+      if (cancelled) return;
+      if (outcome.status === "conflict") {
+        // Signed in on another device. Never block — ask whether to take over.
+        setConflict(outcome.sessions);
+        return;
+      }
+      setConflict(null);
+      const sessionId = outcome.sessionId;
       stopSession = onSnapshot(doc(getDb(), collections.sessions, sessionId), (snap) => {
         const data = snap.data() as { isActive?: boolean } | undefined;
         if (data && data.isActive === false && getStoredSessionId() === sessionId) {
@@ -152,10 +188,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }, 5 * 60 * 1000);
     })();
     return () => {
+      cancelled = true;
       stopSession?.();
       if (beat) window.clearInterval(beat);
     };
-  }, [user]);
+  }, [user, sessionAttempt]);
+
+  const takeOverSession = useCallback(() => {
+    forceNext.current = true;
+    setTakingOver(true);
+    setSessionAttempt((n) => n + 1);
+  }, []);
 
   const ensureVerifier = () => {
     if (verifier) return verifier;
@@ -307,7 +350,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [user, profile, ready, kicked, afterSignIn, loadProfile],
   );
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+      {user && conflict ? (
+        <SessionConflictDialog
+          sessions={conflict}
+          busy={takingOver}
+          onTakeOver={takeOverSession}
+          onSignOut={() => void value.logout()}
+        />
+      ) : null}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuth() {
