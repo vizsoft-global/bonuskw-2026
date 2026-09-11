@@ -287,12 +287,11 @@ function LearnBody() {
       skeleton={<ListPageSkeleton rows={6} />}
     >
       {outline.length ? (
-        <div className="flex flex-col gap-3 lg:gap-5">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:items-stretch lg:gap-5">
-            {/* Player: the whole width on mobile, ~70% on desktop. */}
-            <div className="min-w-0">
+        <div className="learn-fit flex flex-col gap-2">
+          <div className="flex min-h-0 flex-col gap-2 lg:flex-row lg:items-stretch">
+            <div className={cn("min-w-0", !activeQuiz && "learn-player")}>
               {activeQuiz ? (
-                <div className="rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4">
+                <div className="learn-player overflow-auto rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4">
                   <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
                   {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
                     <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
@@ -302,7 +301,7 @@ function LearnBody() {
                 </div>
               ) : (
                 <div
-                  className="relative aspect-video overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
+                  className="relative h-full w-full overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
                   style={{ background: "#1d1d1d" }}
                 >
                   {src ? (
@@ -373,20 +372,20 @@ function LearnBody() {
             </div>
 
             {/* Desktop: the playing lesson's files beside the video. */}
-            <aside className="relative hidden min-w-0 lg:block">
-              <div className="absolute inset-0 flex flex-col overflow-hidden rounded-[12px] border-[0.5px] border-white/10 bg-[#141414]">
-                <div className="flex items-center justify-between px-[15px] pt-[15px] pb-2">
+            <aside className="learn-resources hidden min-w-0 lg:flex">
+              <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-[12px] border-[0.5px] border-white/10 bg-[#141414]">
+                <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
                   <p className="text-[13px] font-medium text-[#fafafa]">{t("resources")}</p>
                   <p className="text-[11px] text-[#999]">{t("assetsCount").replace("{n}", String(currentFiles.length))}</p>
                 </div>
-                <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-[15px] pb-2">{resourcesPanel}</div>
+                <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pb-2">{resourcesPanel}</div>
               </div>
             </aside>
           </div>
 
           {/* Mobile: tabs between what to watch next and the files. */}
           <div className="lg:hidden">
-            <div className="flex items-center gap-[15px] border-b border-white/20 pt-1">
+            <div className="flex items-center gap-[15px] border-b border-white/20">
               {(["lessons", "resources"] as const).map((key) => {
                 const active = mobileTab === key;
                 return (
@@ -412,30 +411,30 @@ function LearnBody() {
             {mobileTab === "resources" ? (
               <ResourceList files={currentFiles} onOpen={openFile} />
             ) : (
-              <div className="pt-1">
-                <ChapterSections
-                  items={outline}
-                  locale={locale}
-                  activeId={quizId || lesson?.id}
-                  quizResults={quizResults.data}
-                  headerTone="muted"
-                  onLesson={(next) => openLesson(next.id)}
-                  onQuiz={openQuiz}
-                  onFile={openFile}
-                />
-              </div>
+              <ChapterSections
+                items={outline}
+                locale={locale}
+                activeId={quizId || lesson?.id}
+                quizResults={quizResults.data}
+                headerTone="muted"
+                dense
+                onLesson={(next) => openLesson(next.id)}
+                onQuiz={openQuiz}
+                onFile={openFile}
+              />
             )}
           </div>
 
           {/* Desktop: what to watch next, chapter by chapter. */}
-          <section className="hidden lg:block">
-            <h2 className="pb-1 text-[14px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
+          <section className="hidden min-h-0 lg:block">
+            <h2 className="text-[13px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
             <ChapterSections
               items={outline}
               locale={locale}
               activeId={quizId || lesson?.id}
               quizResults={quizResults.data}
               headerTone="muted"
+              dense
               onLesson={(next) => openLesson(next.id)}
               onQuiz={openQuiz}
               onFile={openFile}

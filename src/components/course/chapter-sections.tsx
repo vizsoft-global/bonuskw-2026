@@ -109,16 +109,26 @@ function CardThumb({ src, children, className }: { src?: string; children?: Reac
 /* Cards                                                                    */
 /* ----------------------------------------------------------------------- */
 
-const CARD = "flex w-[calc((100%-10px)/2)] shrink-0 snap-start flex-col gap-1.5 sm:w-[calc((100%-20px)/3)] lg:w-[calc((100%-30px)/4)]";
+const CARD =
+  "flex w-[calc((100%-10px)/2)] shrink-0 snap-start flex-col gap-1.5 sm:w-[calc((100%-20px)/3)] lg:w-[calc((100%-30px)/4)]";
+/** Smaller thumbs on the learn page so a full row fits under the player. */
+const CARD_DENSE =
+  "flex w-[calc((100%-8px)/2)] shrink-0 snap-start flex-col gap-1 sm:w-[calc((100%-16px)/3)] lg:w-[min(188px,calc((100%-36px)/5))]";
+
+function cardClass(dense?: boolean) {
+  return dense ? CARD_DENSE : CARD;
+}
 
 function LessonCard({
   lesson,
   active,
+  dense,
   onOpen,
   onResources,
 }: {
   lesson: OutlineLesson;
   active?: boolean;
+  dense?: boolean;
   onOpen?: () => void;
   onResources?: () => void;
 }) {
@@ -126,7 +136,7 @@ function LessonCard({
   const playable = Boolean(onOpen) && (!lesson.locked || lesson.preview);
   const thumb = lesson.image || lesson.poster;
   return (
-    <div className={CARD}>
+    <div className={cardClass(dense)}>
       <button
         type="button"
         disabled={!playable}
@@ -186,18 +196,20 @@ function TestCard({
   number,
   result,
   active,
+  dense,
   onOpen,
 }: {
   quiz: Quiz;
   number: number;
   result?: QuizResultSummary;
   active?: boolean;
+  dense?: boolean;
   onOpen?: () => void;
 }) {
   const { t } = useI18n();
   const canOpen = Boolean(onOpen) && !quiz.locked;
   return (
-    <div className={CARD}>
+    <div className={cardClass(dense)}>
       <button
         type="button"
         disabled={!canOpen}
@@ -252,7 +264,10 @@ function TestCard({
         <button
           type="button"
           onClick={onOpen}
-          className="mt-0.5 flex h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-[#373737] px-5 text-[13px] text-[#fafafa]"
+          className={cn(
+            "mt-0.5 flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#373737] text-[#fafafa]",
+            dense ? "h-8 px-3 text-[12px]" : "h-10 px-5 text-[13px]",
+          )}
         >
           {result ? t("retakeTest") : t("takeTheTest")}
           <span className="size-3.5 rtl:-scale-x-100">
@@ -269,9 +284,17 @@ function defaultOpenFile(file: OutlineFile) {
 }
 
 /** A chapter-level attachment, shown as a card in the same row as the lessons. */
-function FileCard({ file, onOpen }: { file: OutlineFile; onOpen: (file: OutlineFile) => void }) {
+function FileCard({
+  file,
+  dense,
+  onOpen,
+}: {
+  file: OutlineFile;
+  dense?: boolean;
+  onOpen: (file: OutlineFile) => void;
+}) {
   return (
-    <div className={CARD}>
+    <div className={cardClass(dense)}>
       <button
         type="button"
         disabled={file.locked}
@@ -474,6 +497,7 @@ export function ChapterSections({
   onBuyChapter,
   onFile,
   headerTone = "light",
+  dense,
 }: {
   items: OutlineItem[];
   locale: Locale;
@@ -488,6 +512,8 @@ export function ChapterSections({
   onFile?: (file: OutlineFile) => void;
   /** Chapter title colour: bright on the course page, muted on the learn page. */
   headerTone?: "light" | "muted";
+  /** Tighter cards so a lesson row fits under the player. */
+  dense?: boolean;
 }) {
   const { t } = useI18n();
   const openFile = onFile ?? defaultOpenFile;
@@ -510,7 +536,7 @@ export function ChapterSections({
         const open = toggled[chapter.id] ?? section === activeSection;
         const count = chapter.lessons.length + chapter.files.length + section.quizzes.length;
         return (
-          <section key={chapter.id} className="border-b border-white/10 py-3 last:border-b-0">
+          <section key={chapter.id} className={cn("border-b border-white/10 last:border-b-0", dense ? "py-1.5" : "py-3")}>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -550,25 +576,27 @@ export function ChapterSections({
             </div>
             {open ? (
               count ? (
-                <div className="pt-2">
+                <div className={dense ? "pt-1" : "pt-2"}>
                   <Rail count={count}>
                     {chapter.lessons.map((lesson) => (
                       <LessonCard
                         key={lesson.id}
                         lesson={lesson}
+                        dense={dense}
                         active={activeId === lesson.id}
                         onOpen={onLesson ? () => onLesson(lesson) : undefined}
                         onResources={() => setResourcesFor(lesson)}
                       />
                     ))}
                     {chapter.files.map((file) => (
-                      <FileCard key={file.id} file={file} onOpen={openFile} />
+                      <FileCard key={file.id} file={file} dense={dense} onOpen={openFile} />
                     ))}
                     {section.quizzes.map(({ quiz, number }) => (
                       <TestCard
                         key={quiz.id}
                         quiz={quiz}
                         number={number}
+                        dense={dense}
                         result={quizResults?.[quiz.id]}
                         active={activeId === quiz.id}
                         onOpen={onQuiz ? () => onQuiz(quiz.id) : undefined}

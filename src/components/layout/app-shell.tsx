@@ -335,7 +335,12 @@ function AppChrome({ children }: { children: ReactNode }) {
 
         <header className="relative z-40 overflow-visible lg:sticky lg:top-0 lg:bg-app-top">
           <DesktopGlow />
-          <div className="relative hidden items-center justify-between px-[30px] py-[15px] lg:flex">
+          <div
+            className={cn(
+              "relative hidden items-center justify-between px-[30px] lg:flex",
+              path.includes("/learn") ? "py-1.5" : "py-[15px]",
+            )}
+          >
             <div className="flex items-center gap-8">
               <Link href="/" prefetch>
                 <BrandLogo size="nav" />
@@ -368,7 +373,10 @@ function AppChrome({ children }: { children: ReactNode }) {
                 <button
                   type="button"
                   onClick={() => router.push("/search")}
-                  className="flex h-[51px] w-[304px] items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-black/25 px-[15px] backdrop-blur-[15px] transition-transform duration-150 active:scale-[0.99]"
+                  className={cn(
+                    "flex w-[304px] items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-black/25 px-[15px] backdrop-blur-[15px] transition-transform duration-150 active:scale-[0.99]",
+                    path.includes("/learn") ? "h-9" : "h-[51px]",
+                  )}
                 >
                   <span className="size-5 shrink-0">
                     <HomeIcon src="/home/search.svg" />
@@ -379,7 +387,10 @@ function AppChrome({ children }: { children: ReactNode }) {
               <NotificationsMenu />
               <GlassIcon href="/cart" label={t("cart")} icon="/home/cart.svg" badge={cartCount} />
               <ProfileMenu
-                className="flex items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-white/5 py-[5px] ps-[5px] pe-2.5 backdrop-blur-[15px]"
+                className={cn(
+                  "flex items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-white/5 ps-[5px] pe-2.5 backdrop-blur-[15px]",
+                  path.includes("/learn") ? "py-0.5" : "py-[5px]",
+                )}
                 trigger={(open) => (
                   <>
                     <Avatar src={profile?.photo_url} name={displayName} />
@@ -456,7 +467,14 @@ function AppChrome({ children }: { children: ReactNode }) {
               <div ref={bindExtra} className="relative empty:hidden empty:pt-0 pt-[15px]" />
             </div>
           ) : (
-            <div className="relative px-[15px] pb-3 pt-safe-header lg:hidden">
+            <div
+              className={cn(
+                "relative px-[15px] lg:hidden",
+                path.includes("/learn")
+                  ? "pb-1.5 pt-[max(8px,env(safe-area-inset-top,0px))]"
+                  : "pb-3 pt-safe-header",
+              )}
+            >
               <PageToolbar title={pageTitle} actionsRef={bindActions} />
             </div>
           )}
@@ -465,15 +483,15 @@ function AppChrome({ children }: { children: ReactNode }) {
         <main
           className={cn(
             "relative z-10 mx-auto w-full max-w-[1040px] px-[15px] lg:px-0 lg:pb-10",
-            showTabBar ? "pb-32" : "pb-10",
+            showTabBar ? "pb-32" : path.includes("/learn") ? "pb-4" : "pb-10",
             path.startsWith("/profile") && "lg:max-w-[1280px] lg:px-[30px]",
-            path.includes("/learn") && "lg:max-w-[1600px] lg:px-[30px]",
+            path.includes("/learn") && "lg:max-w-[1600px] lg:px-6 lg:pb-3",
           )}
         >
           {nested && !path.startsWith("/profile/") ? (
             <PageToolbar
               heading={false}
-              className="mb-4 hidden pt-[30px] lg:flex"
+              className={cn("hidden lg:flex", path.includes("/learn") ? "mb-1.5" : "mb-4 pt-[30px]")}
               title={pageTitle}
               actionsRef={bindActionsLg}
             />

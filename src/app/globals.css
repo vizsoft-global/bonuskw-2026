@@ -389,3 +389,43 @@ html:not(.dark) .bg-primary img {
     transform: none;
   }
 }
+
+/*
+ * After-purchase learn page: size the player from the viewport so the
+ * resources column and the next-lessons row stay on screen at any resolution.
+ * --learn-chrome must stay in sync with the tightened learn paddings in AppChrome.
+ */
+.learn-fit {
+  --learn-chrome: 100px;
+  --learn-rail: clamp(188px, 28dvh, 236px);
+  --learn-player-h: min(calc(100dvh - var(--learn-chrome) - var(--learn-rail)), 52dvh);
+  --learn-resources-min: 240px;
+}
+
+.learn-player {
+  width: 100%;
+  max-height: var(--learn-player-h);
+  aspect-ratio: 16 / 9;
+}
+
+@media (min-width: 1024px) {
+  .learn-player {
+    width: min(calc(var(--learn-player-h) * 16 / 9), calc(100% - var(--learn-resources-min) - 12px));
+    max-height: var(--learn-player-h);
+    height: auto;
+    flex: 0 0 auto;
+  }
+
+  .learn-resources {
+    min-width: var(--learn-resources-min);
+    flex: 1 1 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .learn-fit {
+    --learn-chrome: calc(env(safe-area-inset-top, 0px) + 68px);
+    --learn-rail: clamp(200px, 40dvh, 300px);
+    --learn-player-h: min(calc(100dvh - var(--learn-chrome) - var(--learn-rail)), 32dvh);
+  }
+}
