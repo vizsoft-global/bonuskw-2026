@@ -49,7 +49,13 @@ export type OutlineLesson = {
   /** Video poster used when the lesson has no thumbnail of its own. */
   poster?: string;
   videoDuration: number;
+  /** Not playable for this student (paid content they have not unlocked). */
   locked: boolean;
+  /**
+   * Marked as a free preview by the instructor while the student has not
+   * unlocked it: playable in a popup without enrolling.
+   */
+  preview: boolean;
   /** Attachments that belong to this lesson (downloadable while watching). */
   files: OutlineFile[];
 };
@@ -63,6 +69,8 @@ export type OutlineItem =
       price?: number;
       locked: boolean;
       lessons: OutlineLesson[];
+      /** Attachments that belong to the chapter itself rather than one lesson. */
+      files: OutlineFile[];
     }
   | {
       kind: "quiz";
@@ -72,8 +80,7 @@ export type OutlineItem =
       locked: boolean;
       passPercent?: number;
       timeLimitMin?: number | null;
-    }
-  | { kind: "file"; id: string; file: OutlineFile };
+    };
 
 type Sub = Pick<
   SubscriptionDoc,
@@ -81,10 +88,11 @@ type Sub = Pick<
 > | null;
 
 /**
- * Merges chapters (with their lessons and attachments), tests and standalone
- * files into one list ordered by `serialNumber`, and resolves what the
- * current student can open. Without a subscription everything paid is locked;
- * free-preview lessons stay open.
+ * Merges chapters (with their lessons and attachments) and tests into one list
+ * ordered by `serialNumber`, and resolves what the current student can open.
+ * Without a subscription everything paid is locked; free-preview lessons stay
+ * playable. Course files always belong to a chapter: by `chapterRef`, or for
+ * files saved before that link existed, the chapter they were placed after.
  */
 export function buildOutline(input: {
   chapters: Row[];
@@ -117,10 +125,47 @@ export function buildOutline(input: {
 
   const items: { serial: number; item: OutlineItem }[] = [];
 
-  for (const chapter of input.chapters) {
+  // Chapters sorted by position, so a legacy file with no chapterRef can be
+  // attached to the chapter it was dragged under in the admin outline.
+  const orderedChapters = [...input.chapters].sort(
+    (a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0),
+  );
+  const filesByChapter = new Map<string, Row[]>();
+  for (const resource of input.resources) {
+    const r = resource as unknown as CourseResourceDoc;
+    if (!r.url || !orderedChapters.length) continue;
+    let chapterId = r.chapterRef?.id;
+    if (!chapterId || !orderedChapters.some((c) => c.id === chapterId)) {
+      const serial = Number(resource.serialNumber || 0);
+      const before = orderedChapters.filter((c) => Number(c.serialNumber || 0) <= serial);
+      chapterId = (before[before.length - 1] ?? orderedChapters[0]).id;
+    }
+    const list = filesByChapter.get(chapterId) ?? [];
+    list.push(resource);
+    filesByChapter.set(chapterId, list);
+  }
+
+  for (const chapter of orderedChapters) {
     const c = chapter as unknown as ChapterDoc;
     const gate = chapterEmiIndex({ emiIndex: c.emiIndex, emiType: c.emiType });
     const chapterOpen = !isChapterLocked(c) && ((enrolled && paid >= gate) || purchased.has(chapter.id));
+    const chapterFiles = (filesByChapter.get(chapter.id) ?? [])
+      .sort((a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0))
+      .map((resource) => {
+        const r = resource as unknown as CourseResourceDoc;
+        const fileGate = Math.max(1, Number(r.emiIndex ?? 1));
+        const open = r.status !== false && ((enrolled && paid >= fileGate) || purchased.has(chapter.id));
+        return {
+          id: resource.id,
+          name: String(r.name || fileNameFromUrl(r.url!)),
+          url: r.url!,
+          kind:
+            (r.kind as ResourceKind | undefined) ??
+            resourceKind({ contentType: r.contentType, name: r.name, url: r.url }),
+          bytes: r.bytes,
+          locked: !open,
+        } satisfies OutlineFile;
+      });
     const lessons = (lessonsByChapter.get(chapter.id) ?? []).map((row) => {
       const lesson = row as unknown as LessonDoc;
       const lessonOpen = chapterOpen && !isLessonLocked(lesson);
@@ -142,7 +187,8 @@ export function buildOutline(input: {
         image: typeof lesson.image === "string" ? lesson.image : undefined,
         poster: input.posters?.[row.id],
         videoDuration: Number(lesson.videoDuration || input.durations?.[row.id] || 0),
-        locked: !lessonOpen && lesson.lessonStatus !== "Unlock",
+        locked: !lessonOpen,
+        preview: !lessonOpen && lesson.lessonStatus === "Unlock" && !isLessonLocked(lesson) && !isChapterLocked(c),
         files,
       } satisfies OutlineLesson;
     });
@@ -156,6 +202,7 @@ export function buildOutline(input: {
         price: typeof c.price === "number" ? c.price : undefined,
         locked: !chapterOpen,
         lessons,
+        files: chapterFiles,
       },
     });
   }
@@ -176,28 +223,6 @@ export function buildOutline(input: {
     });
   }
 
-  for (const resource of input.resources) {
-    const r = resource as unknown as CourseResourceDoc;
-    if (!r.url) continue;
-    const gate = Math.max(1, Number(r.emiIndex ?? 1));
-    const open = r.status !== false && enrolled && paid >= gate;
-    items.push({
-      serial: Number(resource.serialNumber || 0),
-      item: {
-        kind: "file",
-        id: resource.id,
-        file: {
-          id: resource.id,
-          name: String(r.name || fileNameFromUrl(r.url)),
-          url: r.url,
-          kind: (r.kind as ResourceKind | undefined) ?? resourceKind({ contentType: r.contentType, name: r.name, url: r.url }),
-          bytes: r.bytes,
-          locked: !open,
-        },
-      },
-    });
-  }
-
   return items.sort((a, b) => a.serial - b.serial).map((x) => x.item);
 }
 
@@ -208,9 +233,8 @@ export function outlineCounts(items: OutlineItem[]) {
   for (const item of items) {
     if (item.kind === "chapter") {
       lessons += item.lessons.length;
-      files += item.lessons.reduce((s, l) => s + l.files.length, 0);
-    } else if (item.kind === "quiz") tests += 1;
-    else files += 1;
+      files += item.files.length + item.lessons.reduce((s, l) => s + l.files.length, 0);
+    } else tests += 1;
   }
   return { lessons, files, tests };
 }

@@ -480,6 +480,8 @@ export type QuizQuestion = {
 /** A downloadable file sitting in the course outline. Collection: `courseResources`. */
 export type CourseResourceDoc = {
   courseRef?: DocumentReference;
+  /** The chapter this file is shown under; files always belong to a chapter. */
+  chapterRef?: DocumentReference;
   serialNumber?: number;
   name?: string;
   description?: string;

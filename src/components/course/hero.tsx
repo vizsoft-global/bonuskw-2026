@@ -5,33 +5,81 @@ import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import { HomeIcon } from "@/components/home/icon";
 import { cn } from "@/lib/utils";
 
+/**
+ * The course's own intro video, when it has one: the thumbnail becomes a play
+ * button and the player takes its place once a ticket arrives.
+ */
+export type CoverVideo = {
+  /** Embed URL once playback was granted; empty until then. */
+  src: string;
+  busy?: boolean;
+  onPlay: () => void;
+  label: string;
+};
+
 export function CourseCover({
   image,
   batchName,
   aspect = "5/3",
+  video,
 }: {
   image?: string;
   batchName?: string;
-  aspect?: "5/3" | "3/4";
+  aspect?: "5/3" | "3/4" | "16/9";
+  video?: CoverVideo;
 }) {
   return (
     <div
       className={cn(
         "relative overflow-hidden rounded-[12px] bg-[#141414]",
-        aspect === "3/4" ? "aspect-[3/4]" : "aspect-[5/3]",
+        aspect === "3/4" ? "aspect-[3/4]" : aspect === "16/9" ? "aspect-video" : "aspect-[5/3]",
       )}
     >
-      {hasThumb(image) ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" className="h-full w-full object-cover" />
+      {video?.src ? (
+        <iframe
+          key={video.src}
+          title={video.label}
+          src={video.src}
+          className="absolute inset-0 h-full w-full"
+          allow="fullscreen; autoplay; encrypted-media"
+        />
       ) : (
-        <ThumbPlaceholder />
+        <>
+          {hasThumb(image) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={image} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <ThumbPlaceholder />
+          )}
+          {video ? (
+            <button
+              type="button"
+              onClick={video.onPlay}
+              disabled={video.busy}
+              aria-label={video.label}
+              className="absolute inset-0 grid place-items-center bg-black/25 transition hover:bg-black/35"
+            >
+              <span className="flex items-center gap-2 rounded-full bg-black/70 py-2 pe-4 ps-2.5 text-[13px] font-medium text-white ring-1 ring-white/25 backdrop-blur-sm">
+                <span className="grid size-7 place-items-center rounded-full bg-[#0c5eff]">
+                  {video.busy ? (
+                    <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+                  ) : (
+                    <svg viewBox="0 0 24 24" className="size-3.5 translate-x-px" fill="currentColor" aria-hidden>
+                      <path d="M8 5v14l11-7z" />
+                    </svg>
+                  )}
+                </span>
+                {video.label}
+              </span>
+            </button>
+          ) : null}
+          {batchName ? (
+            <span className="absolute bottom-3 end-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] text-[#fafafa]">
+              {batchName}
+            </span>
+          ) : null}
+        </>
       )}
-      {batchName ? (
-        <span className="absolute bottom-3 end-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] text-[#fafafa]">
-          {batchName}
-        </span>
-      ) : null}
     </div>
   );
 }
@@ -72,7 +120,7 @@ export function CourseInfo({
   const long = text.length > 160;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
         {sku ? <span className="text-[12px] text-[#999]">{sku}</span> : null}
         {language ? (
@@ -85,10 +133,10 @@ export function CourseInfo({
         ) : null}
       </div>
 
-      <p className="text-[20px] font-semibold leading-7 text-[#fafafa] lg:text-[24px]">{title}</p>
+      <p className="text-[18px] font-semibold leading-6 text-[#fafafa] lg:text-[22px] lg:leading-7">{title}</p>
 
       <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#999]">
-        <span className="flex items-center gap-1 rounded-full bg-[#141414] px-2.5 py-1.5 text-[#fafafa]">
+        <span className="flex items-center gap-1 rounded-full bg-[#141414] px-2.5 py-1 text-[#fafafa]">
           <span className="size-3.5">
             <HomeIcon src="/course/star.svg" />
           </span>
@@ -107,7 +155,7 @@ export function CourseInfo({
 
       {text ? (
         <div>
-          <p className={cn("text-[13px] leading-5 text-[#999]", !open && long && "line-clamp-3")}>{text}</p>
+          <p className={cn("text-[13px] leading-5 text-[#999]", !open && long && "line-clamp-2 lg:line-clamp-3")}>{text}</p>
           {long ? (
             <button
               type="button"

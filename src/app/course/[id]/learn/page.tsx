@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
 import { InstructorCard } from "@/components/course/instructor-card";
-import { LearnMobileTabs, LessonGroups, ResourcesPanel } from "@/components/course/learn-aside";
+import { ChapterSections } from "@/components/course/chapter-sections";
 import { QuizPlayer } from "@/components/course/quiz-player";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
@@ -15,12 +15,14 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { buildOutline } from "@/lib/course/outline";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
+import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { VideoTracker } from "@/lib/analytics/video-tracker";
+import { playerSrc, type PlaybackTicket } from "@/lib/video/player-src";
 
 function LearnBody() {
   const { id } = useParams<{ id: string }>();
@@ -34,6 +36,7 @@ function LearnBody() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const subscription = useCourseSubscription(id, user?.uid);
+  const quizResults = useQuizResults(id, user?.uid);
   const videoMeta = useLessonVideoMeta(lessons.data);
   // Real runtimes from the video records: lesson docs often carry
   // `videoDuration: 0`, which used to blank every readout and block progress.
@@ -62,7 +65,7 @@ function LearnBody() {
 
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
-  const [otp, setOtp] = useState<{ otp?: string; playbackInfo?: string; provider?: string; uid?: string; videoDocId?: string | null } | null>(null);
+  const [otp, setOtp] = useState<PlaybackTicket | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [otpBusy, setOtpBusy] = useState(false);
   const [review, setReview] = useState(5);
@@ -222,43 +225,22 @@ function LearnBody() {
     router.replace(`/course/${id}/learn?quiz=${nextId}`);
   }
 
-  // Both players start muted: browsers block audible autoplay, so this is
-  // what turns one lesson tap into instant motion instead of a paused frame
-  // plus a second tap on play. One tap on unmute restores sound.
-  const src =
-    otp?.provider === "vdocipher" && otp.otp
-      ? `https://player.vdocipher.com/v2/?otp=${otp.otp}&playbackInfo=${otp.playbackInfo}&autoplay=true`
-      : otp?.provider === "stream" && otp.uid
-        ? `https://${process.env.NEXT_PUBLIC_CF_STREAM_DOMAIN || "customer.cloudflarestream.com"}/${otp.uid}/iframe?autoplay=true&muted=true`
-        : "";
+  const src = playerSrc(otp);
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
 
-  const asideLabels = {
-    currentlyPlaying: t("currentlyPlaying"),
-    nextLessons: t("nextLessons"),
-    lessons: t("lessons"),
-    resources: t("resources"),
-    resourcesCount: t("resourcesCount"),
-    assetsCount: t("assetsCount"),
-    takeTheTest: t("takeTheTest"),
-    download: t("download"),
-    test: t("test"),
-    tests: t("tests"),
-    questions: t("questions"),
-    minShort: t("minShort"),
-  };
-
-  function scrollToResources() {
-    document.getElementById("learn-resources-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
-  }
+  const currentChapter = outline.find(
+    (item) => item.kind === "chapter" && item.lessons.some((l) => l.id === lesson?.id),
+  );
+  const currentLesson =
+    currentChapter?.kind === "chapter" ? currentChapter.lessons.find((l) => l.id === lesson?.id) : undefined;
 
   return (
     <AppShell loading={loading} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
       {outline.length ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-            <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+            <div className="min-w-0">
               {activeQuiz ? (
                 <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
                   <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
@@ -293,56 +275,86 @@ function LearnBody() {
                       </button>
                     )}
                   </div>
-                  <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
-                  {instructor.data ? (
-                    <InstructorCard
-                      href={`/instructor/${instructor.data.id}`}
-                      name={String(instructor.data.display_name || t("instructor"))}
-                      bio={instructor.data.bio}
-                      photo={instructor.data.photo_url}
-                      rating={Number(course.data?.totalRatting || 0)}
-                      ratingLabel={t("rating")}
-                      verified={instructor.data.instuctorStatus === "Approved"}
-                    />
-                  ) : null}
                 </>
               )}
             </div>
-            <aside className="hidden min-w-0 overflow-y-auto rounded-3xl border border-line lg:block lg:max-h-[calc(100vh-120px)] lg:p-4">
-              <ResourcesPanel items={outline} labels={asideLabels} />
+            <aside className="flex min-w-0 flex-col gap-3">
+              {!activeQuiz ? (
+                <div className="rounded-[16px] bg-[#141414] p-3">
+                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#999]">{t("currentlyPlaying")}</p>
+                  <p className="mt-1 text-[15px] font-semibold leading-5 text-[#fafafa]">
+                    {String(lesson?.name || course.data?.name || "")}
+                  </p>
+                  {currentChapter?.kind === "chapter" ? (
+                    <p className="mt-0.5 truncate text-[12px] text-[#999]">{currentChapter.name}</p>
+                  ) : null}
+                  {currentLesson?.files.length ? (
+                    <ul className="mt-2 flex flex-col divide-y divide-white/10">
+                      {currentLesson.files.map((file) => (
+                        <li key={file.id}>
+                          <button
+                            type="button"
+                            disabled={file.locked}
+                            onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
+                            className="flex min-h-10 w-full items-center gap-2 py-1.5 text-start disabled:opacity-60"
+                          >
+                            <span className="min-w-0 flex-1 truncate text-[12px] text-[#fafafa]">{file.name}</span>
+                            <span className="shrink-0 text-[11px] font-medium text-[#0c5eff]">
+                              {file.locked ? "" : t("download")}
+                            </span>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                </div>
+              ) : null}
+              {instructor.data ? (
+                <div className="[&>a]:mt-0">
+                  <InstructorCard
+                    href={`/instructor/${instructor.data.id}`}
+                    name={String(instructor.data.display_name || t("instructor"))}
+                    bio={instructor.data.bio}
+                    photo={instructor.data.photo_url}
+                    rating={Number(course.data?.totalRatting || 0)}
+                    ratingLabel={t("rating")}
+                    verified={instructor.data.instuctorStatus === "Approved"}
+                  />
+                </div>
+              ) : null}
+              <div className="rounded-[16px] bg-[#141414] p-3 text-[13px] text-[#fafafa]">
+                <label className="flex items-center gap-2">
+                  {t("rating")}
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={review}
+                    onChange={(e) => setReview(Number(e.target.value))}
+                    className="w-14 rounded-md bg-white/10 px-2 py-1 text-center"
+                  />
+                </label>
+                <button
+                  type="button"
+                  className="mt-2 h-8 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
+                  onClick={() => void leaveReview()}
+                >
+                  {t("finish")}
+                </button>
+              </div>
             </aside>
           </div>
-          <div className="lg:hidden">
-            <LearnMobileTabs
+          <section>
+            <h2 className="pb-1 text-[16px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
+            <ChapterSections
               items={outline}
-              activeLessonId={quizId ? undefined : lesson?.id}
-              activeQuizId={quizId || undefined}
-              labels={asideLabels}
-              onLesson={openLesson}
+              locale={locale}
+              activeId={quizId || lesson?.id}
+              quizResults={quizResults.data}
+              onLesson={(next) => openLesson(next.id)}
               onQuiz={openQuiz}
-            />
-          </div>
-          <section className="hidden lg:block">
-            <h2 className="pb-3 text-[16px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
-            <LessonGroups
-              items={outline}
-              activeLessonId={quizId ? undefined : lesson?.id}
-              activeQuizId={quizId || undefined}
-              labels={asideLabels}
-              onLesson={openLesson}
-              onQuiz={openQuiz}
-              onResources={scrollToResources}
             />
           </section>
-          <div>
-            <label className="mt-1 block text-sm">
-              {t("rating")}
-              <input type="number" min={1} max={5} value={review} onChange={(e) => setReview(Number(e.target.value))} className="ms-2 w-16 bg-transparent" />
-            </label>
-            <button type="button" className="mt-2 text-sm" onClick={() => void leaveReview()}>
-              {t("finish")}
-            </button>
-          </div>
         </div>
       ) : (
         <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />

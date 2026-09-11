@@ -30,9 +30,9 @@ export function InstructorCard({
   return (
     <Link
       href={href}
-      className="mt-5 flex items-center gap-3 rounded-[16px] bg-[#141414] p-3"
+      className="mt-3 flex items-center gap-3 rounded-[16px] bg-[#141414] px-3 py-2.5"
     >
-      <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border border-[#666] bg-[#2a2a2a] text-sm font-semibold text-[#c8c8c8]">
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border border-[#666] bg-[#2a2a2a] text-sm font-semibold text-[#c8c8c8]">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="h-full w-full object-cover" />

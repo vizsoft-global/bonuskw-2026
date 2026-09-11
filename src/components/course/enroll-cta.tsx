@@ -54,8 +54,8 @@ export function EnrollCta({
   const disabled = Boolean(block) || busy;
 
   return (
-    <div className="mt-5 flex flex-col gap-2.5">
-      <div className="flex flex-col gap-3 rounded-[24px] bg-[#141414] p-4">
+    <div className="mt-3 flex flex-col gap-2">
+      <div className="flex flex-col gap-2.5 rounded-[20px] bg-[#141414] p-3">
         {stats.length ? (
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             {stats.map((stat) => (

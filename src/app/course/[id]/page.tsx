@@ -8,7 +8,8 @@ import { CourseHeaderActions } from "@/components/course/header-actions";
 import { CourseCover, CourseInfo } from "@/components/course/hero";
 import { EnrollCta } from "@/components/course/enroll-cta";
 import { InstructorCard } from "@/components/course/instructor-card";
-import { CourseOutline } from "@/components/course/outline";
+import { ChapterSections } from "@/components/course/chapter-sections";
+import { VideoPopup } from "@/components/course/video-popup";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
@@ -19,15 +20,17 @@ import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { enrolmentBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
-import { buildOutline, outlineCounts } from "@/lib/course/outline";
+import { buildOutline, outlineCounts, type OutlineLesson } from "@/lib/course/outline";
 import { invalidateEnrolment } from "@/lib/course/invalidate";
-import { useLessonPosters } from "@/lib/course/use-lesson-posters";
+import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
+import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { UserDoc } from "@/lib/types/firestore";
+import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
 
 export default function CoursePage() {
   const { id } = useParams<{ id: string }>();
@@ -37,6 +40,9 @@ export default function CoursePage() {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
+  const [preview, setPreview] = useState<OutlineLesson | null>(null);
+  const [intro, setIntro] = useState<PlaybackTicket | null>(null);
+  const [introBusy, setIntroBusy] = useState(false);
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const batch = useQuery({
     queryKey: ["batch", course.data?.batchesRef?.id],
@@ -47,8 +53,9 @@ export default function CoursePage() {
   const lessons = useQuery({ queryKey: ["lessons", id], queryFn: () => listLessons(id) });
   const quizzes = useQuery({ queryKey: ["quizzes", id], queryFn: () => listQuizzes(id) });
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
-  const posters = useLessonPosters(lessons.data);
+  const videoMeta = useLessonVideoMeta(lessons.data);
   const subscription = useCourseSubscription(id, user?.uid);
+  const quizResults = useQuizResults(id, user?.uid);
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
     enabled: Boolean(course.data?.authorRef?.id),
@@ -159,6 +166,19 @@ export default function CoursePage() {
     }
   }
 
+  /** The course's intro video replaces the thumbnail once a ticket arrives. */
+  async function playIntro() {
+    if (introBusy || intro) return;
+    setIntroBusy(true);
+    try {
+      const token = user ? await user.getIdToken() : null;
+      const ticket = await requestPlayback({ courseId: id }, token);
+      if (playerSrc(ticket)) setIntro(ticket);
+    } finally {
+      setIntroBusy(false);
+    }
+  }
+
   async function share() {
     const url = window.location.href;
     try {
@@ -198,28 +218,57 @@ export default function CoursePage() {
   const c = course.data;
   const blockReason = enrolmentBlock(c, batch.data);
   const block = blockReason ? (blockReason === "batch-full" ? t("batchFull") : t("noBatch")) : undefined;
-  const seconds = lessons.data?.reduce((sum, lesson) => sum + Number(lesson.videoDuration || 0), 0) || 0;
-  const hours = Math.round(seconds / 3600);
   const language = courseLanguage(c);
-  // One outline in the instructor's order: chapters with lessons and their
-  // attachments, tests and standalone files. No separate resources tab.
+  // Real runtimes and posters from the video records; lesson docs often
+  // carry `videoDuration: 0` and no thumbnail of their own.
+  const durations: Record<string, number> = {};
+  const posters: Record<string, string> = {};
+  for (const [lessonId, meta] of Object.entries(videoMeta.data ?? {})) {
+    if (meta.durationSec) durations[lessonId] = meta.durationSec;
+    if (meta.poster) posters[lessonId] = meta.poster;
+  }
+  const seconds =
+    lessons.data?.reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0) || 0;
+  const hours = Math.round(seconds / 3600);
+  // One outline in the instructor's order: every chapter is a section holding
+  // its lessons, its files and the tests that follow it.
   const outline = buildOutline({
     chapters: chapters.data ?? [],
     lessons: lessons.data ?? [],
     quizzes: quizzes.data ?? [],
     resources: resources.data ?? [],
     subscription: subscription.data ?? null,
-    posters: posters.data,
+    posters,
+    durations,
     locale,
   });
   const counts = outlineCounts(outline);
   const enrolled = subscription.data?.status === "Ongoing";
   const staffViewer = Boolean(user) && !canPurchase(profile);
+  const hasIntro = Boolean(c.videoRef || c.video);
+
+  function openLesson(lesson: OutlineLesson) {
+    if (enrolled && !lesson.locked) {
+      router.push(`/course/${id}/learn?lesson=${lesson.id}`);
+      return;
+    }
+    // Not unlocked: free previews play right here in a popup.
+    if (lesson.preview) setPreview(lesson);
+  }
 
   return (
     <AppShell compactHeader title={title} actions={actions}>
-      <div className="grid gap-5 lg:grid-cols-2 lg:items-start lg:gap-8 lg:pt-2">
-        <CourseCover image={c.image} batchName={batch.data?.name} />
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-start lg:gap-6 lg:pt-1">
+        <CourseCover
+          image={c.image}
+          batchName={batch.data?.name}
+          aspect="16/9"
+          video={
+            hasIntro
+              ? { src: playerSrc(intro), busy: introBusy, onPlay: () => void playIntro(), label: t("watchIntro") }
+              : undefined
+          }
+        />
         <div>
           <CourseInfo
             sku={c.sku || id.slice(0, 8)}
@@ -288,25 +337,19 @@ export default function CoursePage() {
         />
       ) : null}
 
-      <div className="mt-6 flex items-center gap-2 border-b border-white/10 pb-2.5">
-        <span className="text-[13px] font-medium text-[#fafafa]">{t("courseContent")}</span>
-        <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#fafafa]">
+      <div className="mt-5 flex items-center gap-2 border-b border-white/10 pb-2">
+        <span className="text-[15px] font-semibold text-[#fafafa]">{t("lessonsAndChapters")}</span>
+        <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#999]">
           {counts.lessons} {t("lessons")}
           {counts.files ? ` · ${counts.files} ${t("attachments").toLowerCase()}` : ""}
           {counts.tests ? ` · ${counts.tests} ${t("tests").toLowerCase()}` : ""}
         </span>
       </div>
-      <CourseOutline
+      <ChapterSections
         items={outline}
         locale={locale}
-        labels={{
-          download: t("download"),
-          test: t("test"),
-          questions: t("questions"),
-          chapter: t("chapters"),
-          buyChapter: t("buyChapter"),
-        }}
-        onLesson={enrolled ? (lessonId) => router.push(`/course/${id}/learn?lesson=${lessonId}`) : undefined}
+        quizResults={quizResults.data}
+        onLesson={openLesson}
         onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
         onBuyChapter={
           c.coursePaymentType === "Free" || staffViewer || enrolled
@@ -314,6 +357,7 @@ export default function CoursePage() {
             : (chapterId) => void addChapterToCart(chapterId)
         }
       />
+      {preview ? <VideoPopup lessonId={preview.id} title={preview.name} onClose={() => setPreview(null)} /> : null}
     </AppShell>
   );
 }
