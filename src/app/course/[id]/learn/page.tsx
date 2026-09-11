@@ -146,29 +146,43 @@ function LearnBody() {
 
   // Opening a lesson starts playback straight away — no second tap on Start.
   // Runs for the first lesson too: landing on the learn page means watch.
+  // The fetch waits a beat so hopping across lessons fires one OTP request
+  // for the lesson the student settles on, and an in-flight request is
+  // aborted when they move on before it resolves.
   useEffect(() => {
-    if (!user || !lesson || quizId || otp || otpBusy) return;
-    let cancelled = false;
-    async function autoplay() {
-      setOtpBusy(true);
-      try {
-        const token = await user!.getIdToken();
-        const res = await fetch("/api/video/otp", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ lessonId: lesson!.id }),
-        });
-        const json = await res.json();
-        if (!cancelled) setOtp(json);
-      } catch {
-        // The Start button stays as the fallback.
-      } finally {
-        if (!cancelled) setOtpBusy(false);
+    // Note: otpBusy is intentionally not part of the guard — an aborted run
+    // must never block the run for the newly selected lesson.
+    if (!user || !lesson || quizId || otp) return;
+    const targetId = lesson.id;
+    const getToken = () => user.getIdToken();
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => {
+      async function autoplay() {
+        setOtpBusy(true);
+        try {
+          const token = await getToken();
+          const res = await fetch("/api/video/otp", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+            body: JSON.stringify({ lessonId: targetId }),
+            signal: controller.signal,
+          });
+          const json = await res.json();
+          setOtp(json);
+        } catch (err) {
+          // Aborts and network blips keep the Start button as the fallback.
+          if ((err as Error)?.name !== "AbortError") {
+            setOtpBusy(false);
+          }
+        }
       }
-    }
-    void autoplay();
+      void autoplay().finally(() => {
+        if (!controller.signal.aborted) setOtpBusy(false);
+      });
+    }, 600);
     return () => {
-      cancelled = true;
+      window.clearTimeout(timer);
+      controller.abort();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- autoplay only when the lesson changes
   }, [user, lesson?.id, quizId]);
@@ -197,11 +211,14 @@ function LearnBody() {
     router.replace(`/course/${id}/learn?quiz=${nextId}`);
   }
 
+  // Both players start muted: browsers block audible autoplay, so this is
+  // what turns one lesson tap into instant motion instead of a paused frame
+  // plus a second tap on play. One tap on unmute restores sound.
   const src =
     otp?.provider === "vdocipher" && otp.otp
-      ? `https://player.vdocipher.com/v2/?otp=${otp.otp}&playbackInfo=${otp.playbackInfo}`
+      ? `https://player.vdocipher.com/v2/?otp=${otp.otp}&playbackInfo=${otp.playbackInfo}&autoplay=true`
       : otp?.provider === "stream" && otp.uid
-        ? `https://${process.env.NEXT_PUBLIC_CF_STREAM_DOMAIN || "customer.cloudflarestream.com"}/${otp.uid}/iframe`
+        ? `https://${process.env.NEXT_PUBLIC_CF_STREAM_DOMAIN || "customer.cloudflarestream.com"}/${otp.uid}/iframe?autoplay=true&muted=true`
         : "";
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
