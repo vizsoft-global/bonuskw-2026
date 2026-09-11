@@ -150,7 +150,8 @@ export function ProfileHub() {
           <MenuRow href="/profile/saved" icon="/profile/heart.svg" label={t("savedCourses")} active={path === "/profile/saved"} />
           <MenuRow href="/profile/devices" icon="/profile/phone.svg" label={t("deviceLogs")} active={path === "/profile/devices"} />
           <MenuRow href="/profile/password" icon="/profile/passcode.svg" label={t("changePassword")} active={path === "/profile/password"} />
-          <MenuRow href="/profile/transactions" icon="/profile/receipt.svg" label={t("transactions")} last active={path === "/profile/transactions"} />
+          <MenuRow href="/profile/transactions" icon="/profile/receipt.svg" label={t("transactions")} active={path === "/profile/transactions"} />
+          <MenuRow href="/my-space" icon="/profile/book.svg" label={t("mySpace")} last active={path === "/my-space"} />
         </div>
         <div className="flex flex-col gap-[15px]">
           <SectionLabel>{t("preferences")}</SectionLabel>
