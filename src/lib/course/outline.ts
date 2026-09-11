@@ -46,6 +46,8 @@ export type OutlineLesson = {
   id: string;
   name: string;
   image?: string;
+  /** Video poster used when the lesson has no thumbnail of its own. */
+  poster?: string;
   videoDuration: number;
   locked: boolean;
   /** Attachments that belong to this lesson (downloadable while watching). */
@@ -92,6 +94,8 @@ export function buildOutline(input: {
   subscription?: Sub;
   /** Enrolment through a chapter purchase, by chapter id. */
   purchasedChapterIds?: Set<string>;
+  /** Video posters by lesson id, used when a lesson has no thumbnail. */
+  posters?: Record<string, string>;
   /** Language for chapter/lesson/test names; English when omitted. */
   locale?: Locale;
 }): OutlineItem[] {
@@ -134,6 +138,7 @@ export function buildOutline(input: {
         id: row.id,
         name: localName(lesson as Translatable, locale, "Lesson"),
         image: typeof lesson.image === "string" ? lesson.image : undefined,
+        poster: input.posters?.[row.id],
         videoDuration: Number(lesson.videoDuration || 0),
         locked: !lessonOpen && lesson.lessonStatus !== "Unlock",
         files,

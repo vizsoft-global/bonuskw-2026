@@ -3,10 +3,12 @@
 import { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { AppShell } from "@/components/layout/app-shell";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart } from "@/lib/cart/store";
+import { invalidateEnrolment } from "@/lib/course/invalidate";
 import { useI18n } from "@/lib/i18n/locale";
 
 type StatusResponse = {
@@ -27,6 +29,7 @@ function ReturnBody() {
   const params = useSearchParams();
   const { user } = useAuth();
   const { t } = useI18n();
+  const qc = useQueryClient();
   const [outcome, setOutcome] = useState<Outcome>("checking");
   const [gateway, setGateway] = useState<string>("");
   const orderId = params.get("orderId") || "";
@@ -62,14 +65,16 @@ function ReturnBody() {
         if (json.failure) setFailure(json.failure);
         if (json.status === "Paid" || json.status === "CAPTURED") {
           setOutcome("paid");
-          // The purchased lines are fulfilled; empty the cart so the next
-          // checkout does not re-buy them. Saved-for-later stays.
+          // The purchased lines are fulfilled: empty the cart so the next
+          // checkout does not re-buy them, and drop cached enrolment views
+          // so My Zone shows the new courses without a manual refresh.
           try {
             const cart = await loadCart(user!.uid);
             if (cart.lines.length) await saveCart(user!.uid, { ...cart, lines: [] });
           } catch {
             // best effort
           }
+          void invalidateEnrolment(qc);
           return;
         }
         if (json.status === "Failed" || res.status === 409) {
@@ -97,7 +102,7 @@ function ReturnBody() {
       stopped = true;
       if (timer) window.clearTimeout(timer);
     };
-  }, [user, orderId, chargeId, paymentId, bounced]);
+  }, [user, orderId, chargeId, paymentId, bounced, qc]);
 
   const title =
     outcome === "paid"

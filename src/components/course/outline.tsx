@@ -255,6 +255,7 @@ export function CourseOutline({
                         <LessonRow
                           name={lesson.name}
                           image={lesson.image}
+                          poster={lesson.poster}
                           duration={lesson.videoDuration}
                           locked={lesson.locked}
                         />

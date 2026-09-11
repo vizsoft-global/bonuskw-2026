@@ -3,9 +3,11 @@
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { addDoc, collection, doc, serverTimestamp } from "firebase/firestore";
+import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
-import { CourseOutline, FileTile } from "@/components/course/outline";
+import { FileTile } from "@/components/course/outline";
+import { InstructorCard } from "@/components/course/instructor-card";
+import { LearnAside } from "@/components/course/learn-aside";
 import { QuizPlayer } from "@/components/course/quiz-player";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
@@ -13,11 +15,12 @@ import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { buildOutline } from "@/lib/course/outline";
+import { useLessonPosters } from "@/lib/course/use-lesson-posters";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
-import type { QuizDoc } from "@/lib/types/firestore";
+import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { VideoTracker } from "@/lib/analytics/video-tracker";
 
 function LearnBody() {
@@ -32,6 +35,15 @@ function LearnBody() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const subscription = useCourseSubscription(id, user?.uid);
+  const posters = useLessonPosters(lessons.data);
+  const instructor = useQuery({
+    queryKey: ["instructor", course.data?.authorRef?.id],
+    enabled: Boolean(course.data?.authorRef?.id),
+    queryFn: async () => {
+      const snap = await getDoc(course.data!.authorRef!);
+      return snap.exists() ? ({ id: snap.id, ...(snap.data() as UserDoc) }) : null;
+    },
+  });
 
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
@@ -48,9 +60,10 @@ function LearnBody() {
         quizzes: quizzes.data ?? [],
         resources: resources.data ?? [],
         subscription: subscription.data ?? null,
+        posters: posters.data,
         locale,
       }),
-    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, locale],
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, posters.data, locale],
   );
 
   // Fall back to the first lesson until one is chosen; no effect needed.
@@ -204,6 +217,17 @@ function LearnBody() {
                   )}
                 </div>
                 <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
+                {instructor.data ? (
+                  <InstructorCard
+                    href={`/instructor/${instructor.data.id}`}
+                    name={String(instructor.data.display_name || t("instructor"))}
+                    bio={instructor.data.bio}
+                    photo={instructor.data.photo_url}
+                    rating={Number(course.data?.totalRatting || 0)}
+                    ratingLabel={t("rating")}
+                    verified={instructor.data.instuctorStatus === "Approved"}
+                  />
+                ) : null}
                 {lessonFiles.length ? (
                   <div className="mt-3 rounded-[14px] border border-white/10 p-2">
                     <p className="px-2 pb-1 text-[12px] font-medium text-[#999]">{t("attachments")}</p>
@@ -215,13 +239,33 @@ function LearnBody() {
               </>
             )}
           </div>
-          <aside className="overflow-y-auto rounded-[16px] border border-line p-3 lg:max-h-[70vh] lg:rounded-3xl">
-            <CourseOutline
+          <aside className="overflow-y-auto rounded-[16px] border border-line lg:max-h-[70vh] lg:rounded-3xl">
+            <LearnAside
               items={outline}
-              locale={locale}
-              compact
-              activeId={quizId || lesson?.id}
-              labels={{ download: t("download"), test: t("test"), questions: t("questions"), chapter: t("chapters") }}
+              activeLessonId={quizId ? undefined : lesson?.id}
+              activeQuizId={quizId || undefined}
+              current={
+                lesson && !quizId
+                  ? {
+                      thumb:
+                        typeof lesson.image === "string"
+                          ? lesson.image
+                          : posters.data?.[lesson.id],
+                      title: String(lesson.name || ""),
+                      duration: Number(lesson.videoDuration || 0),
+                    }
+                  : null
+              }
+              labels={{
+                currentlyPlaying: t("currentlyPlaying"),
+                nextLessons: t("nextLessons"),
+                resources: t("resources"),
+                download: t("download"),
+                test: t("test"),
+                tests: t("tests"),
+                questions: t("questions"),
+                minShort: t("minShort"),
+              }}
               onLesson={openLesson}
               onQuiz={openQuiz}
             />

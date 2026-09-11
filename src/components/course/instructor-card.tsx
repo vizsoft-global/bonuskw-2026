@@ -14,6 +14,7 @@ export function InstructorCard({
   href,
   name,
   bio,
+  photo,
   rating,
   ratingLabel,
   verified,
@@ -21,6 +22,7 @@ export function InstructorCard({
   href: string;
   name: string;
   bio?: string;
+  photo?: string;
   rating: number;
   ratingLabel: string;
   verified?: boolean;
@@ -31,7 +33,12 @@ export function InstructorCard({
       className="mt-5 flex items-center gap-3 rounded-[16px] bg-[#141414] p-3"
     >
       <span className="grid size-12 shrink-0 place-items-center overflow-hidden rounded-full border border-[#666] bg-[#2a2a2a] text-sm font-semibold text-[#c8c8c8]">
-        {initialsOf(name)}
+        {photo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={photo} alt="" className="h-full w-full object-cover" />
+        ) : (
+          initialsOf(name)
+        )}
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">

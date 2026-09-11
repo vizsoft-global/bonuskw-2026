@@ -10,6 +10,8 @@ export type ContinueItem = {
   hrsLeft: number;
   nextName?: string;
   lastStudied?: string;
+  /** Epoch ms of the last watched lesson; drives Resume ordering. */
+  lastStudiedAt?: number;
 };
 
 export function ContinueCard({

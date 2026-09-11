@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
 import { CourseHeaderActions } from "@/components/course/header-actions";
 import { CourseCover, CourseInfo } from "@/components/course/hero";
@@ -20,6 +20,8 @@ import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResour
 import { enrolmentBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
 import { buildOutline, outlineCounts } from "@/lib/course/outline";
+import { invalidateEnrolment } from "@/lib/course/invalidate";
+import { useLessonPosters } from "@/lib/course/use-lesson-posters";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -32,6 +34,7 @@ export default function CoursePage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
+  const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
@@ -44,6 +47,7 @@ export default function CoursePage() {
   const lessons = useQuery({ queryKey: ["lessons", id], queryFn: () => listLessons(id) });
   const quizzes = useQuery({ queryKey: ["quizzes", id], queryFn: () => listQuizzes(id) });
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
+  const posters = useLessonPosters(lessons.data);
   const subscription = useCourseSubscription(id, user?.uid);
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
@@ -87,6 +91,7 @@ export default function CoursePage() {
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ courseId: id }),
         });
+        await invalidateEnrolment(qc);
         router.push(`/course/${id}/learn`);
         return;
       }
@@ -204,6 +209,7 @@ export default function CoursePage() {
     quizzes: quizzes.data ?? [],
     resources: resources.data ?? [],
     subscription: subscription.data ?? null,
+    posters: posters.data,
     locale,
   });
   const counts = outlineCounts(outline);

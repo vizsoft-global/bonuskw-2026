@@ -35,15 +35,22 @@ async function loadContinueItems(uid: string, courseIds: Array<string | undefine
   if (!ids.length) return [];
   const db = getDb();
   const userRef = doc(db, collections.users, uid);
-  const progressSnap = await getDocs(
-    query(collection(db, collections.watchProgress), where("userRef", "==", userRef)),
-  );
-  const progress = progressSnap.docs.map((d) => ({
-    courseId: d.get("courseRef")?.id as string | undefined,
-    lessonId: String(d.get("lessonId") || ""),
-    completed: Boolean(d.get("completed")),
-    updatedAt: toDate(d.get("updatedAt")),
-  }));
+  // Resume state is a bonus: if it cannot be read, every course still shows
+  // with 0% progress instead of blanking the whole section.
+  let progress: Array<{ courseId?: string; lessonId: string; completed: boolean; updatedAt: Date | null }> = [];
+  try {
+    const progressSnap = await getDocs(
+      query(collection(db, collections.watchProgress), where("userRef", "==", userRef)),
+    );
+    progress = progressSnap.docs.map((d) => ({
+      courseId: d.get("courseRef")?.id as string | undefined,
+      lessonId: String(d.get("lessonId") || ""),
+      completed: Boolean(d.get("completed")),
+      updatedAt: toDate(d.get("updatedAt")),
+    }));
+  } catch {
+    progress = [];
+  }
 
   const rows: Array<ContinueItem | null> = await Promise.all(
     ids.map(async (courseId) => {
@@ -67,6 +74,7 @@ async function loadContinueItems(uid: string, courseIds: Array<string | undefine
         hrsLeft,
         nextName: remaining[0] ? String(remaining[0].name || "") : undefined,
         lastStudied: last ? formatDistanceToNow(last, { addSuffix: true }) : undefined,
+        lastStudiedAt: last ? last.getTime() : undefined,
       };
     }),
   );
@@ -179,50 +187,66 @@ export default function MySpacePage() {
           />
         </div>
 
-        {(continueLearning.data ?? []).length ? (
-          <section className="flex flex-col gap-5 py-5">
-            <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("continueLearning")}</h2>
-            <div className={exploreRailClass}>
-              {(continueLearning.data ?? []).map((item) => (
-                <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
-              ))}
-            </div>
-          </section>
-        ) : (
-          <section className="py-5">
-            <h2 className="mb-3 text-[14px] font-semibold text-[#fafafa]">{t("continueLearning")}</h2>
-            <EmptyState
-              icon="/course/book.svg"
-              title={t("emptyMyCoursesTitle")}
-              body={t("emptyMyCoursesBody")}
-              cta={{ href: "/", label: t("explore") }}
-            />
-          </section>
-        )}
-
-        <section className="flex flex-col gap-5 py-5">
-          <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("myEbooks")}</h2>
-          {ebookItems.length ? (
-            <div className={exploreRailClass}>
-              {ebookItems.map((item) => (
-                <div key={item.id} className="w-[180px] shrink-0 lg:w-[227px]">
-                  <ExploreGridCard
-                    item={item}
-                    labels={cardLabels}
-                    onEnroll={() => router.push(`/store/${item.id}`)}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <EmptyState
-              icon="/profile/book.svg"
-              title={t("emptyMyEbooksTitle")}
-              body={t("emptyMyEbooksBody")}
-              cta={{ href: "/store", label: t("store") }}
-            />
-          )}
-        </section>
+        {(() => {
+          const items = continueLearning.data ?? [];
+          const resume = items
+            .filter((item) => item.lastStudiedAt)
+            .sort((a, b) => (b.lastStudiedAt ?? 0) - (a.lastStudiedAt ?? 0))
+            .slice(0, 6);
+          const hasAnything = items.length > 0 || ebookItems.length > 0;
+          if (!hasAnything) {
+            return (
+              <section className="py-5">
+                <EmptyState
+                  icon="/course/book.svg"
+                  title={t("emptyMyCoursesTitle")}
+                  body={t("emptyMyCoursesBody")}
+                  cta={{ href: "/", label: t("explore") }}
+                />
+              </section>
+            );
+          }
+          return (
+            <>
+              {resume.length ? (
+                <section className="flex flex-col gap-5 py-5">
+                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("resumeWatching")}</h2>
+                  <div className={exploreRailClass}>
+                    {resume.map((item) => (
+                      <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {items.length ? (
+                <section className="flex flex-col gap-5 py-5">
+                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("myCourses")}</h2>
+                  <div className={exploreRailClass}>
+                    {items.map((item) => (
+                      <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+              {ebookItems.length ? (
+                <section className="flex flex-col gap-5 py-5">
+                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("myEbooks")}</h2>
+                  <div className={exploreRailClass}>
+                    {ebookItems.map((item) => (
+                      <div key={item.id} className="w-[180px] shrink-0 lg:w-[227px]">
+                        <ExploreGridCard
+                          item={item}
+                          labels={cardLabels}
+                          onEnroll={() => router.push(`/store/${item.id}`)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              ) : null}
+            </>
+          );
+        })()}
       </div>
     </AppShell>
   );

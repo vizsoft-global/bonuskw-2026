@@ -7,23 +7,27 @@ import { cn } from "@/lib/utils";
 export function LessonRow({
   name,
   image,
+  poster,
   duration,
   locked,
 }: {
   name: string;
   image?: string;
+  /** Video poster shown when the lesson has no thumbnail of its own. */
+  poster?: string;
   duration?: number;
   locked: boolean;
 }) {
   const { t } = useI18n();
   const mins = duration && Number.isFinite(duration) ? Math.max(1, Math.round(duration / 60)) : 0;
+  const thumb = image || poster;
 
   return (
     <div className="flex flex-col gap-1.5">
       <div className="relative aspect-[82/55] overflow-hidden rounded-[10px] border-[0.5px] border-white/25 bg-[#252525]">
-        {image ? (
+        {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : null}
         <span className={cn("absolute inset-0", locked ? "bg-black/45" : "bg-black/20")} />
         {locked ? (
