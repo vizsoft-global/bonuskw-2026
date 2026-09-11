@@ -17,6 +17,7 @@ import { Avatar } from "@/components/ui/avatar";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 import { displayName } from "@/lib/format";
+import { avatarSrc } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
 const itemClass =
@@ -36,7 +37,7 @@ export function AccountMenu({ subtitle }: { subtitle?: string }) {
           type="button"
           className="flex h-11 items-center gap-2 rounded-full border border-line bg-surface/70 ps-1 pe-3 text-start hover:bg-surface-2"
         >
-          <Avatar src={profile?.photo_url} name={name} size="sm" />
+          <Avatar src={avatarSrc(profile)} name={name} size="sm" />
           <span className="hidden min-w-0 lg:block">
             <span className="block max-w-36 truncate text-sm font-medium leading-tight">{name}</span>
             {subtitle ? (

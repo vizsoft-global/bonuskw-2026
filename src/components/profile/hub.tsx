@@ -12,6 +12,7 @@ import { LangRadio, MenuRow, PushToggle, SectionLabel } from "@/components/profi
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb, getFirebaseApp } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
+import { avatarSrc } from "@/lib/avatar";
 import { useI18n } from "@/lib/i18n/locale";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 
@@ -110,7 +111,7 @@ export function ProfileHub() {
 
   return (
     <div className="flex w-full max-w-[365px] flex-col items-center">
-      <Avatar src={profile?.photo_url} name={name} className="size-[75px] text-2xl lg:size-[100px]" />
+      <Avatar src={avatarSrc(profile, user?.uid)} name={name} className="size-[75px] text-2xl lg:size-[100px]" />
       <p className="mt-2.5 text-[14px] font-bold text-[#fafafa]">{name}</p>
       {subtitle ? <p className="text-[12px] text-[#999]">{subtitle}</p> : null}
 

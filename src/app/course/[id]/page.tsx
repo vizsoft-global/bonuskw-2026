@@ -33,6 +33,7 @@ import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { UserDoc } from "@/lib/types/firestore";
 import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
+import { avatarSrc } from "@/lib/avatar";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
@@ -335,6 +336,7 @@ export default function CoursePage() {
         <InstructorCard
           href={`/instructor/${instructor.data.id}`}
           name={instructor.data.display_name || t("instructor")}
+          photo={avatarSrc(instructor.data, instructor.data.id)}
           bio={instructor.data.bio}
           rating={Number(c.totalRatting || 0)}
           ratingLabel={t("rating")}

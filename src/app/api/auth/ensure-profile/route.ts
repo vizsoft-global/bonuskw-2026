@@ -1,5 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { NextRequest, NextResponse } from "next/server";
+import { avatarSeed, generatedAvatar } from "@/lib/avatar";
 import { collections } from "@/lib/firebase/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
@@ -60,6 +61,22 @@ export async function POST(req: NextRequest) {
       if (user.name && !snap.get("display_name")) patch.display_name = user.name;
       if (user.picture && !snap.get("photo_url")) patch.photo_url = user.picture;
       if (user.email_verified) patch.emailVerifed = true;
+    }
+
+    // Everyone gets a face: a new profile with no photo is given a generated
+    // avatar keyed by mobile number (else email, else name) so it is unique
+    // and stable across the student app, admin and any other consumer.
+    if (!snap.exists && !patch.photo_url) {
+      patch.photo_url = generatedAvatar(
+        avatarSeed(
+          {
+            phoneE164: (patch.phoneE164 as string | undefined) || phone,
+            email: user.email,
+            display_name: user.name,
+          },
+          user.uid,
+        ),
+      );
     }
 
     await ref.set(patch, { merge: true });

@@ -32,6 +32,7 @@ import { loadCart } from "@/lib/cart/store";
 import { useI18n } from "@/lib/i18n/locale";
 import { haptic } from "@/lib/ui/haptics";
 import { useDeferredLoading } from "@/lib/ui/deferred-loading";
+import { avatarSrc } from "@/lib/avatar";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -393,7 +394,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                 )}
                 trigger={(open) => (
                   <>
-                    <Avatar src={profile?.photo_url} name={displayName} />
+                    <Avatar src={avatarSrc(profile, user?.uid)} name={displayName} />
                     <span className="min-w-0 text-start">
                       <span className="block truncate text-[14px] font-bold text-[#fafafa]">{displayName}</span>
                       <span className="block truncate text-[12px] text-[#999]">{uniName}</span>
@@ -441,7 +442,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                   className="flex min-w-0 items-center gap-2.5"
                   trigger={() => (
                     <>
-                      <Avatar src={profile?.photo_url} name={displayName} />
+                      <Avatar src={avatarSrc(profile, user?.uid)} name={displayName} />
                       <span className="min-w-0 text-start">
                         <span className="block truncate text-[14px] font-bold text-[#fafafa]">{displayName}</span>
                         <span className="block truncate text-[12px] text-[#999]">{uniName}</span>
@@ -518,7 +519,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                 icon={tab.icon}
                 iconActive={tab.iconActive}
                 profile={
-                  tab.key === "profile" ? { src: profile?.photo_url, name: displayName } : undefined
+                  tab.key === "profile" ? { src: avatarSrc(profile, user?.uid), name: displayName } : undefined
                 }
               />
             );

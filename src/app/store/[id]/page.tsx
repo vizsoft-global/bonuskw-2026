@@ -25,6 +25,7 @@ import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { avatarSrc } from "@/lib/avatar";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function EbookPage() {
@@ -252,6 +253,7 @@ export default function EbookPage() {
         <InstructorCard
           href={`/instructor/${instructor.data.id}`}
           name={instructor.data.display_name || t("instructor")}
+          photo={avatarSrc(instructor.data, instructor.data.id)}
           bio={instructor.data.bio}
           rating={Number(data.totalRatting || 0)}
           ratingLabel={t("rating")}
