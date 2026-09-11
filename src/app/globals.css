@@ -193,6 +193,7 @@ html:not(.dark) .bg-\[\#252525\] {
 html:not(.dark) .bg-\[\#2a2a2a\],
 html:not(.dark) .bg-\[\#292929\],
 html:not(.dark) .bg-\[\#333\],
+html:not(.dark) .bg-\[\#373737\],
 html:not(.dark) .bg-\[\#3a3a3a\] {
   background-color: #ececee;
 }
@@ -275,6 +276,10 @@ html:not(.dark) .border-\[\#050505\] {
 }
 html:not(.dark) img[src$=".svg"]:not([src*="glow"]):not([src*="knet"]):not([src*="visa"]) {
   filter: brightness(0);
+}
+/* Chips drawn over thumbnails/video keep their dark look on the light theme. */
+html:not(.dark) .on-media img {
+  filter: none !important;
 }
 html:not(.dark) .bg-\[\#0c5eff\] img,
 html:not(.dark) .bg-\[\#f24822\] img,

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HomeIcon } from "@/components/home/icon";
-import { FileThumb } from "@/components/course/outline";
+import { FileDownloadIcon, FileGlyph, FileTileArt, fileGradient, fileTypeLabel } from "@/components/course/file-art";
 import { formatBytes } from "@/lib/course/resource-kind";
 import type { OutlineFile, OutlineItem, OutlineLesson } from "@/lib/course/outline";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
@@ -47,16 +47,10 @@ function mins(seconds: number) {
   return seconds && Number.isFinite(seconds) ? Math.max(1, Math.round(seconds / 60)) : 0;
 }
 
-function fileTypeLabel(file: OutlineFile) {
-  const ext = file.name.split(".").pop()?.toUpperCase();
-  if (ext && ext.length <= 5 && ext !== file.name.toUpperCase()) return ext;
-  return file.kind.toUpperCase();
-}
-
 /** Small lock in the top corner of a card, as in the design. */
 function TinyLock() {
   return (
-    <span className="absolute end-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-black/70 ring-1 ring-white/25">
+    <span className="on-media absolute end-1.5 top-1.5 grid size-5 place-items-center rounded-full bg-black/70 ring-1 ring-white/25">
       <span className="size-2.5">
         <HomeIcon src="/course/lock.svg" />
       </span>
@@ -64,17 +58,22 @@ function TinyLock() {
   );
 }
 
+/** "Currently Playing" overlay on the active lesson card (equalizer + label). */
 function Equalizer() {
+  const { t } = useI18n();
   return (
-    <span className="absolute inset-0 grid place-items-center bg-black/35">
-      <span className="flex h-4 items-end gap-[3px]" aria-hidden>
-        {[0, 1, 2].map((i) => (
+    <span className="absolute inset-0 flex flex-col items-center justify-center gap-1.5" style={{ background: "rgba(0,0,0,0.4)" }}>
+      <span className="flex h-[18px] items-end gap-[2.5px]" aria-hidden>
+        {[55, 100, 75, 40, 85].map((h, i) => (
           <span
             key={i}
-            className="w-[3px] animate-pulse rounded-full bg-[#0c5eff]"
-            style={{ height: `${[60, 100, 75][i]}%`, animationDelay: `${i * 150}ms` }}
+            className="w-[2.5px] animate-pulse rounded-full"
+            style={{ height: `${h}%`, background: "#fff", animationDelay: `${i * 120}ms` }}
           />
         ))}
+      </span>
+      <span className="text-[12px] font-medium" style={{ color: "#fafafa" }}>
+        {t("currentlyPlaying")}
       </span>
     </span>
   );
@@ -160,9 +159,7 @@ function LessonCard({
             disabled={!onResources}
             className="flex items-center gap-1 rounded-full hover:text-[#fafafa] disabled:hover:text-[#999]"
           >
-            <span className="size-3 shrink-0">
-              <HomeIcon src="/course/paperclip.svg" />
-            </span>
+            <FileDownloadIcon className="size-3 shrink-0" />
             {t("resourcesCount").replace("{n}", String(lesson.files.length))}
           </button>
         ) : null}
@@ -173,7 +170,7 @@ function LessonCard({
 
 function TestBadge() {
   return (
-    <svg viewBox="0 0 48 48" className="size-11 text-white" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+    <svg viewBox="0 0 48 48" className="size-11" style={{ color: "#fff" }} fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
       <path
         d="M24 4l4.6 3.4 5.7-.6 2.1 5.3 5.3 2.1-.6 5.7L44 24l-3.4 4.6.6 5.7-5.3 2.1-2.1 5.3-5.7-.6L24 44l-4.6-3.4-5.7.6-2.1-5.3-5.3-2.1.6-5.7L4 24l3.4-4.6-.6-5.7 5.3-2.1 2.1-5.3 5.7.6z"
         strokeLinejoin="round"
@@ -212,19 +209,22 @@ function TestCard({
             "relative block aspect-video w-full overflow-hidden rounded-[10px] ring-1 ring-white/10",
             active && "ring-2 ring-[#0c5eff]",
           )}
-          style={{ background: "linear-gradient(160deg,#2a63e6 0%,#0b2f7c 100%)" }}
+          style={{ background: "linear-gradient(180deg,#122853 0%,#2859b9 100%)" }}
         >
-          <span className="absolute inset-0 flex flex-col items-center justify-center gap-1">
+          <span className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
             <TestBadge />
-            <span className="text-[13px] font-medium text-white">{t("test")}</span>
+            <span className="text-[18px] font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {t("test")}
+            </span>
           </span>
           {quiz.locked ? <TinyLock /> : null}
           {result ? (
             <span
               className={cn(
                 "absolute bottom-1.5 start-1.5 rounded-full px-2 py-0.5 text-[9px] font-semibold",
-                result.passed ? "bg-[#10b981] text-white" : "bg-[#f24822] text-white",
+                result.passed ? "bg-[#10b981]" : "bg-[#f24822]",
               )}
+              style={{ color: "#fff" }}
             >
               {result.percent}% · {result.passed ? t("passedTest") : t("failedTest")}
             </span>
@@ -252,50 +252,56 @@ function TestCard({
         <button
           type="button"
           onClick={onOpen}
-          className="mt-0.5 h-8 w-fit rounded-full bg-[#0c5eff] px-3 text-[11px] font-semibold text-white"
+          className="mt-0.5 flex h-10 w-full items-center justify-center gap-2 rounded-[12px] bg-[#373737] px-5 text-[13px] text-[#fafafa]"
         >
           {result ? t("retakeTest") : t("takeTheTest")}
+          <span className="size-3.5 rtl:-scale-x-100">
+            <HomeIcon src="/course/chevron.svg" />
+          </span>
         </button>
       ) : null}
     </div>
   );
 }
 
-function openFile(file: OutlineFile) {
+function defaultOpenFile(file: OutlineFile) {
   window.open(file.url, "_blank", "noopener,noreferrer");
 }
 
 /** A chapter-level attachment, shown as a card in the same row as the lessons. */
-function FileCard({ file }: { file: OutlineFile }) {
-  const { t } = useI18n();
+function FileCard({ file, onOpen }: { file: OutlineFile; onOpen: (file: OutlineFile) => void }) {
   return (
     <div className={CARD}>
       <button
         type="button"
         disabled={file.locked}
-        onClick={() => openFile(file)}
+        onClick={() => onOpen(file)}
         className="flex flex-col gap-1.5 text-start disabled:cursor-default"
       >
-        <span className="relative block aspect-video w-full overflow-hidden rounded-[10px]">
-          <FileThumb kind={file.kind} className="h-full w-full rounded-[10px]" />
+        <span
+          className="relative block aspect-video w-full overflow-hidden rounded-[10px] ring-1 ring-white/25"
+          style={{ background: fileGradient(file.kind) }}
+        >
+          <span className="absolute inset-0 grid place-items-center">
+            <FileGlyph file={file} className="w-[29%]" />
+          </span>
           {file.locked ? <span className="absolute inset-0 bg-black/35" /> : null}
           {file.locked ? <TinyLock /> : null}
         </span>
         <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-[#fafafa]">{file.name}</span>
       </button>
-      <span className="flex items-center gap-1 text-[11px] font-medium text-[#999]">
-        <span className="size-3 shrink-0">
-          <HomeIcon src="/course/paperclip.svg" />
+      <span className="flex items-center gap-2.5 text-[11px] font-medium text-[#999]">
+        <span className="flex items-center gap-1">
+          <span className="size-3 shrink-0">
+            <HomeIcon src="/course/paperclip.svg" />
+          </span>
+          {fileTypeLabel(file)}
         </span>
-        {fileTypeLabel(file)}
-        {file.bytes ? ` · ${formatBytes(file.bytes)}` : ""}
-        {!file.locked ? (
-          <>
-            {" · "}
-            <button type="button" onClick={() => openFile(file)} className="text-[#0c5eff]">
-              {t("download")}
-            </button>
-          </>
+        {file.bytes ? (
+          <span className="flex items-center gap-1">
+            <FileDownloadIcon className="size-3 shrink-0" />
+            {formatBytes(file.bytes)}
+          </span>
         ) : null}
       </span>
     </div>
@@ -359,7 +365,7 @@ function RailArrow({ side, onClick }: { side: "start" | "end"; onClick: () => vo
       aria-label={side === "end" ? "Scroll forward" : "Scroll back"}
       className={cn(
         // Roughly centred on the thumbnails, which take the top ~60% of a card.
-        "absolute top-[30%] z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/75 ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-black",
+        "on-media absolute top-[30%] z-10 grid size-9 -translate-y-1/2 place-items-center rounded-full bg-black/75 ring-1 ring-white/25 backdrop-blur-sm transition hover:bg-black",
         side === "end" ? "end-1" : "start-1",
       )}
     >
@@ -374,7 +380,15 @@ function RailArrow({ side, onClick }: { side: "start" | "end"; onClick: () => vo
 /* Resources dialog: a lesson's attachments, opened from the card          */
 /* ----------------------------------------------------------------------- */
 
-function ResourcesDialog({ lesson, onClose }: { lesson: OutlineLesson; onClose: () => void }) {
+function ResourcesDialog({
+  lesson,
+  onClose,
+  onOpen,
+}: {
+  lesson: OutlineLesson;
+  onClose: () => void;
+  onOpen: (file: OutlineFile) => void;
+}) {
   const { t } = useI18n();
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -416,10 +430,13 @@ function ResourcesDialog({ lesson, onClose }: { lesson: OutlineLesson; onClose: 
               <button
                 type="button"
                 disabled={file.locked}
-                onClick={() => openFile(file)}
+                onClick={() => {
+                  onClose();
+                  onOpen(file);
+                }}
                 className="flex min-h-12 w-full items-center gap-3 py-2 text-start disabled:opacity-70"
               >
-                <FileThumb kind={file.kind} className="h-10 w-14" />
+                <FileTileArt file={file} className="size-10 rounded-[8px]" />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-medium text-[#fafafa]">{file.name}</span>
                   <span className="text-[11px] text-[#999]">
@@ -455,6 +472,8 @@ export function ChapterSections({
   onLesson,
   onQuiz,
   onBuyChapter,
+  onFile,
+  headerTone = "light",
 }: {
   items: OutlineItem[];
   locale: Locale;
@@ -465,8 +484,13 @@ export function ChapterSections({
   onLesson?: (lesson: OutlineLesson) => void;
   onQuiz?: (quizId: string) => void;
   onBuyChapter?: (chapterId: string) => void;
+  /** Open an unlocked file (preview or download); opens in a new tab by default. */
+  onFile?: (file: OutlineFile) => void;
+  /** Chapter title colour: bright on the course page, muted on the learn page. */
+  headerTone?: "light" | "muted";
 }) {
   const { t } = useI18n();
+  const openFile = onFile ?? defaultOpenFile;
   const sections = groupSections(items);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
   const [resourcesFor, setResourcesFor] = useState<OutlineLesson | null>(null);
@@ -494,7 +518,12 @@ export function ChapterSections({
                 aria-expanded={open}
                 className="flex min-w-0 flex-1 items-center gap-2 py-1.5 text-start"
               >
-                <span className="min-w-0 truncate text-[14px] font-medium text-[#fafafa]">
+                <span
+                  className={cn(
+                    "min-w-0 truncate text-[14px] font-medium",
+                    headerTone === "muted" ? "text-[#999]" : "text-[#fafafa]",
+                  )}
+                >
                   {t("chapterN").replace("{n}", String(index + 1))}: {chapter.name}
                 </span>
                 <span className="shrink-0 text-[11px] text-[#666]">{count}</span>
@@ -533,7 +562,7 @@ export function ChapterSections({
                       />
                     ))}
                     {chapter.files.map((file) => (
-                      <FileCard key={file.id} file={file} />
+                      <FileCard key={file.id} file={file} onOpen={openFile} />
                     ))}
                     {section.quizzes.map(({ quiz, number }) => (
                       <TestCard
@@ -554,7 +583,9 @@ export function ChapterSections({
           </section>
         );
       })}
-      {resourcesFor ? <ResourcesDialog lesson={resourcesFor} onClose={() => setResourcesFor(null)} /> : null}
+      {resourcesFor ? (
+        <ResourcesDialog lesson={resourcesFor} onClose={() => setResourcesFor(null)} onOpen={openFile} />
+      ) : null}
     </div>
   );
 }

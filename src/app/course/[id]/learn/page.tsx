@@ -1,19 +1,23 @@
 "use client";
 
 import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
-import { InstructorCard } from "@/components/course/instructor-card";
 import { ChapterSections } from "@/components/course/chapter-sections";
+import { isPreviewable } from "@/components/course/file-art";
+import { downloadFile, FilePreview } from "@/components/course/file-preview";
 import { QuizPlayer } from "@/components/course/quiz-player";
+import { ResourceList } from "@/components/course/resource-list";
+import { HomeIcon } from "@/components/home/icon";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
-import { buildOutline } from "@/lib/course/outline";
+import { buildOutline, type OutlineFile } from "@/lib/course/outline";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
@@ -21,6 +25,7 @@ import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
+import { cn } from "@/lib/utils";
 import { VideoTracker } from "@/lib/analytics/video-tracker";
 import { playerSrc, type PlaybackTicket } from "@/lib/video/player-src";
 
@@ -69,6 +74,8 @@ function LearnBody() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [otpBusy, setOtpBusy] = useState(false);
   const [review, setReview] = useState(5);
+  const [mobileTab, setMobileTab] = useState<"lessons" | "resources">("lessons");
+  const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
 
   const outline = useMemo(
     () =>
@@ -234,15 +241,58 @@ function LearnBody() {
   );
   const currentLesson =
     currentChapter?.kind === "chapter" ? currentChapter.lessons.find((l) => l.id === lesson?.id) : undefined;
+  // Files shown next to the player: the lesson's own, then its chapter's.
+  const currentFiles = [
+    ...(currentLesson?.files ?? []),
+    ...(currentChapter?.kind === "chapter" ? currentChapter.files : []),
+  ];
+  // Previous/next across every lesson the student can play, in outline order.
+  const playable = outline.flatMap((item) =>
+    item.kind === "chapter" ? item.lessons.filter((l) => !l.locked) : [],
+  );
+  const position = playable.findIndex((l) => l.id === lesson?.id);
+  const prevLesson = position > 0 ? playable[position - 1] : undefined;
+  const nextLesson = position >= 0 ? playable[position + 1] : undefined;
+
+  function openFile(file: OutlineFile) {
+    if (isPreviewable(file)) setPreviewFile(file);
+    else downloadFile(file);
+  }
+
+  const courseName = String(course.data?.name || "");
+  const instructorAction = instructor.data ? (
+    <Link
+      href={`/instructor/${instructor.data.id}`}
+      className="flex min-w-0 items-center gap-0.5 text-[11px] text-[#999] lg:text-[12px]"
+    >
+      <span className="truncate">
+        {t("byInstructor").replace("{name}", String(instructor.data.display_name || t("instructor")))}
+      </span>
+      <span className="size-3.5 shrink-0 rtl:-scale-x-100">
+        <HomeIcon src="/course/chevron.svg" />
+      </span>
+    </Link>
+  ) : undefined;
+
+  const resourcesPanel = (
+    <ResourceList files={currentFiles} onOpen={openFile} dense />
+  );
 
   return (
-    <AppShell loading={loading} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
+    <AppShell
+      loading={loading}
+      compactHeader
+      title={courseName || t("lessons")}
+      actions={instructorAction}
+      skeleton={<ListPageSkeleton rows={6} />}
+    >
       {outline.length ? (
-        <div className="flex flex-col gap-4">
-          <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+        <div className="flex flex-col gap-3 lg:gap-5">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)] lg:items-stretch lg:gap-5">
+            {/* Player: the whole width on mobile, ~70% on desktop. */}
             <div className="min-w-0">
               {activeQuiz ? (
-                <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
+                <div className="rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4">
                   <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
                   {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
                     <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
@@ -251,115 +301,188 @@ function LearnBody() {
                   )}
                 </div>
               ) : (
-                <>
-                  <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
-                    {src ? (
-                      <iframe
-                        ref={iframeRef}
-                        key={src}
-                        title={String(lesson?.name || "Lesson")}
-                        src={src}
-                        className="h-full w-full"
-                        allow="fullscreen; autoplay; encrypted-media"
-                        onLoad={(e) => {
-                          e.currentTarget.dataset.loaded = "1";
-                        }}
-                      />
-                    ) : otpBusy ? (
-                      <div className="grid h-full w-full place-items-center">
-                        <Loader size="page" />
-                      </div>
-                    ) : (
-                      <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
-                        {t("start")}
-                      </button>
-                    )}
+                <div
+                  className="relative aspect-video overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
+                  style={{ background: "#1d1d1d" }}
+                >
+                  {src ? (
+                    <iframe
+                      ref={iframeRef}
+                      key={src}
+                      title={String(lesson?.name || "Lesson")}
+                      src={src}
+                      className="h-full w-full"
+                      allow="fullscreen; autoplay; encrypted-media"
+                      onLoad={(e) => {
+                        e.currentTarget.dataset.loaded = "1";
+                      }}
+                    />
+                  ) : otpBusy ? (
+                    <div className="grid h-full w-full place-items-center">
+                      <Loader size="page" />
+                    </div>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => void play()}
+                      className="grid h-full w-full place-items-center"
+                      style={{ color: "#fff" }}
+                    >
+                      {t("start")}
+                    </button>
+                  )}
+                  {/* Title strip and previous/next lesson, over the top edge of the video. */}
+                  <div
+                    className="pointer-events-none absolute inset-x-0 top-0 h-[58px] lg:h-[72px]"
+                    style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)" }}
+                  />
+                  <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
+                    <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
+                      {String(lesson?.name || courseName)}
+                    </p>
+                    <p className="text-[10px] leading-4 lg:text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
+                      {courseName}
+                    </p>
                   </div>
-                </>
+                  <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
+                    {prevLesson ? (
+                      <button
+                        type="button"
+                        onClick={() => openLesson(prevLesson.id)}
+                        className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                      >
+                        <SkipIcon direction="back" />
+                        <span className="hidden sm:inline">{t("previousLessonBtn")}</span>
+                      </button>
+                    ) : null}
+                    {nextLesson ? (
+                      <button
+                        type="button"
+                        onClick={() => openLesson(nextLesson.id)}
+                        className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                      >
+                        {t("nextLessonBtn")}
+                        <SkipIcon direction="forward" />
+                      </button>
+                    ) : null}
+                  </div>
+                </div>
               )}
             </div>
-            <aside className="flex min-w-0 flex-col gap-3">
-              {!activeQuiz ? (
-                <div className="rounded-[16px] bg-[#141414] p-3">
-                  <p className="text-[11px] font-medium uppercase tracking-wide text-[#999]">{t("currentlyPlaying")}</p>
-                  <p className="mt-1 text-[15px] font-semibold leading-5 text-[#fafafa]">
-                    {String(lesson?.name || course.data?.name || "")}
-                  </p>
-                  {currentChapter?.kind === "chapter" ? (
-                    <p className="mt-0.5 truncate text-[12px] text-[#999]">{currentChapter.name}</p>
-                  ) : null}
-                  {currentLesson?.files.length ? (
-                    <ul className="mt-2 flex flex-col divide-y divide-white/10">
-                      {currentLesson.files.map((file) => (
-                        <li key={file.id}>
-                          <button
-                            type="button"
-                            disabled={file.locked}
-                            onClick={() => window.open(file.url, "_blank", "noopener,noreferrer")}
-                            className="flex min-h-10 w-full items-center gap-2 py-1.5 text-start disabled:opacity-60"
-                          >
-                            <span className="min-w-0 flex-1 truncate text-[12px] text-[#fafafa]">{file.name}</span>
-                            <span className="shrink-0 text-[11px] font-medium text-[#0c5eff]">
-                              {file.locked ? "" : t("download")}
-                            </span>
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  ) : null}
+
+            {/* Desktop: the playing lesson's files beside the video. */}
+            <aside className="relative hidden min-w-0 lg:block">
+              <div className="absolute inset-0 flex flex-col overflow-hidden rounded-[12px] border-[0.5px] border-white/10 bg-[#141414]">
+                <div className="flex items-center justify-between px-[15px] pt-[15px] pb-2">
+                  <p className="text-[13px] font-medium text-[#fafafa]">{t("resources")}</p>
+                  <p className="text-[11px] text-[#999]">{t("assetsCount").replace("{n}", String(currentFiles.length))}</p>
                 </div>
-              ) : null}
-              {instructor.data ? (
-                <div className="[&>a]:mt-0">
-                  <InstructorCard
-                    href={`/instructor/${instructor.data.id}`}
-                    name={String(instructor.data.display_name || t("instructor"))}
-                    bio={instructor.data.bio}
-                    photo={instructor.data.photo_url}
-                    rating={Number(course.data?.totalRatting || 0)}
-                    ratingLabel={t("rating")}
-                    verified={instructor.data.instuctorStatus === "Approved"}
-                  />
-                </div>
-              ) : null}
-              <div className="rounded-[16px] bg-[#141414] p-3 text-[13px] text-[#fafafa]">
-                <label className="flex items-center gap-2">
-                  {t("rating")}
-                  <input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={review}
-                    onChange={(e) => setReview(Number(e.target.value))}
-                    className="w-14 rounded-md bg-white/10 px-2 py-1 text-center"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="mt-2 h-8 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
-                  onClick={() => void leaveReview()}
-                >
-                  {t("finish")}
-                </button>
+                <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-[15px] pb-2">{resourcesPanel}</div>
               </div>
             </aside>
           </div>
-          <section>
-            <h2 className="pb-1 text-[16px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
+
+          {/* Mobile: tabs between what to watch next and the files. */}
+          <div className="lg:hidden">
+            <div className="flex items-center gap-[15px] border-b border-white/20 pt-1">
+              {(["lessons", "resources"] as const).map((key) => {
+                const active = mobileTab === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setMobileTab(key)}
+                    className={cn(
+                      "flex items-center gap-[5px] border-b px-[5px] py-2.5 text-[12px] text-[#fafafa]",
+                      active ? "border-[#fafafa] font-medium" : "border-transparent opacity-60",
+                    )}
+                  >
+                    {key === "lessons" ? t("nextLessons") : t("resources")}
+                    {key === "resources" ? (
+                      <span className="rounded-[6px] bg-[#141414] px-2 text-[10px] font-medium leading-4 text-[#fafafa]">
+                        {currentFiles.length}
+                      </span>
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+            {mobileTab === "resources" ? (
+              <ResourceList files={currentFiles} onOpen={openFile} />
+            ) : (
+              <div className="pt-1">
+                <ChapterSections
+                  items={outline}
+                  locale={locale}
+                  activeId={quizId || lesson?.id}
+                  quizResults={quizResults.data}
+                  headerTone="muted"
+                  onLesson={(next) => openLesson(next.id)}
+                  onQuiz={openQuiz}
+                  onFile={openFile}
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Desktop: what to watch next, chapter by chapter. */}
+          <section className="hidden lg:block">
+            <h2 className="pb-1 text-[14px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
             <ChapterSections
               items={outline}
               locale={locale}
               activeId={quizId || lesson?.id}
               quizResults={quizResults.data}
+              headerTone="muted"
               onLesson={(next) => openLesson(next.id)}
               onQuiz={openQuiz}
+              onFile={openFile}
             />
           </section>
+
+          <div className="flex items-center gap-3 rounded-[12px] bg-[#141414] px-3 py-2.5 text-[12px] text-[#fafafa]">
+            <label className="flex items-center gap-2">
+              {t("rating")}
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={review}
+                onChange={(e) => setReview(Number(e.target.value))}
+                className="w-14 rounded-md bg-white/10 px-2 py-1 text-center"
+              />
+            </label>
+            <button
+              type="button"
+              className="h-8 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
+              onClick={() => void leaveReview()}
+            >
+              {t("finish")}
+            </button>
+          </div>
         </div>
       ) : (
         <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
       )}
+      {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>
+  );
+}
+
+/** Skip-to-next / skip-to-previous glyph for the player overlay. */
+function SkipIcon({ direction }: { direction: "forward" | "back" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={cn("size-3.5", direction === "back" ? "-scale-x-100 rtl:scale-x-100" : "rtl:-scale-x-100")}
+      fill="currentColor"
+      aria-hidden
+    >
+      <path d="M5 5.5v13l9-6.5z" />
+      <rect x="16" y="5.5" width="2.5" height="13" rx="0.8" />
+    </svg>
   );
 }
 

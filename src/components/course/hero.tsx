@@ -57,9 +57,13 @@ export function CourseCover({
               onClick={video.onPlay}
               disabled={video.busy}
               aria-label={video.label}
-              className="absolute inset-0 grid place-items-center bg-black/25 transition hover:bg-black/35"
+              className="absolute inset-0 grid place-items-center transition"
+              style={{ background: "rgba(0,0,0,0.25)" }}
             >
-              <span className="flex items-center gap-2 rounded-full bg-black/70 py-2 pe-4 ps-2.5 text-[13px] font-medium text-white ring-1 ring-white/25 backdrop-blur-sm">
+              <span
+                className="flex items-center gap-2 rounded-full py-2 pe-4 ps-2.5 text-[13px] font-medium ring-1 ring-white/25 backdrop-blur-sm"
+                style={{ background: "rgba(0,0,0,0.7)", color: "#fff" }}
+              >
                 <span className="grid size-7 place-items-center rounded-full bg-[#0c5eff]">
                   {video.busy ? (
                     <span className="size-3.5 animate-spin rounded-full border-2 border-white/40 border-t-white" />
@@ -74,7 +78,10 @@ export function CourseCover({
             </button>
           ) : null}
           {batchName ? (
-            <span className="absolute bottom-3 end-3 rounded-full bg-black/70 px-2.5 py-1 text-[11px] text-[#fafafa]">
+            <span
+              className="absolute bottom-3 end-3 rounded-full px-2.5 py-1 text-[11px]"
+              style={{ background: "rgba(0,0,0,0.7)", color: "#fafafa" }}
+            >
               {batchName}
             </span>
           ) : null}

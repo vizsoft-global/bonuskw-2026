@@ -9,6 +9,8 @@ import { CourseCover, CourseInfo } from "@/components/course/hero";
 import { EnrollCta } from "@/components/course/enroll-cta";
 import { InstructorCard } from "@/components/course/instructor-card";
 import { ChapterSections } from "@/components/course/chapter-sections";
+import { isPreviewable } from "@/components/course/file-art";
+import { downloadFile, FilePreview } from "@/components/course/file-preview";
 import { VideoPopup } from "@/components/course/video-popup";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
@@ -20,7 +22,7 @@ import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { enrolmentBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
-import { buildOutline, outlineCounts, type OutlineLesson } from "@/lib/course/outline";
+import { buildOutline, outlineCounts, type OutlineFile, type OutlineLesson } from "@/lib/course/outline";
 import { invalidateEnrolment } from "@/lib/course/invalidate";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
@@ -41,6 +43,7 @@ export default function CoursePage() {
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
   const [preview, setPreview] = useState<OutlineLesson | null>(null);
+  const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
   const [intro, setIntro] = useState<PlaybackTicket | null>(null);
   const [introBusy, setIntroBusy] = useState(false);
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
@@ -350,6 +353,7 @@ export default function CoursePage() {
         locale={locale}
         quizResults={quizResults.data}
         onLesson={openLesson}
+        onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
         onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
         onBuyChapter={
           c.coursePaymentType === "Free" || staffViewer || enrolled
@@ -358,6 +362,7 @@ export default function CoursePage() {
         }
       />
       {preview ? <VideoPopup lessonId={preview.id} title={preview.name} onClose={() => setPreview(null)} /> : null}
+      {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>
   );
 }
