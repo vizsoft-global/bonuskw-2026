@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { LineCard, PayCta, SavedCard } from "@/components/cart/line-card";
 import { PaymentMethods } from "@/components/cart/payment-method";
 import { AppShell } from "@/components/layout/app-shell";
@@ -10,6 +11,7 @@ import { Loader } from "@/components/shared/loader";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { canPurchase } from "@/lib/auth/purchase-access";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
@@ -26,6 +28,7 @@ type CreateResponse = {
 export default function CartPage() {
   const { user, profile } = useAuth();
   const staffViewer = Boolean(user) && !canPurchase(profile);
+  const gate = usePurchaseGate();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<CartState>({ lines: [], savedForLater: [] });
@@ -151,7 +154,9 @@ export default function CartPage() {
   const emiEligible = cart.lines.filter((l) => l.kind === "course" && l.emiAvailable !== false);
   const allEmi = emiEligible.length > 0 && emiEligible.every((l) => l.paymentType === "EMI");
   const dueLabel = formatKwdLocale(due, locale);
-  const canPay = accept && !busy && !redirecting && cart.lines.length > 0 && !staffViewer;
+  // First paused line wins: the checkout API refuses the whole order anyway.
+  const paused = cart.lines.map((line) => gate.blockFor(line.kind)).find(Boolean);
+  const canPay = accept && !busy && !redirecting && cart.lines.length > 0 && !staffViewer && !paused;
   const lineLabels = {
     fullPay: t("fullPay"),
     emi: t("emi"),
@@ -191,6 +196,12 @@ export default function CartPage() {
           {t("staffViewOnlyBody")}
         </p>
       ) : null}
+      {paused ? (
+        <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-[#999]">
+          <span className="block font-semibold text-[#f5d08a]">{paused}</span>
+          {t("purchasesPausedBody")}
+        </p>
+      ) : null}
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
       <div className="flex flex-col items-center gap-2.5">
         {busy || redirecting ? (
@@ -223,6 +234,7 @@ export default function CartPage() {
       ) : (
         <div className="grid items-start gap-8 lg:grid-cols-2 lg:gap-20">
           <div className="flex flex-col gap-5">
+            <DevModeBanner />
             {cart.lines.map((line) => (
               <LineCard
                 key={`${line.kind}-${line.courseId}-${line.chapterId || ""}-${line.installmentId || ""}`}

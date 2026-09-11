@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
 import { Avatar } from "@/components/layout/avatar";
 import { HomeIcon } from "@/components/home/icon";
+import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
+import { DevModeSheet } from "@/components/profile/dev-mode-sheet";
 import { LanguageSheet } from "@/components/profile/language-sheet";
 import { LangRadio, MenuRow, PushToggle, SectionLabel } from "@/components/profile/ui";
 import { useAuth } from "@/lib/auth/auth-provider";
@@ -15,6 +17,7 @@ import { collections } from "@/lib/firebase/collections";
 import { avatarSrc } from "@/lib/avatar";
 import { useI18n } from "@/lib/i18n/locale";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
+import { SHORT_VERSION } from "@/lib/version";
 
 const PUSH_KEY = "ba_push_enabled";
 const LANG_SHEET_KEY = "ba_open_lang";
@@ -24,6 +27,8 @@ export function ProfileHub() {
   const { t, locale, setLocale } = useI18n();
   const path = usePathname();
   const [langOpen, setLangOpen] = useState(false);
+  const [devOpen, setDevOpen] = useState(false);
+  const taps = useRef<number[]>([]);
   const [pushOn, setPushOn] = useState(false);
   const [pushBusy, setPushBusy] = useState(false);
   const install = useInstallPrompt();
@@ -111,6 +116,7 @@ export function ProfileHub() {
 
   return (
     <div className="flex w-full max-w-[365px] flex-col items-center">
+      <DevModeBanner className="mb-3 w-full" />
       <Avatar src={avatarSrc(profile, user?.uid)} name={name} className="size-[75px] text-2xl lg:size-[100px]" />
       <p className="mt-2.5 text-[14px] font-bold text-[#fafafa]">{name}</p>
       {subtitle ? <p className="text-[12px] text-[#999]">{subtitle}</p> : null}
@@ -200,6 +206,22 @@ export function ProfileHub() {
         <MenuRow icon="/profile/logout.svg" label={t("logout")} onClick={() => void logout()} last />
       </div>
 
+      <button
+        type="button"
+        onClick={() => {
+          const now = Date.now();
+          taps.current = [...taps.current.filter((at) => now - at < 1600), now];
+          if (taps.current.length >= 3) {
+            taps.current = [];
+            setDevOpen(true);
+          }
+        }}
+        className="mt-4 text-[11px] text-[#666]"
+      >
+        {t("version")} {SHORT_VERSION}
+      </button>
+
+      <DevModeSheet open={devOpen} onClose={() => setDevOpen(false)} />
       <LanguageSheet
         open={langOpen}
         locale={locale}

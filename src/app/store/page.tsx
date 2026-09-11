@@ -28,6 +28,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { TaxonomyPicker } from "@/components/taxonomy/taxonomy-picker";
 import {
   EMPTY_SELECTION,
@@ -51,6 +52,7 @@ import { cn } from "@/lib/utils";
 export default function StorePage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
+  const gate = usePurchaseGate();
   const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<TaxonomySelection | null>(null);
@@ -134,6 +136,7 @@ export default function StorePage() {
       router.push("/login");
       return;
     }
+    if (gate.blockFor("ebook")) return;
     await addEbookToCart(user.uid, book);
     router.push("/cart");
   }
@@ -203,6 +206,7 @@ export default function StorePage() {
                       labels={cardLabels}
                       onEnroll={() => book && void addEbook(book)}
                       onSave={() => void toggleSave(item.id)}
+                      enrollBlocked={gate.blockFor("ebook")}
                     />
                   </div>
                 );
@@ -248,6 +252,7 @@ export default function StorePage() {
                       labels={cardLabels}
                       onEnroll={() => book && void addEbook(book)}
                       onSave={() => void toggleSave(item.id)}
+                      enrollBlocked={gate.blockFor("ebook")}
                     />
                   );
                 })}
@@ -263,6 +268,7 @@ export default function StorePage() {
                       labels={cardLabels}
                       onEnroll={() => book && void addEbook(book)}
                       onSave={() => void toggleSave(item.id)}
+                      enrollBlocked={gate.blockFor("ebook")}
                     />
                   );
                 })}

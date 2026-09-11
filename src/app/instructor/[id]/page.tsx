@@ -11,6 +11,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { InstructorSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
@@ -28,6 +29,7 @@ export default function InstructorPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
+  const gate = usePurchaseGate();
   const [tab, setTab] = useState<"courses" | "ebooks">("courses");
 
   const instructor = useQuery({
@@ -90,6 +92,7 @@ export default function InstructorPage() {
       router.push("/login");
       return;
     }
+    if (gate.blockFor(purchaseKindFor(row))) return;
     if (isEbookCourse(row)) await addEbookToCart(user.uid, row);
     else await addCourseToCart(user.uid, row);
     router.push("/cart");
@@ -207,6 +210,7 @@ export default function InstructorPage() {
                 labels={tab === "ebooks" ? ebookLabels : courseLabels}
                 onEnroll={() => row && void addItem(row)}
                 onSave={() => void toggleSave(item.id)}
+                enrollBlocked={row ? gate.blockFor(purchaseKindFor(row)) : undefined}
               />
             );
           })}

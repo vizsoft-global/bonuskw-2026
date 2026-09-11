@@ -10,6 +10,7 @@ import { ProfileTabs } from "@/components/profile/ui";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse } from "@/lib/catalog/queries";
 import { isEbookCourse } from "@/lib/format";
@@ -23,6 +24,7 @@ import { courseThumb } from "@/lib/course/thumb";
 
 export default function SavedPage() {
   const { user, profile, refreshProfile } = useAuth();
+  const gate = usePurchaseGate();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<"course" | "ebook">("course");
@@ -88,6 +90,7 @@ export default function SavedPage() {
   async function enrol(id: string) {
     if (!user) return;
     const course = saved.data?.rows.find((row) => row.id === id);
+    if (gate.blockFor(purchaseKindFor(course))) return;
     const cart = await loadCart(user.uid);
     await saveCart(
       user.uid,
@@ -135,6 +138,7 @@ export default function SavedPage() {
               labels={labels}
               onEnroll={() => void enrol(item.id)}
               onSave={() => void unsave(item.id)}
+              enrollBlocked={gate.blockFor(tab === "ebook" ? "ebook" : "course")}
             />
           ))}
         </div>

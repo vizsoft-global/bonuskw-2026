@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { collections } from "@/lib/firebase/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
-import type { BatchDoc, CourseDoc, UserDoc } from "@/lib/types/firestore";
+import type { BatchDoc, CourseDoc, PurchaseControls, UserDoc } from "@/lib/types/firestore";
 import { canPurchase } from "@/lib/auth/purchase-access";
 
 export const runtime = "nodejs";
@@ -20,6 +20,22 @@ export async function POST(req: NextRequest) {
   if (!canPurchase(profile)) {
     return NextResponse.json(
       { error: "Instructor and admin accounts cannot enrol", code: "staff-account" },
+      { status: 403 },
+    );
+  }
+  // Fail-safe switches (Settings > Purchases & dev mode). Dev-mode testers may
+  // enrol, but their subscription is stamped as a test record.
+  const controls = ((await db.collection(collections.adminConfig).doc("studentApp").get()).data()?.purchases ??
+    {}) as PurchaseControls;
+  const tester = controls.devMode === true && profile?.devTester === true;
+  if (!tester && (controls.catalogMode || controls.coursesOff)) {
+    return NextResponse.json(
+      {
+        error: controls.catalogMode
+          ? "Purchases are paused right now. Please check back soon."
+          : "Course enrolment is paused right now. Please check back soon.",
+        code: controls.catalogMode ? "purchases-disabled" : "courses-disabled",
+      },
       { status: 403 },
     );
   }
@@ -58,6 +74,7 @@ export async function POST(req: NextRequest) {
     paymentType: "Full payment",
     payment_status: "CAPTURED",
     status: "Ongoing",
+    ...(tester ? { isTest: true, devSession: true } : {}),
   });
   await courseRef.set({ bookedCount: FieldValue.increment(1) }, { merge: true });
   return NextResponse.json({ ok: true });

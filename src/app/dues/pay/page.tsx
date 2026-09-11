@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { AppShell } from "@/components/layout/app-shell";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine, type CartState } from "@/lib/cart/store";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
@@ -34,6 +35,7 @@ type DueRequest = {
 function PayBody() {
   const params = useSearchParams();
   const { user, ready } = useAuth();
+  const gate = usePurchaseGate();
   const { t, locale } = useI18n();
   const router = useRouter();
   const id = params.get("req") || "";
@@ -70,8 +72,10 @@ function PayBody() {
     };
   }, [ready, user, id, router]);
 
+  const paused = gate.blockFor("installment");
+
   async function payAll() {
-    if (!user || !data || busy) return;
+    if (!user || !data || busy || paused) return;
     setBusy(true);
     try {
       let cart: CartState = await loadCart(user.uid);
@@ -123,9 +127,12 @@ function PayBody() {
                 </li>
               ))}
             </ul>
+            {paused ? (
+              <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-[#f5d08a]">{paused}</p>
+            ) : null}
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || Boolean(paused)}
               onClick={() => void payAll()}
               className="flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#0c5eff] px-4 text-[14px] font-semibold text-white disabled:opacity-60"
             >

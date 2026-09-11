@@ -10,6 +10,13 @@ export type UserDoc = {
   uid?: string;
   created_time?: Timestamp | Date;
   phone_number?: string;
+  /**
+   * Unlocked dev mode in the student app (3 taps + password). Only honoured
+   * while `adminConfig/studentApp.purchases.devMode` is on; purchases then go
+   * through the test gateway and are stamped `isTest`.
+   */
+  devTester?: boolean;
+  devTesterAt?: Timestamp | Date;
   /** Canonical +965… form of `phone_number`; used for sign-in matching. */
   phoneE164?: string;
   lastActive?: Timestamp | Date;
@@ -927,3 +934,15 @@ export type PromotionUsageDoc = {
  * own `id` field (batches), the original is preserved as `sourceId`.
  */
 export type WithId<T> = T & { id: string; refPath: string; sourceId?: unknown };
+
+/** `adminConfig/studentApp.purchases` — fail-safe switches for the live store. */
+export type PurchaseControls = {
+  /** Catalog mode: nothing can be bought. */
+  catalogMode?: boolean;
+  /** Courses, chapters and instalments cannot be bought. */
+  coursesOff?: boolean;
+  /** eBooks cannot be bought. */
+  ebooksOff?: boolean;
+  /** Testers may unlock the app and buy through the test gateway. */
+  devMode?: boolean;
+};

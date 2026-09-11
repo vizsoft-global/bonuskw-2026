@@ -8,6 +8,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine, type CartLine, type CartState } from "@/lib/cart/store";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -28,6 +29,7 @@ function dueLine(due: QueryDocumentSnapshot): CartLine {
 
 export default function DuesPage() {
   const { user } = useAuth();
+  const gate = usePurchaseGate();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [busy, setBusy] = useState(false);
@@ -45,8 +47,10 @@ export default function DuesPage() {
   const list = dues.data ?? [];
   const total = list.reduce((sum, d) => sum + (Number(d.get("amount")) || 0), 0);
 
+  const paused = gate.blockFor("installment");
+
   async function addToCart(items: QueryDocumentSnapshot[]) {
-    if (!user || busy) return;
+    if (!user || busy || paused) return;
     setBusy(true);
     try {
       let cart: CartState = await loadCart(user.uid);
@@ -63,10 +67,15 @@ export default function DuesPage() {
       {list.length ? (
         <>
           {/* One checkout for everything outstanding: a single gateway charge. */}
+          {paused ? (
+            <p className="mb-3 rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-[#f5d08a]">
+              {paused}
+            </p>
+          ) : null}
           {list.length > 1 ? (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || Boolean(paused)}
               onClick={() => void addToCart(list)}
               className="mb-3 flex min-h-12 w-full items-center justify-center rounded-2xl bg-[#0c5eff] px-4 text-[14px] font-semibold text-white disabled:opacity-60"
             >
@@ -77,7 +86,7 @@ export default function DuesPage() {
             <button
               key={due.id}
               type="button"
-              disabled={busy}
+              disabled={busy || Boolean(paused)}
               className="mb-2 block min-h-11 w-full rounded-2xl border border-line p-3 text-start disabled:opacity-60"
               onClick={() => void addToCart([due])}
             >

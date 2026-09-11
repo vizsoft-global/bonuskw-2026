@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { doc, getDoc } from "firebase/firestore";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
+import type { PurchaseControls } from "@/lib/types/firestore";
 
 /** `adminConfig/studentApp` — written by the admin panel (Settings > Student app). */
 export type StudentConfig = {
@@ -14,6 +15,8 @@ export type StudentConfig = {
   supportWhatsapp?: string;
   supportEmail?: string;
   maintenance?: { enabled?: boolean; message?: { en?: string; ar?: string } };
+  /** Fail-safe purchase switches (Settings > Purchases & dev mode). */
+  purchases?: PurchaseControls;
 };
 
 export async function fetchStudentConfig(): Promise<StudentConfig> {

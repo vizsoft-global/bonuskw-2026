@@ -30,7 +30,9 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { HomeSkeleton } from "@/components/shared/skeleton";
 import { PageLoader } from "@/components/shared/loader";
+import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { CATALOG_STALE_MS, exploreCourses, getCourse, getDocsByIds, listCourses } from "@/lib/catalog/queries";
 import { TaxonomyPicker } from "@/components/taxonomy/taxonomy-picker";
 import {
@@ -104,6 +106,7 @@ export default function HomePage() {
 function HomeBody({ uid }: { uid: string }) {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
+  const gate = usePurchaseGate();
   const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("grid");
   // Filter starts at the student's own university/field; they can widen it.
@@ -192,6 +195,7 @@ function HomeBody({ uid }: { uid: string }) {
   );
 
   async function enrol(course: CourseDoc & { id: string }) {
+    if (gate.blockFor("course")) return;
     await addCourseToCart(uid, course);
     router.push("/cart");
   }
@@ -236,6 +240,11 @@ function HomeBody({ uid }: { uid: string }) {
   return (
     <AppShell headerExtra={<StoriesRow stories={storyItems} />} loading={courses.isPending} skeleton={<HomeSkeleton />}>
       <div className="flex flex-col">
+        {gate.tester ? (
+          <div className="pt-3 lg:pt-5">
+            <DevModeBanner />
+          </div>
+        ) : null}
         <p className="hidden text-[20px] font-semibold text-[#fafafa] lg:block lg:pt-[30px]">
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
@@ -300,6 +309,7 @@ function HomeBody({ uid }: { uid: string }) {
                       labels={exploreLabels}
                       onEnroll={() => course && void enrol(course)}
                       onSave={() => void toggleSave(item.id)}
+                      enrollBlocked={gate.blockFor("course")}
                     />
                   );
                 })}
@@ -315,6 +325,7 @@ function HomeBody({ uid }: { uid: string }) {
                       labels={exploreLabels}
                       onEnroll={() => course && void enrol(course)}
                       onSave={() => void toggleSave(item.id)}
+                      enrollBlocked={gate.blockFor("course")}
                     />
                   );
                 })}

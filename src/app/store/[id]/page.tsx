@@ -26,6 +26,7 @@ import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
 import { avatarSrc } from "@/lib/avatar";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function EbookPage() {
@@ -33,6 +34,7 @@ export default function EbookPage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
+  const gate = usePurchaseGate();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
 
@@ -126,6 +128,11 @@ export default function EbookPage() {
   }
 
   async function addEbook(target: CourseDoc & { id: string }) {
+    const paused = gate.blockFor("ebook");
+    if (paused) {
+      setCartError(paused);
+      return;
+    }
     if (!ready) return;
     if (!user) {
       router.push("/login");
@@ -239,7 +246,7 @@ export default function EbookPage() {
               price={formatKwdLocale(data.price, locale)}
               enrollLabel={t("addToCart")}
               secure={t("secure")}
-              block={owned.data ? t("purchased") : undefined}
+              block={owned.data ? t("purchased") : gate.blockFor("ebook")}
               busy={busy}
               showEmi={false}
               onEnroll={() => void addEbook(data)}

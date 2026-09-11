@@ -131,23 +131,31 @@ function CardActions({
   item,
   labels,
   onEnroll,
+  enrollBlocked,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
   onEnroll: () => void;
+  enrollBlocked?: string;
 }) {
   return (
     <div className="mt-auto flex w-full items-end justify-between gap-2.5 px-1 pb-1">
       <Meta item={item} labels={labels} />
       <button
         type="button"
+        disabled={Boolean(enrollBlocked)}
+        title={enrollBlocked}
         onClick={() => {
+          if (enrollBlocked) return;
           haptic("medium");
           onEnroll();
         }}
-        className="ms-auto flex h-7 shrink-0 items-center justify-center rounded-[16px] bg-[#0c5eff] px-[15px] text-[12px] font-medium leading-none whitespace-nowrap text-white lg:h-8"
+        className={cn(
+          "ms-auto flex h-7 shrink-0 items-center justify-center rounded-[16px] px-[15px] text-[12px] font-medium leading-none whitespace-nowrap lg:h-8",
+          enrollBlocked ? "cursor-not-allowed bg-[#2a2a2a] text-[#999]" : "bg-[#0c5eff] text-white",
+        )}
       >
-        {labels.enroll}
+        {enrollBlocked || labels.enroll}
       </button>
     </div>
   );
@@ -158,11 +166,13 @@ export function ExploreListCard({
   labels,
   onEnroll,
   onSave,
+  enrollBlocked,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
   onEnroll: () => void;
   onSave?: () => void;
+  enrollBlocked?: string;
 }) {
   const href = itemHref(item);
   const portrait = item.aspect === "3/4";
@@ -183,7 +193,7 @@ export function ExploreListCard({
           </Link>
           <RatingRow item={item} />
         </div>
-        <CardActions item={item} labels={labels} onEnroll={onEnroll} />
+        <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
       </div>
     </article>
   );
@@ -194,11 +204,13 @@ export function ExploreGridCard({
   labels,
   onEnroll,
   onSave,
+  enrollBlocked,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
   onEnroll: () => void;
   onSave?: () => void;
+  enrollBlocked?: string;
 }) {
   const href = itemHref(item);
   return (
@@ -218,7 +230,7 @@ export function ExploreGridCard({
           </Link>
           <RatingRow item={item} />
         </div>
-        <CardActions item={item} labels={labels} onEnroll={onEnroll} />
+        <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
       </div>
     </article>
   );

@@ -11,6 +11,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SearchSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
@@ -67,6 +68,7 @@ export default function SearchPage() {
   const { t, locale } = useI18n();
   const tax = useTaxonomy();
   const { user, profile, refreshProfile } = useAuth();
+  const gate = usePurchaseGate();
   const router = useRouter();
   const [q, setQ] = useState("");
   const [rating, setRating] = useState(0);
@@ -226,7 +228,7 @@ export default function SearchPage() {
   };
 
   async function enrol(course: CourseDoc & { id: string }) {
-    if (!user) return;
+    if (!user || gate.blockFor(purchaseKindFor(course))) return;
     const cart = await loadCart(user.uid);
     await saveCart(
       user.uid,
@@ -421,6 +423,7 @@ export default function SearchPage() {
                     labels={exploreLabels}
                     onEnroll={() => course && void enrol(course)}
                     onSave={() => void toggleSave(item.id)}
+                    enrollBlocked={course ? gate.blockFor(purchaseKindFor(course)) : undefined}
                   />
                 );
               })}

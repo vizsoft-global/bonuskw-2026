@@ -34,6 +34,7 @@ import { useI18n } from "@/lib/i18n/locale";
 import type { UserDoc } from "@/lib/types/firestore";
 import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
 import { avatarSrc } from "@/lib/avatar";
+import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
@@ -41,6 +42,7 @@ export default function CoursePage() {
   const router = useRouter();
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
+  const gate = usePurchaseGate();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
@@ -92,6 +94,11 @@ export default function CoursePage() {
       return;
     }
     if (!course.data) return;
+    const paused = gate.blockFor("course");
+    if (paused) {
+      setCartError(paused);
+      return;
+    }
     const c = course.data;
     setBusy(true);
     setCartError("");
@@ -138,6 +145,11 @@ export default function CoursePage() {
     if (!ready) return;
     if (!user) {
       router.push("/login");
+      return;
+    }
+    const paused = gate.blockFor("chapter");
+    if (paused) {
+      setCartError(paused);
       return;
     }
     const c = course.data;
@@ -222,7 +234,8 @@ export default function CoursePage() {
 
   const c = course.data;
   const blockReason = enrolmentBlock(c, batch.data);
-  const block = blockReason ? (blockReason === "batch-full" ? t("batchFull") : t("noBatch")) : undefined;
+  const block =
+    gate.blockFor("course") ?? (blockReason ? (blockReason === "batch-full" ? t("batchFull") : t("noBatch")) : undefined);
   const language = courseLanguage(c);
   // Real runtimes and posters from the video records; lesson docs often
   // carry `videoDuration: 0` and no thumbnail of their own.
@@ -360,7 +373,7 @@ export default function CoursePage() {
         onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
         onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
         onBuyChapter={
-          c.coursePaymentType === "Free" || staffViewer || enrolled
+          c.coursePaymentType === "Free" || staffViewer || enrolled || gate.blockFor("chapter")
             ? undefined
             : (chapterId) => void addChapterToCart(chapterId)
         }

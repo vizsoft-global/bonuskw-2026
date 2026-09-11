@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAuth } from "@/lib/auth/auth-provider";
 
 type TestCard = {
   brand: string;
@@ -40,13 +41,21 @@ export function PaymentMethods({
   copyLabel: string;
 }) {
   const [config, setConfig] = useState<PublicConfig | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
-    void fetch("/api/checkout/public-config")
+    // Signed-in dev-mode testers get test-mode hints even on the live gateway.
+    const load = async () => {
+      const token = user ? await user.getIdToken().catch(() => "") : "";
+      return fetch("/api/checkout/public-config", {
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+      });
+    };
+    void load()
       .then((res) => res.json() as Promise<PublicConfig>)
       .then(setConfig)
       .catch(() => setConfig({ mode: "live", testCards: [] }));
-  }, []);
+  }, [user]);
 
   const testCards =
     config?.mode === "test" && config?.showTestCards !== false ? (config.testCards ?? []) : [];
