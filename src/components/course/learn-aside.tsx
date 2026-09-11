@@ -66,6 +66,30 @@ function LockDot() {
   );
 }
 
+/** One attachment under its lesson: ready to download without opening another tab. */
+function LessonFileRow({ file, downloadLabel }: { file: OutlineFile; downloadLabel: string }) {
+  return (
+    <div className="flex items-center gap-2 border-b border-white/5 py-2 pe-[10px] ps-[97px]">
+      <FileThumb kind={file.kind} className="h-7 w-10 shrink-0" />
+      <span className="min-w-0 flex-1 truncate text-[11px] text-[#ccc]">{file.name}</span>
+      {file.locked ? (
+        <LockDot />
+      ) : (
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noreferrer"
+          download
+          onClick={(e) => e.stopPropagation()}
+          className="shrink-0 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-medium text-[#fafafa]"
+        >
+          {downloadLabel}
+        </a>
+      )}
+    </div>
+  );
+}
+
 function LessonRow({
   lesson,
   thumb,
@@ -212,14 +236,18 @@ export function LearnAside({
               {collapsed[chapter.id] ? null : (
                 <div>
                   {chapter.lessons.map((lesson) => (
-                    <LessonRow
-                      key={lesson.id}
-                      lesson={lesson}
-                      thumb={lesson.image || lesson.poster}
-                      active={lesson.id === activeLessonId}
-                      minShort={labels.minShort}
-                      onOpen={onLesson ? () => onLesson(lesson.id) : undefined}
-                    />
+                    <div key={lesson.id}>
+                      <LessonRow
+                        lesson={lesson}
+                        thumb={lesson.image || lesson.poster}
+                        active={lesson.id === activeLessonId}
+                        minShort={labels.minShort}
+                        onOpen={onLesson ? () => onLesson(lesson.id) : undefined}
+                      />
+                      {lesson.files.map((file) => (
+                        <LessonFileRow key={file.id} file={file} downloadLabel={labels.download} />
+                      ))}
+                    </div>
                   ))}
                 </div>
               )}

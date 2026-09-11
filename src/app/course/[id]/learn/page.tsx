@@ -144,6 +144,37 @@ function LearnBody() {
     }
   }
 
+  // Opening a lesson starts playback straight away — no second tap on Start.
+  // Runs for the first lesson too: landing on the learn page means watch.
+  useEffect(() => {
+    if (!user || !lesson || quizId || otp || otpBusy) return;
+    let cancelled = false;
+    setOtpBusy(true);
+    void user
+      .getIdToken()
+      .then((token) =>
+        fetch("/api/video/otp", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ lessonId: lesson.id }),
+        }),
+      )
+      .then((res) => res.json())
+      .then((json) => {
+        if (!cancelled) setOtp(json);
+      })
+      .catch(() => {
+        // The Start button stays as the fallback.
+      })
+      .finally(() => {
+        if (!cancelled) setOtpBusy(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- autoplay only when the lesson changes
+  }, [user, lesson?.id, quizId]);
+
   async function leaveReview() {
     if (!user) return;
     await addDoc(collection(getDb(), collections.review), {
