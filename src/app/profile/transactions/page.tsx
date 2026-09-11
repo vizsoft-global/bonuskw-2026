@@ -15,6 +15,8 @@ import { collections } from "@/lib/firebase/collections";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, OrderItem, OrderLine } from "@/lib/types/firestore";
+import { courseThumb } from "@/lib/course/thumb";
+import { BrandThumb } from "@/components/shared/brand-thumb";
 
 type TxKind = "course" | "ebook";
 type TxRow = {
@@ -23,6 +25,7 @@ type TxRow = {
   kind: TxKind;
   title: string;
   image?: string;
+  courseId?: string;
   author?: string;
   amount: number;
   date?: Date | null;
@@ -95,7 +98,8 @@ export default function TransactionsPage() {
             orderId: order.id,
             kind,
             title: String(title),
-            image: rec.courseImage || course?.image,
+            image: course ? courseThumb(course) : rec.courseImage,
+            courseId,
             amount,
             date: created,
           });
@@ -144,11 +148,13 @@ export default function TransactionsPage() {
                 onClick={() => void invoice(row.orderId)}
                 className="flex w-full items-center gap-3 rounded-[12px] bg-[#141414] p-1 text-start"
               >
-                <span className="h-[79px] w-[59px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
+                <span className="relative h-[79px] w-[59px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
                   {row.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={row.image} alt="" className="h-full w-full object-cover" />
-                  ) : null}
+                  ) : (
+                    <BrandThumb seed={row.courseId} />
+                  )}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col justify-between py-1">
                   <span>
@@ -168,11 +174,13 @@ export default function TransactionsPage() {
                 onClick={() => void invoice(row.orderId)}
                 className="flex w-full gap-3 rounded-[12px] bg-[#141414] p-1 text-start"
               >
-                <span className="h-[86px] w-[154px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
+                <span className="relative h-[86px] w-[154px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
                   {row.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={row.image} alt="" className="h-full w-full object-cover" />
-                  ) : null}
+                  ) : (
+                    <BrandThumb seed={row.courseId} />
+                  )}
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col justify-between py-1">
                   <span>

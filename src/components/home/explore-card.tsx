@@ -170,7 +170,7 @@ export function ExploreListCard({
     <article className="relative flex w-full gap-3 overflow-hidden rounded-[12px] bg-[#141414] p-1.5">
       <div className={cn("relative shrink-0", portrait ? "w-[110px]" : "w-[154px]")}>
         <Link href={href} className="block">
-          <CourseThumb image={item.image} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
+          <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
             {item.batch ? <BatchBadge label={item.batch} /> : null}
           </CourseThumb>
         </Link>
@@ -205,7 +205,7 @@ export function ExploreGridCard({
     <article className="flex h-full flex-col overflow-hidden rounded-[12px] bg-[#141414] p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={href} className="block">
-          <CourseThumb image={item.image} aspect={item.aspect} className="w-full">
+          <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full">
             {item.batch ? <BatchBadge label={item.batch} /> : null}
           </CourseThumb>
         </Link>

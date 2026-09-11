@@ -25,6 +25,7 @@ import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseThumb } from "@/lib/course/thumb";
 
 export default function EbookPage() {
   const { id } = useParams<{ id: string }>();
@@ -97,7 +98,7 @@ export default function EbookPage() {
         return {
           id: row.id,
           name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
-          image: row.image,
+          image: courseThumb(row),
           rating: Number(row.totalRatting || 0),
           author: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id] : instructor.data?.display_name,
           pages: pages > 0 ? pages : undefined,
@@ -211,7 +212,7 @@ export default function EbookPage() {
   return (
     <AppShell compactHeader title={title} actions={actions}>
       <div className="grid gap-5 lg:grid-cols-[minmax(0,280px)_1fr] lg:items-start lg:gap-8 lg:pt-2">
-        <CourseCover image={data.image} aspect="3/4" />
+        <CourseCover image={data.image} seed={id} aspect="3/4" />
         <div>
           <CourseInfo
             sku={data.sku || id.slice(0, 8)}

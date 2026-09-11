@@ -19,6 +19,7 @@ import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseThumb } from "@/lib/course/thumb";
 
 export default function SavedPage() {
   const { user, profile, refreshProfile } = useAuth();
@@ -62,7 +63,7 @@ export default function SavedPage() {
     return data.rows.map((course) => ({
       id: course.id,
       name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
-      image: course.image,
+      image: courseThumb(course),
       rating: Number(course.totalRatting || 0),
       author: course.authorRef?.id ? data.authors[course.authorRef.id] : undefined,
       lessons: Number(course.numberLessons || 0),
@@ -95,7 +96,7 @@ export default function SavedPage() {
         courseId: id,
         paymentType: "Full payment",
         title: course?.name,
-        image: course?.image,
+        image: course ? courseThumb(course) : undefined,
         price: Number(course?.price) || 0,
         addedAt: Date.now(),
       }),

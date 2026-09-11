@@ -1,26 +1,27 @@
 "use client";
 
 import { HomeIcon } from "@/components/home/icon";
+import { BrandThumb } from "@/components/shared/brand-thumb";
 import { useI18n } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
 export function LessonRow({
   name,
   image,
-  poster,
+  seed,
   duration,
   locked,
 }: {
   name: string;
   image?: string;
-  /** Video poster shown when the lesson has no thumbnail of its own. */
-  poster?: string;
+  /** Chapter id: colour of the default artwork when the lesson has no image. */
+  seed?: string;
   duration?: number;
   locked: boolean;
 }) {
   const { t } = useI18n();
   const mins = duration && Number.isFinite(duration) ? Math.max(1, Math.round(duration / 60)) : 0;
-  const thumb = image || poster;
+  const thumb = image;
 
   return (
     <div className="flex flex-col gap-1.5">
@@ -28,7 +29,9 @@ export function LessonRow({
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
-        ) : null}
+        ) : (
+          <BrandThumb seed={seed} />
+        )}
         <span className={cn("absolute inset-0", locked ? "bg-black/45" : "bg-black/20")} />
         {locked ? (
           <span className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-black/65 ring-1 ring-white/25">

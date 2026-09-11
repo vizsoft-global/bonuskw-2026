@@ -79,6 +79,11 @@ export type CourseDoc = {
   name?: string;
   image?: string;
   /**
+   * Courses show the brand-coloured default artwork unless the instructor
+   * turned this on and uploaded `image`. Ignored for eBooks (covers always show).
+   */
+  thumbnailOverride?: boolean;
+  /**
    * "course" (default when absent — every legacy document is a course) or
    * "ebook". eBooks are a separate product: a bundle of downloadable files
    * rather than a lesson tree, tracked in `ebookFiles`.

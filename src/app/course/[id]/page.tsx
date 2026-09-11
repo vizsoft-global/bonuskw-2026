@@ -33,6 +33,7 @@ import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { UserDoc } from "@/lib/types/firestore";
 import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
+import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
   const { id } = useParams<{ id: string }>();
@@ -113,7 +114,7 @@ export default function CoursePage() {
           courseId: id,
           paymentType,
           title: c.name,
-          image: c.image,
+          image: courseThumb(c),
           price: Number(c.price) || 0,
           emiAvailable: Boolean(c.emiPaymentStatus),
           ...(c.emiPaymentStatus
@@ -155,7 +156,7 @@ export default function CoursePage() {
           chapterId,
           paymentType: "Full payment",
           title: `${c.name ?? ""} › ${chapter.name ?? ""}`.trim(),
-          image: c.image,
+          image: courseThumb(c),
           price: Number(chapter.price) || 0,
           ...(batch.data?.name ? { batch: batch.data.name } : {}),
           addedAt: Date.now(),
@@ -263,7 +264,8 @@ export default function CoursePage() {
     <AppShell compactHeader title={title} actions={actions}>
       <div className="grid gap-4 lg:grid-cols-[minmax(0,11fr)_minmax(0,9fr)] lg:items-start lg:gap-6 lg:pt-1">
         <CourseCover
-          image={c.image}
+          image={courseThumb(c)}
+          seed={id}
           batchName={batch.data?.name}
           aspect="16/9"
           video={

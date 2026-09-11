@@ -54,7 +54,7 @@ export function LineCard({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={line.image} alt="" className="h-full w-full object-cover" />
           ) : (
-            <ThumbPlaceholder />
+            <ThumbPlaceholder seed={line.courseId} />
           )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
@@ -165,7 +165,7 @@ export function SavedCard({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={line.image} alt="" className="h-full w-full object-cover" />
         ) : (
-          <ThumbPlaceholder />
+          <ThumbPlaceholder seed={line.courseId} />
         )}
       </div>
       <p className="line-clamp-2 min-h-[36px] text-[14px] font-medium leading-5 text-[#fafafa]">

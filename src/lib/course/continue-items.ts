@@ -4,6 +4,7 @@ import type { ContinueItem } from "@/components/home/continue-card";
 import { getCourse, getDocsByIds, listLessons } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
+import { courseThumb } from "@/lib/course/thumb";
 
 function toDate(value: unknown): Date | null {
   if (!value) return null;
@@ -110,7 +111,7 @@ export async function loadContinueItems(
       return {
         courseId,
         name: course.name || "",
-        image: course.image,
+        image: courseThumb(course),
         pct: Math.round((done / total) * 100),
         hrsLeft: Math.max(hrsLeft >= 1 ? Math.round(hrsLeft) : Math.round(hrsLeft * 10) / 10, 0),
         watchedMin,

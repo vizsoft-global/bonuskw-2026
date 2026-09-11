@@ -19,11 +19,14 @@ export type CoverVideo = {
 
 export function CourseCover({
   image,
+  seed,
   batchName,
   aspect = "5/3",
   video,
 }: {
   image?: string;
+  /** Course id: colour of the default artwork. */
+  seed?: string | null;
   batchName?: string;
   aspect?: "5/3" | "3/4" | "16/9";
   video?: CoverVideo;
@@ -49,7 +52,7 @@ export function CourseCover({
             // eslint-disable-next-line @next/next/no-img-element
             <img src={image} alt="" className="h-full w-full object-cover" />
           ) : (
-            <ThumbPlaceholder />
+            <ThumbPlaceholder seed={seed} />
           )}
           {video ? (
             <button

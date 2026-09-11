@@ -39,6 +39,7 @@ export function LessonAccordion({
                 key={lesson.id}
                 name={String(lesson.name || "Lesson")}
                 image={typeof lesson.image === "string" ? lesson.image : undefined}
+                seed={chapter.id}
                 duration={Number(lesson.videoDuration || 0)}
                 locked={lesson.locked}
               />

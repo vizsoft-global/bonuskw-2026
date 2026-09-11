@@ -34,7 +34,7 @@ export function ContinueCard({
 
   return (
     <article className="flex w-[223px] shrink-0 flex-col gap-3 overflow-hidden rounded-[12px] bg-[#141414] p-1.5 lg:w-[293px] lg:p-1">
-      <CourseThumb image={item.image} className="w-full" />
+      <CourseThumb image={item.image} seed={item.courseId} className="w-full" />
       <div className="px-1">
         <p className="truncate text-[14px] font-medium leading-[18px] text-[#fafafa]">{item.name}</p>
       </div>

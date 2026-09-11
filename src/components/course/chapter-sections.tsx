@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { HomeIcon } from "@/components/home/icon";
+import { BrandThumb } from "@/components/shared/brand-thumb";
 import { FileDownloadIcon, FileGlyph, FileTileArt, fileGradient, fileTypeLabel } from "@/components/course/file-art";
 import { formatBytes } from "@/lib/course/resource-kind";
 import type { OutlineFile, OutlineItem, OutlineLesson } from "@/lib/course/outline";
@@ -79,8 +80,21 @@ function Equalizer() {
   );
 }
 
-/** Lesson thumbnail: its own image, the video poster, or the brand mark on a blue gradient. */
-function CardThumb({ src, children, className }: { src?: string; children?: ReactNode; className?: string }) {
+/**
+ * Lesson thumbnail: its own uploaded image, else the brand artwork in the
+ * chapter's colour so every lesson of a chapter looks like one set.
+ */
+function CardThumb({
+  src,
+  seed,
+  children,
+  className,
+}: {
+  src?: string;
+  seed?: string;
+  children?: ReactNode;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -92,13 +106,7 @@ function CardThumb({ src, children, className }: { src?: string; children?: Reac
         // eslint-disable-next-line @next/next/no-img-element
         <img src={src} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <span
-          className="absolute inset-0 grid place-items-center"
-          style={{ background: "linear-gradient(160deg,#0c5eff 0%,#071f4f 100%)" }}
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/onboarding/logo.svg" alt="" className="size-[34%] max-h-12 object-contain opacity-90" />
-        </span>
+        <BrandThumb seed={seed} />
       )}
       {children}
     </span>
@@ -121,12 +129,15 @@ function cardClass(dense?: boolean) {
 
 function LessonCard({
   lesson,
+  chapterId,
   active,
   dense,
   onOpen,
   onResources,
 }: {
   lesson: OutlineLesson;
+  /** Colours the default artwork; all lessons in a chapter share it. */
+  chapterId: string;
   active?: boolean;
   dense?: boolean;
   onOpen?: () => void;
@@ -134,7 +145,9 @@ function LessonCard({
 }) {
   const { t } = useI18n();
   const playable = Boolean(onOpen) && (!lesson.locked || lesson.preview);
-  const thumb = lesson.image || lesson.poster;
+  // Only an uploaded thumbnail counts; auto video posters are skipped so the
+  // outline stays uniform.
+  const thumb = lesson.image;
   return (
     <div className={cardClass(dense)}>
       <button
@@ -143,7 +156,7 @@ function LessonCard({
         onClick={onOpen}
         className="flex flex-col gap-1.5 text-start disabled:cursor-default"
       >
-        <CardThumb src={thumb} className={cn(active && "ring-2 ring-[#0c5eff]")}>
+        <CardThumb src={thumb} seed={chapterId} className={cn(active && "ring-2 ring-[#0c5eff]")}>
           {lesson.locked && !lesson.preview ? <span className="absolute inset-0 bg-black/35" /> : null}
           {lesson.locked && !lesson.preview ? <TinyLock /> : null}
           {active ? <Equalizer /> : null}
@@ -582,6 +595,7 @@ export function ChapterSections({
                       <LessonCard
                         key={lesson.id}
                         lesson={lesson}
+                        chapterId={chapter.id}
                         dense={dense}
                         active={activeId === lesson.id}
                         onOpen={onLesson ? () => onLesson(lesson) : undefined}

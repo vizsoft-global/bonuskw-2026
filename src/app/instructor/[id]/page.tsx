@@ -20,6 +20,7 @@ import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseThumb } from "@/lib/course/thumb";
 
 export default function InstructorPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,7 +71,7 @@ export default function InstructorPage() {
     return {
       id: row.id,
       name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
-      image: row.image,
+      image: courseThumb(row),
       rating: Number(row.totalRatting || 0),
       author: name,
       lessons: ebook ? undefined : Number(row.numberLessons || 0),
@@ -229,7 +230,7 @@ async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) 
       courseId: course.id,
       paymentType: "Full payment",
       title: course.name,
-      image: course.image,
+      image: courseThumb(course),
       price: course.price,
       addedAt: Date.now(),
     }),

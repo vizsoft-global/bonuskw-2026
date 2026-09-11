@@ -12,7 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SearchSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
-import { getBatch, listCourses } from "@/lib/catalog/queries";
+import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { isEbookCourse } from "@/lib/format";
@@ -27,6 +27,7 @@ import {
 } from "@/lib/search/recents";
 import type { CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseThumb } from "@/lib/course/thumb";
 
 function normalizeSearch(value: unknown) {
   return String(value ?? "")
@@ -128,7 +129,9 @@ export default function SearchPage() {
   });
 
   const results = useMemo(() => {
-    const base = (courses.data ?? []).filter((c) => !c.trashed);
+    // Every published course on the platform, whatever university it belongs
+    // to — search is the one place the profile's taxonomy never narrows.
+    const base = publishedCourses(courses.data ?? []);
     // Wild match: case/accent-insensitive, every typed word must appear in the
     // course name (any language), subtitle, SKU or instructor name.
     const words = normalizeSearch(q).split(" ").filter(Boolean);
@@ -202,7 +205,7 @@ export default function SearchPage() {
       results.map((course) => ({
         id: course.id,
         name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
-        image: course.image,
+        image: courseThumb(course),
         rating: Number(course.totalRatting || 0),
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id] : undefined,
         lessons: Number(course.numberLessons || 0),
@@ -232,7 +235,7 @@ export default function SearchPage() {
         courseId: course.id,
         paymentType: "Full payment",
         title: course.name,
-        image: course.image,
+        image: courseThumb(course),
         price: course.price,
         addedAt: Date.now(),
       }),

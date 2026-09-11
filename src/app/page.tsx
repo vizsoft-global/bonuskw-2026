@@ -49,6 +49,7 @@ import type { CourseDoc, SettingsDoc } from "@/lib/types/firestore";
 import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
 import { loadContinueItems } from "@/lib/course/continue-items";
+import { courseThumb } from "@/lib/course/thumb";
 
 const SPLASH_KEY = "ba_splash_done";
 let splashPlayed = false;
@@ -179,7 +180,7 @@ function HomeBody({ uid }: { uid: string }) {
       explore.map((course) => ({
         id: course.id,
         name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
-        image: course.image,
+        image: courseThumb(course),
         rating: Number(course.totalRatting || 0),
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id] : undefined,
         lessons: Number(course.numberLessons || 0),
@@ -342,7 +343,7 @@ async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) 
       courseId: course.id,
       paymentType: "Full payment",
       title: course.name,
-      image: course.image,
+      image: courseThumb(course),
       price: course.price,
       addedAt: Date.now(),
     }),
