@@ -1,21 +1,35 @@
 "use client";
 
-import { useEffect, useRef } from "react";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
 import { Download, EllipsisVertical, ExternalLink, Link as LinkIcon, Share, SquarePlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { toast } from "@/components/ui/toaster";
-import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
+import { cn } from "@/lib/utils";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 
-/** Routes where an install nudge would get in the way. */
-const QUIET_PREFIXES = ["/login", "/onboarding", "/verify", "/cart", "/checkout", "/learn", "/pay", "/offline"];
-/** First visit: wait this long before nudging; later visits nudge sooner. */
-const FIRST_OPEN_DELAY_MS = 30_000;
-const LATER_OPEN_DELAY_MS = 4_000;
+/**
+ * Download icon for the phone header. Only rendered on Android / iOS browsers
+ * while the app is not installed; tapping opens the install sheet. Desktop
+ * never sees it — a shortcut there is not something we want to push.
+ */
+export function InstallButton({ className }: { className?: string }) {
+  const { t } = useI18n();
+  const install = useInstallPrompt();
+  if (!install.eligible) return null;
+  return (
+    <button
+      type="button"
+      aria-label={t("installRowTitle")}
+      title={t("installRowTitle")}
+      onClick={install.show}
+      className={cn("grid size-10 place-items-center text-[#fafafa]", className)}
+    >
+      <Download className="size-5" strokeWidth={1.75} />
+    </button>
+  );
+}
 
 function Step({ n, icon, title, hint }: { n: number; icon: React.ReactNode; title: string; hint?: string }) {
   return (
@@ -41,30 +55,11 @@ function Step({ n, icon, title, hint }: { n: number; icon: React.ReactNode; titl
  *  - Android without the event: menu -> Install app.
  *  - iOS browsers: Share -> Add to Home Screen.
  *  - iOS in-app webviews: open in Safari first.
- * Auto-shows once eligibility rules pass; can also be opened from the profile.
+ * Never auto-opens: it is reached from the header download icon or the profile row.
  */
 export function InstallPrompt() {
   const { t } = useI18n();
-  const pathname = usePathname() ?? "/";
-  const { user } = useAuth();
   const install = useInstallPrompt();
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const autoShown = useRef(false);
-
-  const quiet = QUIET_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-
-  // Auto nudge: signed in, eligible platform, not on a quiet route, once per page load.
-  useEffect(() => {
-    if (autoShown.current || !install.ready || !install.eligible || !user || quiet) return;
-    const delay = install.opens <= 1 ? FIRST_OPEN_DELAY_MS : LATER_OPEN_DELAY_MS;
-    timer.current = setTimeout(() => {
-      autoShown.current = true;
-      install.show();
-    }, delay);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [install, install.ready, install.eligible, install.opens, user, quiet]);
 
   async function copyLink() {
     const url = window.location.origin;
@@ -83,8 +78,8 @@ export function InstallPrompt() {
 
   return (
     <Sheet
-      open={install.open && !install.installed}
-      onOpenChange={(open) => (open ? install.show() : install.snooze())}
+      open={install.open && !install.installed && install.mobile}
+      onOpenChange={(open) => (open ? install.show() : install.close())}
       title={inApp ? t("installInAppTitle") : t("installTitle")}
       description={inApp ? t("installInAppBody") : t("installBody")}
       footer={
@@ -108,7 +103,7 @@ export function InstallPrompt() {
             </Button>
           ) : null}
           <div className="flex items-center justify-between gap-2">
-            <Button variant="ghost" size="sm" onClick={install.snooze}>
+            <Button variant="ghost" size="sm" onClick={install.close}>
               {t("installNotNow")}
             </Button>
             <Button variant="link" size="sm" className="text-muted" onClick={install.hideForever}>

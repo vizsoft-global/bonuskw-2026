@@ -19,7 +19,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
 import { CustomPopupHost } from "@/components/home/custom-popup";
-import { InstallPrompt } from "@/components/system/install-prompt";
+import { InstallButton, InstallPrompt } from "@/components/system/install-prompt";
 import { HomeIcon } from "@/components/home/icon";
 import { Avatar } from "@/components/layout/avatar";
 import { BackButton } from "@/components/layout/back-button";
@@ -451,6 +451,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                   )}
                 />
                 <div className="flex shrink-0 items-center gap-[5px]">
+                  <InstallButton />
                   <Link href="/search" prefetch aria-label={t("search")} className="grid size-10 place-items-center">
                     <span className="size-5">
                       <HomeIcon src="/home/search.svg" />

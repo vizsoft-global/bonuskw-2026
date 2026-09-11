@@ -103,7 +103,19 @@ function detectPlatform(): InstallPlatform {
     return inApp ? "ios-inapp" : "ios-safari";
   }
   if (/Android/i.test(ua)) return state.deferred ? "android-native" : "android-manual";
-  return state.deferred ? "android-native" : "desktop";
+  // Desktop Chromium also fires `beforeinstallprompt`; the home-screen UI is phone-only,
+  // so keep desktop as "desktop" even when a deferred prompt exists.
+  return "desktop";
+}
+
+/** Phones and tablets: the only place the install button / sheet is offered. */
+export function isMobilePlatform(platform: InstallPlatform) {
+  return (
+    platform === "android-native" ||
+    platform === "android-manual" ||
+    platform === "ios-safari" ||
+    platform === "ios-inapp"
+  );
 }
 
 function boot() {
@@ -120,7 +132,8 @@ function boot() {
 
   window.addEventListener("beforeinstallprompt", (event) => {
     event.preventDefault();
-    emit({ deferred: event as BeforeInstallPromptEvent, platform: isStandalone() ? "installed" : "android-native" });
+    state = { ...state, deferred: event as BeforeInstallPromptEvent };
+    emit({ platform: detectPlatform() });
   });
   window.addEventListener("appinstalled", () => {
     write(INSTALLED, "1");
@@ -154,16 +167,12 @@ export function useInstallPrompt() {
     boot();
   }, []);
 
-  const canPromptNatively = Boolean(snap.deferred);
+  const mobile = isMobilePlatform(snap.platform);
+  // Desktop Chromium can prompt too, but the install UI is phone-only.
+  const canPromptNatively = Boolean(snap.deferred) && mobile;
   const installed = snap.platform === "installed";
-  /** Whether the auto prompt should be considered at all right now. */
-  const eligible =
-    snap.ready &&
-    !installed &&
-    !snap.hidden &&
-    !snap.snoozed &&
-    snap.platform !== "desktop" &&
-    snap.platform !== "unknown";
+  /** Whether the install button should be offered right now. */
+  const eligible = snap.ready && !installed && !snap.hidden && mobile;
 
   const promptInstall = useCallback(async () => {
     const deferred = state.deferred;
@@ -175,7 +184,8 @@ export function useInstallPrompt() {
       emit({ deferred: null, platform: "installed", hidden: true, open: false });
     } else {
       // The browser only lets us call prompt() once per captured event.
-      emit({ deferred: null, platform: detectPlatform() });
+      state = { ...state, deferred: null };
+      emit({ platform: detectPlatform() });
     }
     return choice.outcome;
   }, []);
@@ -197,6 +207,7 @@ export function useInstallPrompt() {
     ready: snap.ready,
     platform: snap.platform,
     installed,
+    mobile,
     canPromptNatively,
     eligible,
     opens: snap.opens,

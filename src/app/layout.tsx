@@ -40,12 +40,10 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  // Fallbacks before ThemeColorSync runs; must match `--app-top`.
-  themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#f6f6f8" },
-    { media: "(prefers-color-scheme: dark)", color: "#050505" },
-    { color: "#050505" },
-  ],
+  // The app renders dark regardless of the phone's system scheme, so the bar
+  // must not follow `prefers-color-scheme` (a light phone painted a light bar
+  // over a dark header). ThemeColorSync switches this when the user picks light.
+  themeColor: "#050505",
   width: "device-width",
   initialScale: 1,
   // Draw under the notch / home indicator; safe-area insets handle spacing.

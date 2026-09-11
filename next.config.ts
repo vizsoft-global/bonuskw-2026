@@ -45,6 +45,14 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     return [
+      // Old Vercel aliases → canonical domain (Firebase Auth, VdoCipher and
+      // the installed PWA are all scoped to app.bonuskw.com).
+      ...["bonuskw-web.vercel.app", "bonuskw-web-chethan-5694s-projects.vercel.app"].map((host) => ({
+        source: "/:path*",
+        has: [{ type: "host" as const, value: host }],
+        destination: "https://app.bonuskw.com/:path*",
+        permanent: true,
+      })),
       { source: "/homePage", destination: "/", permanent: false },
       { source: "/home_new", destination: "/", permanent: false },
       { source: "/main", destination: "/", permanent: false },

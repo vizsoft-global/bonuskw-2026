@@ -33,8 +33,7 @@ export function ProfileHub() {
   const [pushBusy, setPushBusy] = useState(false);
   const install = useInstallPrompt();
   // Only phones/tablets that are not yet running from the home screen.
-  const showInstall =
-    install.ready && !install.installed && install.platform !== "desktop" && install.platform !== "unknown";
+  const showInstall = install.ready && !install.installed && install.mobile;
 
   useEffect(() => {
     setPushOn(window.localStorage.getItem(PUSH_KEY) === "1");

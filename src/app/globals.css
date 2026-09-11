@@ -102,6 +102,8 @@
   }
   html {
     color-scheme: dark;
+    /* Paints the translucent iOS status bar / overscroll area in the header colour. */
+    background: var(--app-top);
     -webkit-tap-highlight-color: transparent;
   }
   html:not(.dark) {

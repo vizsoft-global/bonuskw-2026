@@ -21,19 +21,20 @@ export function ThemeColorSync() {
     const color = resolvedTheme === "light" ? APP_TOP_LIGHT : APP_TOP_DARK;
     document.documentElement.style.setProperty("--app-top", color);
 
-    const metas = document.querySelectorAll('meta[name="theme-color"]');
-    if (metas.length === 0) {
-      const meta = document.createElement("meta");
-      meta.setAttribute("name", "theme-color");
-      meta.setAttribute("content", color);
-      document.head.appendChild(meta);
+    // Keep exactly one unscoped tag: Android reads the first matching
+    // `theme-color`, so stray media-scoped copies can win over the live one.
+    const metas = Array.from(document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]'));
+    const [meta, ...extra] = metas;
+    extra.forEach((m) => m.remove());
+    if (!meta) {
+      const created = document.createElement("meta");
+      created.setAttribute("name", "theme-color");
+      created.setAttribute("content", color);
+      document.head.appendChild(created);
       return;
     }
-    metas.forEach((meta) => {
-      // Drop media-scoped fallbacks so one live colour wins in the installed app.
-      meta.removeAttribute("media");
-      meta.setAttribute("content", color);
-    });
+    meta.removeAttribute("media");
+    if (meta.getAttribute("content") !== color) meta.setAttribute("content", color);
   }, [resolvedTheme, pathname]);
 
   return null;
