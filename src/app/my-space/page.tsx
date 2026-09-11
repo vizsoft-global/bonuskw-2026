@@ -3,16 +3,16 @@
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
-import { ContinueCard, type ContinueItem } from "@/components/home/continue-card";
+import { ContinueCard } from "@/components/home/continue-card";
 import { ExploreGridCard, exploreRailClass, type ExploreItem } from "@/components/home/explore-card";
 import { StatsCard } from "@/components/home/stats-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { getCourse, listLessons } from "@/lib/catalog/queries";
+import { getCourse } from "@/lib/catalog/queries";
+import { loadContinueItems } from "@/lib/course/continue-items";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { ebookPageCount } from "@/lib/format";
@@ -20,66 +20,6 @@ import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc } from "@/lib/types/firestore";
 
-function toDate(value: unknown): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === "object" && value && "toDate" in value) {
-    const fn = (value as { toDate?: () => Date }).toDate;
-    if (typeof fn === "function") return fn();
-  }
-  return null;
-}
-
-async function loadContinueItems(uid: string, courseIds: Array<string | undefined>): Promise<ContinueItem[]> {
-  const ids = courseIds.filter((id): id is string => Boolean(id)).slice(0, 8);
-  if (!ids.length) return [];
-  const db = getDb();
-  const userRef = doc(db, collections.users, uid);
-  // Resume state is a bonus: if it cannot be read, every course still shows
-  // with 0% progress instead of blanking the whole section.
-  let progress: Array<{ courseId?: string; lessonId: string; completed: boolean; updatedAt: Date | null }> = [];
-  try {
-    const progressSnap = await getDocs(
-      query(collection(db, collections.watchProgress), where("userRef", "==", userRef)),
-    );
-    progress = progressSnap.docs.map((d) => ({
-      courseId: d.get("courseRef")?.id as string | undefined,
-      lessonId: String(d.get("lessonId") || ""),
-      completed: Boolean(d.get("completed")),
-      updatedAt: toDate(d.get("updatedAt")),
-    }));
-  } catch {
-    progress = [];
-  }
-
-  const rows: Array<ContinueItem | null> = await Promise.all(
-    ids.map(async (courseId) => {
-      const [course, lessons] = await Promise.all([getCourse(courseId), listLessons(courseId)]);
-      if (!course) return null;
-      const courseProgress = progress.filter((p) => p.courseId === courseId);
-      const completedIds = new Set(courseProgress.filter((p) => p.completed).map((p) => p.lessonId));
-      const total = lessons.length || 1;
-      const done = lessons.filter((l) => completedIds.has(l.id)).length;
-      const remaining = lessons.filter((l) => !completedIds.has(l.id));
-      const hrsLeft = Math.round(remaining.reduce((sum, l) => sum + Number(l.videoDuration || 0), 0) / 3600);
-      const last = courseProgress.reduce<Date | null>((max, p) => {
-        if (!p.updatedAt) return max;
-        return !max || p.updatedAt > max ? p.updatedAt : max;
-      }, null);
-      return {
-        courseId,
-        name: course.name || "",
-        image: course.image,
-        pct: Math.round((done / total) * 100),
-        hrsLeft,
-        nextName: remaining[0] ? String(remaining[0].name || "") : undefined,
-        lastStudied: last ? formatDistanceToNow(last, { addSuffix: true }) : undefined,
-        lastStudiedAt: last ? last.getTime() : undefined,
-      };
-    }),
-  );
-  return rows.filter((row): row is ContinueItem => row !== null);
-}
 
 export default function MySpacePage() {
   const { user } = useAuth();
@@ -160,6 +100,7 @@ export default function MySpacePage() {
   const continueLabels = {
     percentCompleted: t("percentCompleted"),
     hrsLeft: t("hrsLeft"),
+    watchedMin: t("watchedMin"),
     nextLesson: t("nextLesson"),
     lastStudied: t("lastStudied"),
     resume: t("resume"),

@@ -5,7 +5,6 @@ import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
-import { FileTile } from "@/components/course/outline";
 import { InstructorCard } from "@/components/course/instructor-card";
 import { LearnAside } from "@/components/course/learn-aside";
 import { QuizPlayer } from "@/components/course/quiz-player";
@@ -15,7 +14,7 @@ import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { buildOutline } from "@/lib/course/outline";
-import { useLessonPosters } from "@/lib/course/use-lesson-posters";
+import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -35,7 +34,23 @@ function LearnBody() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const subscription = useCourseSubscription(id, user?.uid);
-  const posters = useLessonPosters(lessons.data);
+  const videoMeta = useLessonVideoMeta(lessons.data);
+  // Real runtimes from the video records: lesson docs often carry
+  // `videoDuration: 0`, which used to blank every readout and block progress.
+  const durations = useMemo(() => {
+    const out: Record<string, number> = {};
+    for (const [lessonId, meta] of Object.entries(videoMeta.data ?? {})) {
+      if (meta.durationSec) out[lessonId] = meta.durationSec;
+    }
+    return out;
+  }, [videoMeta.data]);
+  const posters = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [lessonId, meta] of Object.entries(videoMeta.data ?? {})) {
+      if (meta.poster) out[lessonId] = meta.poster;
+    }
+    return out;
+  }, [videoMeta.data]);
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
     enabled: Boolean(course.data?.authorRef?.id),
@@ -60,23 +75,17 @@ function LearnBody() {
         quizzes: quizzes.data ?? [],
         resources: resources.data ?? [],
         subscription: subscription.data ?? null,
-        posters: posters.data,
+        posters,
+        durations,
         locale,
       }),
-    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, posters.data, locale],
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, posters, durations, locale],
   );
 
   // Fall back to the first lesson until one is chosen; no effect needed.
   const lesson = (lessons.data ?? []).find((item) => item.id === lessonId) || lessons.data?.[0];
   const activeQuiz = quizId ? ((quizzes.data ?? []).find((q) => q.id === quizId) as (QuizDoc & { id: string }) | undefined) : undefined;
-  const lessonFiles = useMemo(() => {
-    for (const item of outline) {
-      if (item.kind !== "chapter") continue;
-      const hit = item.lessons.find((l) => l.id === lesson?.id);
-      if (hit) return hit.files;
-    }
-    return [];
-  }, [outline, lesson?.id]);
+  const lessonDuration = Number(lesson?.videoDuration || (lesson ? durations[lesson.id] : 0) || 0);
 
   useEffect(() => {
     if (!user || !lesson || quizId) return;
@@ -91,7 +100,7 @@ function LearnBody() {
             courseId: id,
             chapterId: (lesson.chapterRef as { id?: string } | undefined)?.id,
             positionSec: last + 15,
-            durationSec: Number(lesson.videoDuration || 0),
+            durationSec: lessonDuration,
             deltaSec: 15,
           }),
         }),
@@ -113,7 +122,7 @@ function LearnBody() {
         chapterId: (lesson.chapterRef as { id?: string } | undefined)?.id,
         videoDocId: otp.videoDocId ?? undefined,
         provider: otp.provider === "stream" ? "stream" : "vdocipher",
-        durationSec: Number(lesson.videoDuration || 0) || undefined,
+        durationSec: lessonDuration || undefined,
         locale,
       },
       () => user.getIdToken(),
@@ -226,8 +235,8 @@ function LearnBody() {
   return (
     <AppShell loading={loading} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
       {outline.length ? (
-        <div className="grid gap-4 lg:grid-cols-[1.4fr_0.7fr]">
-          <div className="lg:sticky lg:top-24">
+        <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
             {activeQuiz ? (
               <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
                 <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
@@ -274,18 +283,10 @@ function LearnBody() {
                     verified={instructor.data.instuctorStatus === "Approved"}
                   />
                 ) : null}
-                {lessonFiles.length ? (
-                  <div className="mt-3 rounded-[14px] border border-white/10 p-2">
-                    <p className="px-2 pb-1 text-[12px] font-medium text-[#999]">{t("attachments")}</p>
-                    {lessonFiles.map((file) => (
-                      <FileTile key={file.id} file={file} downloadLabel={t("download")} compact />
-                    ))}
-                  </div>
-                ) : null}
               </>
             )}
           </div>
-          <aside className="overflow-y-auto rounded-[16px] border border-line lg:max-h-[70vh] lg:rounded-3xl">
+          <aside className="min-w-0 overflow-y-auto rounded-[16px] border border-line lg:max-h-[calc(100vh-120px)] lg:rounded-3xl">
             <LearnAside
               items={outline}
               activeLessonId={quizId ? undefined : lesson?.id}
@@ -296,16 +297,16 @@ function LearnBody() {
                       thumb:
                         typeof lesson.image === "string"
                           ? lesson.image
-                          : posters.data?.[lesson.id],
+                          : posters[lesson.id],
                       title: String(lesson.name || ""),
-                      duration: Number(lesson.videoDuration || 0),
+                      duration: lessonDuration,
                     }
                   : null
               }
               labels={{
                 currentlyPlaying: t("currentlyPlaying"),
                 nextLessons: t("nextLessons"),
-                resources: t("resources"),
+                lessons: t("lessons"),
                 download: t("download"),
                 test: t("test"),
                 tests: t("tests"),

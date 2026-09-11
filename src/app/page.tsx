@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { formatDistanceToNow } from "date-fns";
 import {
   arrayRemove,
   arrayUnion,
@@ -16,7 +15,7 @@ import {
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Splash } from "@/components/auth/splash";
-import { ContinueCard, type ContinueItem } from "@/components/home/continue-card";
+import { ContinueCard } from "@/components/home/continue-card";
 import {
   ExploreGridCard,
   ExploreListCard,
@@ -49,16 +48,7 @@ import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, SettingsDoc } from "@/lib/types/firestore";
 import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
-
-function toDate(value: unknown): Date | null {
-  if (!value) return null;
-  if (value instanceof Date) return value;
-  if (typeof value === "object" && value && "toDate" in value) {
-    const fn = (value as { toDate?: () => Date }).toDate;
-    if (typeof fn === "function") return fn();
-  }
-  return null;
-}
+import { loadContinueItems } from "@/lib/course/continue-items";
 
 const SPLASH_KEY = "ba_splash_done";
 let splashPlayed = false;
@@ -228,6 +218,7 @@ function HomeBody({ uid }: { uid: string }) {
   const continueLabels = {
     percentCompleted: t("percentCompleted"),
     hrsLeft: t("hrsLeft"),
+    watchedMin: t("watchedMin"),
     nextLesson: t("nextLesson"),
     lastStudied: t("lastStudied"),
     resume: t("resume"),
@@ -340,44 +331,6 @@ function HomeBody({ uid }: { uid: string }) {
       </div>
     </AppShell>
   );
-}
-
-async function loadContinueItems(uid: string, courseIds: Array<string | undefined>): Promise<ContinueItem[]> {
-  const ids = courseIds.filter((id): id is string => Boolean(id)).slice(0, 8);
-  if (!ids.length) return [];
-  const db = getDb();
-  const userRef = doc(db, collections.users, uid);
-  const progressSnap = await getDocs(
-    query(collection(db, collections.watchProgress), where("userRef", "==", userRef)),
-  );
-  const progress = progressSnap.docs.map((d) => ({
-    courseId: d.get("courseRef")?.id as string | undefined,
-    lessonId: String(d.get("lessonId") || ""),
-    completed: Boolean(d.get("completed")),
-    updatedAt: toDate(d.get("updatedAt")),
-  }));
-
-  const courses = await Promise.all(ids.map((courseId) => getCourse(courseId)));
-  return courses.flatMap((course, index) => {
-    if (!course) return [];
-    const courseId = ids[index];
-    const courseProgress = progress.filter((p) => p.courseId === courseId);
-    const done = courseProgress.filter((p) => p.completed).length;
-    const total = Math.max(Number(course.numberLessons || 0), done, 1);
-    const hours = Number(course.totalHours || course.totalCourseHour || 0);
-    const last = courseProgress.reduce<Date | null>((max, p) => {
-      if (!p.updatedAt) return max;
-      return !max || p.updatedAt > max ? p.updatedAt : max;
-    }, null);
-    return [{
-      courseId,
-      name: course.name || "",
-      image: course.image,
-      pct: Math.min(100, Math.round((done / total) * 100)),
-      hrsLeft: Math.max(0, Math.round(hours * (1 - done / total))),
-      lastStudied: last ? formatDistanceToNow(last, { addSuffix: true }) : undefined,
-    }];
-  });
 }
 
 async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) {

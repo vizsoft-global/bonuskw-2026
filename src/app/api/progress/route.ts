@@ -23,11 +23,17 @@ export async function POST(req: NextRequest) {
 
   const db = getAdminDb();
   const id = `${user.uid}_${body.lessonId}`;
-  const completed =
-    (body.durationSec ?? 0) > 0 &&
-    (body.positionSec ?? 0) / (body.durationSec ?? 1) >= 0.9;
+  const ref = db.collection(collections.watchProgress).doc(id);
+  const prev = await ref.get();
+  const prevData = (prev.data() ?? {}) as { watchedSec?: number; completed?: boolean };
+  const delta = Math.min(30, Math.max(0, body.deltaSec ?? 0));
+  // positionSec resets every page load, so accumulate real watch time across
+  // sessions. Completion sticks once reached — it is never unset.
+  const watched = Number(prevData.watchedSec || 0) + delta;
+  const duration = Math.max(0, body.durationSec ?? 0);
+  const reached = duration > 0 && Math.max(body.positionSec ?? 0, watched) / duration >= 0.9;
 
-  await db.collection(collections.watchProgress).doc(id).set(
+  await ref.set(
     {
       userRef: db.collection(collections.users).doc(user.uid),
       courseRef: db.collection(collections.course).doc(body.courseId),
@@ -36,14 +42,13 @@ export async function POST(req: NextRequest) {
         : null,
       lessonId: body.lessonId,
       positionSec: Math.max(0, body.positionSec ?? 0),
-      durationSec: Math.max(0, body.durationSec ?? 0),
-      completed,
+      durationSec: duration,
+      watchedSec: watched,
+      completed: Boolean(prevData.completed) || reached,
       updatedAt: FieldValue.serverTimestamp(),
     },
     { merge: true },
   );
-
-  const delta = Math.min(30, Math.max(0, body.deltaSec ?? 0));
   const statsRef = db.collection(collections.userStats).doc(user.uid);
   const stats = await statsRef.get();
   const last = stats.get("lastStudyDate")?.toDate?.() as Date | undefined;
@@ -63,5 +68,5 @@ export async function POST(req: NextRequest) {
     { merge: true },
   );
 
-  return NextResponse.json({ ok: true, completed });
+  return NextResponse.json({ ok: true, completed: Boolean(prevData.completed) || reached });
 }

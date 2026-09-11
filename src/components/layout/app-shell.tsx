@@ -467,6 +467,7 @@ function AppChrome({ children }: { children: ReactNode }) {
             "relative z-10 mx-auto w-full max-w-[1040px] px-[15px] lg:px-0 lg:pb-10",
             showTabBar ? "pb-32" : "pb-10",
             path.startsWith("/profile") && "lg:max-w-[1280px] lg:px-[30px]",
+            path.includes("/learn") && "lg:max-w-[1600px] lg:px-[30px]",
           )}
         >
           {nested && !path.startsWith("/profile/") ? (

@@ -8,6 +8,8 @@ export type ContinueItem = {
   image?: string;
   pct: number;
   hrsLeft: number;
+  /** Total minutes watched across the course's lessons. */
+  watchedMin?: number;
   nextName?: string;
   lastStudied?: string;
   /** Epoch ms of the last watched lesson; drives Resume ordering. */
@@ -22,6 +24,7 @@ export function ContinueCard({
   labels: {
     percentCompleted: string;
     hrsLeft: string;
+    watchedMin: string;
     nextLesson: string;
     lastStudied: string;
     resume: string;
@@ -50,6 +53,11 @@ export function ContinueCard({
         {item.nextName ? (
           <p className="truncate text-[10px] text-[#999]">
             {labels.nextLesson} {item.nextName}
+          </p>
+        ) : null}
+        {item.watchedMin ? (
+          <p className="truncate text-[10px] text-[#999]">
+            {labels.watchedMin.replace("{n}", String(item.watchedMin))}
           </p>
         ) : null}
       </div>

@@ -96,6 +96,8 @@ export function buildOutline(input: {
   purchasedChapterIds?: Set<string>;
   /** Video posters by lesson id, used when a lesson has no thumbnail. */
   posters?: Record<string, string>;
+  /** Real runtimes by lesson id, used when a lesson's own duration is 0. */
+  durations?: Record<string, number>;
   /** Language for chapter/lesson/test names; English when omitted. */
   locale?: Locale;
 }): OutlineItem[] {
@@ -139,7 +141,7 @@ export function buildOutline(input: {
         name: localName(lesson as Translatable, locale, "Lesson"),
         image: typeof lesson.image === "string" ? lesson.image : undefined,
         poster: input.posters?.[row.id],
-        videoDuration: Number(lesson.videoDuration || 0),
+        videoDuration: Number(lesson.videoDuration || input.durations?.[row.id] || 0),
         locked: !lessonOpen && lesson.lessonStatus !== "Unlock",
         files,
       } satisfies OutlineLesson;
