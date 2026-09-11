@@ -91,13 +91,17 @@ export function FileTile({
     >
       <span className="relative block">
         <FileThumb kind={file.kind} className="aspect-[82/55] w-full" />
-        <span className={cn("absolute inset-0 grid place-items-center rounded-[10px]", file.locked ? "bg-black/45" : "")}>
-          {file.locked ? (
-            <span className="size-5">
+        {file.locked ? <span className="absolute inset-0 rounded-[10px] bg-black/45" /> : null}
+        <span className="absolute start-1.5 top-1.5 rounded-full bg-black/65 px-2 py-0.5 text-[9px] font-bold tracking-wide text-white ring-1 ring-white/25">
+          {KIND_LABEL[file.kind]}
+        </span>
+        {file.locked ? (
+          <span className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-black/65 ring-1 ring-white/25">
+            <span className="size-3">
               <HomeIcon src="/course/lock.svg" />
             </span>
-          ) : null}
-        </span>
+          </span>
+        ) : null}
       </span>
       <span className="line-clamp-2 text-[13px] font-medium leading-normal text-[#fafafa]">{file.name}</span>
       <span className="flex items-center gap-[5px] text-[11px] font-medium text-[#999]">
@@ -212,7 +216,7 @@ export function CourseOutline({
                 className={
                   compact
                     ? "flex flex-col gap-1"
-                    : "grid grid-cols-2 gap-x-2.5 gap-y-3 pb-4 lg:grid-cols-4 lg:gap-3"
+                    : "grid grid-cols-2 gap-x-2.5 gap-y-3 pb-4 sm:grid-cols-3 lg:grid-cols-5 lg:gap-3 xl:grid-cols-6"
                 }
               >
                 {item.lessons.map((lesson) =>
@@ -297,7 +301,7 @@ export function CourseOutline({
             {compact ? (
               <FileTile file={item.file} downloadLabel={labels.download} compact />
             ) : (
-              <div className="grid grid-cols-2 gap-x-2.5 lg:grid-cols-4">
+              <div className="grid grid-cols-2 gap-x-2.5 sm:grid-cols-3 lg:grid-cols-5 xl:grid-cols-6">
                 <FileTile file={item.file} downloadLabel={labels.download} />
               </div>
             )}

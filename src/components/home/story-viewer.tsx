@@ -226,7 +226,7 @@ export function StoryViewer({
       className={
         embedded
           ? "fixed inset-0 z-[100] flex overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
-          : "relative flex min-h-dvh overflow-y-auto bg-black/90 text-[#fafafa]"
+          : "relative flex h-dvh overflow-y-auto bg-black/90 text-[#fafafa]"
       }
       onClick={(e) => e.target === e.currentTarget && close()}
       role="dialog"
@@ -240,30 +240,16 @@ export function StoryViewer({
           <div className="hidden h-[81px] shrink-0 lg:block" />
         </>
       ) : null}
-      {/* Shrink-wrapped (w-auto) so clicks outside the card hit the backdrop and dismiss. */}
-      <div className="m-auto flex w-auto max-w-[80vw] flex-col items-center p-4">
-        <div className="flex w-auto max-w-full flex-col items-center gap-[15px] lg:gap-[25px]">
-          <header className="flex w-full items-center justify-between">
-            <div className="flex min-w-0 flex-1 items-center gap-2.5 pe-[50px]">
-              <span className="size-[55px] shrink-0 overflow-hidden rounded-full border-[0.5px] border-white/20 bg-[#141414]">
-                {storyThumb(story) ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={storyThumb(story)} alt="" className="h-full w-full object-cover" />
-                ) : null}
-              </span>
-              <p className="min-w-0 truncate text-[16px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
-                {story.title || t("story")}
-              </p>
-            </div>
-            <button type="button" aria-label={t("close")} onClick={close} className="grid size-10 shrink-0 place-items-center">
-              <span className="size-3.5">
-                <HomeIcon src="/story/close.svg" />
-              </span>
-            </button>
-          </header>
-
+      {/*
+        Percentage-sized modal: 80% of the viewport height on desktop
+        (width follows the 9:16 ratio, capped at 80% of the width), 80% of
+        the width on phones (height follows the ratio). Shrink-wrapped so
+        clicks outside the card hit the backdrop and dismiss.
+      */}
+      <div className="m-auto flex h-[80%] max-h-[80%] w-[80%] max-w-[420px] flex-col items-center p-4 lg:w-auto lg:max-w-[80%]">
+        <div className="flex max-h-full w-full flex-col items-center lg:w-auto">
           <div
-            className="relative aspect-[9/16] h-[min(620px,calc(80dvh-190px))] min-h-[300px] w-auto max-w-[80vw] touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-white/20 bg-[#1d1d1d]"
+            className="relative aspect-[9/16] max-h-full w-full max-w-full touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-white/20 bg-[#1d1d1d] lg:h-full lg:w-auto"
             onPointerDown={onPointerDown}
             onPointerUp={onPointerUp}
             onPointerCancel={() => {
@@ -283,6 +269,44 @@ export function StoryViewer({
                 </span>
               ))}
             </div>
+
+            <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-b from-black/70 via-black/30 to-transparent px-3 pb-5 pt-7">
+              <div className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="size-9 shrink-0 overflow-hidden rounded-full border-[0.5px] border-white/20 bg-[#141414]">
+                  {storyThumb(story) ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={storyThumb(story)} alt="" className="h-full w-full object-cover" />
+                  ) : null}
+                </span>
+                <p className="min-w-0 truncate text-[14px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                  {story.title || t("story")}
+                </p>
+              </div>
+              {segment.kind === "video" ? (
+                <button
+                  type="button"
+                  aria-label={muted ? t("unmute") : t("mute")}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setMuted((m) => !m);
+                  }}
+                  className="shrink-0 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white"
+                >
+                  {muted ? t("unmute") : t("mute")}
+                </button>
+              ) : null}
+              <button
+                type="button"
+                aria-label={t("close")}
+                onClick={close}
+                className="grid size-8 shrink-0 place-items-center rounded-full bg-black/40"
+              >
+                <span className="size-3">
+                  <HomeIcon src="/story/close.svg" />
+                </span>
+              </button>
+            </header>
 
             {segment.kind === "video" ? (
               <video
@@ -347,41 +371,29 @@ export function StoryViewer({
               <img src={segment.url} alt="" className="h-full w-full object-cover" />
             )}
 
-            {story.description?.trim() ? (
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-4 pt-12">
-                <p className="line-clamp-4 whitespace-pre-line text-[14px] leading-5 text-white drop-shadow">
-                  {story.description.trim()}
-                </p>
+            {story.description?.trim() || courseId ? (
+              <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-12">
+                {story.description?.trim() ? (
+                  <p className="line-clamp-3 whitespace-pre-line text-[14px] leading-5 text-white drop-shadow">
+                    {story.description.trim()}
+                  </p>
+                ) : null}
+                {courseId ? (
+                  <Link
+                    href={`/course/${courseId}`}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onClick={(e) => e.stopPropagation()}
+                    className="mx-auto mt-2 flex w-fit items-center gap-1 rounded-full bg-white px-4 py-2 text-[12px] font-semibold text-black"
+                  >
+                    {t("learnMore")}
+                    <span className="size-3 rtl:-scale-x-100">
+                      <HomeIcon src="/story/chevron.svg" />
+                    </span>
+                  </Link>
+                ) : null}
               </div>
             ) : null}
-
-            {segment.kind === "video" ? (
-              <button
-                type="button"
-                aria-label={muted ? t("unmute") : t("mute")}
-                onPointerDown={(e) => e.stopPropagation()}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setMuted((m) => !m);
-                }}
-                className="absolute bottom-3 end-3 z-20 rounded-full bg-black/50 px-2.5 py-1 text-[11px] font-medium text-white"
-              >
-                {muted ? t("unmute") : t("mute")}
-              </button>
-            ) : null}
           </div>
-
-          {courseId ? (
-            <Link
-              href={`/course/${courseId}`}
-              className="flex items-center gap-[3px] px-2.5 py-2 text-[12px] font-medium text-white"
-            >
-              {t("learnMore")}
-              <span className="size-3.5 rtl:-scale-x-100">
-                <HomeIcon src="/story/chevron.svg" />
-              </span>
-            </Link>
-          ) : null}
         </div>
       </div>
     </div>

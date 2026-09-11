@@ -25,17 +25,20 @@ export function LessonRow({
           // eslint-disable-next-line @next/next/no-img-element
           <img src={image} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : null}
-        <span className={cn("absolute inset-0 grid place-items-center", locked ? "bg-black/45" : "bg-black/20")}>
-          {locked ? (
-            <span className="size-5">
+        <span className={cn("absolute inset-0", locked ? "bg-black/45" : "bg-black/20")} />
+        {locked ? (
+          <span className="absolute end-1.5 top-1.5 grid size-6 place-items-center rounded-full bg-black/65 ring-1 ring-white/25">
+            <span className="size-3">
               <HomeIcon src="/course/lock.svg" />
             </span>
-          ) : (
+          </span>
+        ) : (
+          <span className="absolute inset-0 grid place-items-center">
             <span className="size-[18px]">
               <HomeIcon src="/course/play.svg" />
             </span>
-          )}
-        </span>
+          </span>
+        )}
       </div>
       <p className="line-clamp-2 text-[13px] font-medium leading-normal text-[#fafafa]">{name}</p>
       <span className="flex items-center gap-[5px] text-[11px] font-medium text-[#999]">
