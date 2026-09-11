@@ -149,26 +149,24 @@ function LearnBody() {
   useEffect(() => {
     if (!user || !lesson || quizId || otp || otpBusy) return;
     let cancelled = false;
-    setOtpBusy(true);
-    void user
-      .getIdToken()
-      .then((token) =>
-        fetch("/api/video/otp", {
+    async function autoplay() {
+      setOtpBusy(true);
+      try {
+        const token = await user!.getIdToken();
+        const res = await fetch("/api/video/otp", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-          body: JSON.stringify({ lessonId: lesson.id }),
-        }),
-      )
-      .then((res) => res.json())
-      .then((json) => {
+          body: JSON.stringify({ lessonId: lesson!.id }),
+        });
+        const json = await res.json();
         if (!cancelled) setOtp(json);
-      })
-      .catch(() => {
+      } catch {
         // The Start button stays as the fallback.
-      })
-      .finally(() => {
+      } finally {
         if (!cancelled) setOtpBusy(false);
-      });
+      }
+    }
+    void autoplay();
     return () => {
       cancelled = true;
     };
