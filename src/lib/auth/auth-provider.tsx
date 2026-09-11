@@ -13,15 +13,19 @@ import {
   linkWithPhoneNumber,
   onAuthStateChanged,
   sendPasswordResetEmail,
+  signInWithCredential,
   signInWithEmailAndPassword,
   signInWithPhoneNumber,
   signInWithPopup,
   signInWithCustomToken,
   signOut,
+  unlink,
+  PhoneAuthProvider,
   RecaptchaVerifier,
   type ConfirmationResult,
   type User,
 } from "firebase/auth";
+import type { FirebaseError } from "firebase/app";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import {
   appleProvider,
@@ -62,8 +66,12 @@ type AuthState = {
   resetPassword: (email: string) => Promise<void>;
   /** Onboarding: send a code to attach a phone to the signed-in account. */
   sendLinkSms: (phone: string) => Promise<void>;
-  /** Onboarding: confirm the code and save the phone on the profile. Throws on conflict. */
-  confirmLinkSms: (code: string) => Promise<void>;
+  /**
+   * Onboarding: confirm the code and save the phone on the profile. When the
+   * number already has its own account, the student just proved they own it,
+   * so we sign into that account instead (`switched: true`).
+   */
+  confirmLinkSms: (code: string) => Promise<SignInResult & { switched: boolean }>;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -321,9 +329,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!current) throw new Error("Sign in first");
         if (!confirmation) throw new Error("Request a code first");
         const phone = window.sessionStorage.getItem("ba_phone") ?? "";
-        await confirmation.confirm(code);
+        try {
+          await confirmation.confirm(code);
+        } catch (err) {
+          const codeOf = (err as { code?: string })?.code;
+          const cred =
+            codeOf === "auth/account-exists-with-different-credential" || codeOf === "auth/credential-already-in-use"
+              ? PhoneAuthProvider.credentialFromError(err as FirebaseError)
+              : null;
+          if (!cred) throw err;
+          // The number is already a Firebase account. The code was correct, so
+          // leave the Google / Apple / email account and continue as the owner.
+          setStoredSessionId(null);
+          const signed = await signInWithCredential(getFirebaseAuth(), cred);
+          const result = await afterSignIn(signed.user, phone);
+          return { ...result, switched: true };
+        }
         // The phone is now on the Auth user; record it on the profile unless
-        // another student already owns that number.
+        // another (legacy) student profile already owns that number.
         const res = await fetch("/api/auth/ensure-profile", {
           method: "POST",
           headers: await bearer(current),
@@ -332,11 +355,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const json = (await res.json().catch(() => ({}))) as { phoneConflict?: boolean; error?: string };
         if (!res.ok) throw new Error(json.error || "Could not save phone");
         if (json.phoneConflict) {
+          // A legacy profile owns the number: move to it and give the number back.
+          const link = await fetch("/api/auth/legacy-link", {
+            method: "POST",
+            headers: await bearer(current),
+            body: JSON.stringify({ phone }),
+          });
+          const linked = (await link.json().catch(() => ({}))) as { customToken?: string | null };
+          if (linked.customToken) {
+            await unlink(current, PhoneAuthProvider.PROVIDER_ID).catch(() => undefined);
+            setStoredSessionId(null);
+            const signed = await signInWithCustomToken(getFirebaseAuth(), linked.customToken);
+            const profile = await loadProfile(signed.user.uid);
+            return { needsOnboarding: computeNeedsOnboarding(profile), switched: true };
+          }
           const conflict = new Error("phone-conflict") as Error & { code: string };
           conflict.code = "profile/phone-conflict";
           throw conflict;
         }
-        await loadProfile(current.uid);
+        const profile = await loadProfile(current.uid);
+        return { needsOnboarding: computeNeedsOnboarding(profile), switched: false };
       },
       refreshProfile: async () => {
         if (user) await loadProfile(user.uid);

@@ -51,6 +51,7 @@ const GLOW = "linear-gradient(180deg, #ED4A27 26%, #32B2B9 72%, #048EE4 100%)";
 function isBarePath(path: string) {
   return (
     path.startsWith("/login") ||
+    path.startsWith("/logout") ||
     path.startsWith("/onboarding") ||
     path.startsWith("/verify") ||
     path.startsWith("/session-ended") ||

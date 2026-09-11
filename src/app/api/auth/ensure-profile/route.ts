@@ -20,8 +20,11 @@ export async function POST(req: NextRequest) {
   const user = await verifyIdToken(req);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const body = (await req.json().catch(() => ({}))) as { phone?: unknown };
-  const bodyPhone = typeof body.phone === "string" && isE164(body.phone) ? body.phone : "";
-  const phone = toE164(bodyPhone || user.phone_number || "") ?? "";
+  // Only a number the ID token vouches for is recorded; the body is just a hint
+  // and is ignored when it does not match the verified number.
+  const bodyPhone = typeof body.phone === "string" && isE164(body.phone) ? toE164(body.phone) : "";
+  const verified = toE164(user.phone_number || "") ?? "";
+  const phone = verified && (!bodyPhone || bodyPhone === verified) ? verified : "";
   const provider = user.firebase?.sign_in_provider ?? "";
   const social = SOCIAL_PROVIDERS.has(provider);
 

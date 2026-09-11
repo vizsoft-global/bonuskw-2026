@@ -8,6 +8,7 @@ import { CtaButton } from "@/components/auth/cta-button";
 import { Field } from "@/components/auth/field";
 import { OtpInput } from "@/components/auth/otp-input";
 import { PageLoader } from "@/components/shared/loader";
+import { toast } from "@/components/ui/toaster";
 import {
   AcademicFields,
   EMPTY_ACADEMIC,
@@ -66,8 +67,13 @@ function PhoneStep() {
     setBusy(true);
     setError("");
     try {
-      await confirmLinkSms(code);
-      // The profile now has a phone; the parent re-renders into the next step.
+      const result = await confirmLinkSms(code);
+      if (result.switched) {
+        // We moved to the account that owns this number.
+        toast.success(t("phoneSwitched"));
+        router.replace(result.needsOnboarding ? "/onboarding" : "/");
+      }
+      // Otherwise the profile now has a phone; the parent re-renders into the next step.
     } catch (err) {
       const codeOf = (err as { code?: string })?.code;
       if (codeOf === "profile/phone-conflict") {
@@ -113,7 +119,7 @@ function PhoneStep() {
           <button
             type="button"
             onClick={() => void logout().then(() => router.replace("/login"))}
-            className="text-[14px] font-medium text-white underline underline-offset-2"
+            className="self-start text-[14px] font-medium text-white underline underline-offset-2"
           >
             {t("logout")}
           </button>
@@ -199,6 +205,36 @@ function AcademicStep() {
   );
 }
 
+/**
+ * Who this session belongs to, with a way out. Without it a student who signed
+ * in with the wrong Google account had no way to tell, and no way to leave.
+ */
+function SignedInAs() {
+  const { t } = useI18n();
+  const { user, logout } = useAuth();
+  const router = useRouter();
+  if (!user) return null;
+  const providerId = user.providerData[0]?.providerId ?? "";
+  const provider =
+    providerId === "google.com" ? "Google" : providerId === "apple.com" ? "Apple" : providerId === "password" ? "Email" : "";
+  const who = user.email || user.phoneNumber || user.displayName || provider;
+  return (
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-4 text-[13px] text-white/60">
+      <span className="min-w-0 truncate">
+        {t("signedInAs")} <span className="text-white/90">{who}</span>
+        {provider && who !== provider ? ` · ${provider}` : ""}
+      </span>
+      <button
+        type="button"
+        onClick={() => void logout().then(() => router.replace("/login"))}
+        className="shrink-0 font-medium text-white underline underline-offset-2"
+      >
+        {t("notYou")}
+      </button>
+    </div>
+  );
+}
+
 export default function OnboardingPage() {
   const { user, needsPhone, needsOnboarding, ready, profile } = useAuth();
   const router = useRouter();
@@ -218,5 +254,10 @@ export default function OnboardingPage() {
     );
   }
 
-  return <AuthShell showBack={false}>{needsPhone ? <PhoneStep /> : <AcademicStep />}</AuthShell>;
+  return (
+    <AuthShell showBack={false}>
+      {needsPhone ? <PhoneStep /> : <AcademicStep />}
+      <SignedInAs />
+    </AuthShell>
+  );
 }

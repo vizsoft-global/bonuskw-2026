@@ -12,6 +12,9 @@ export default function SessionEndedPage() {
         <Link href="/login" className="mt-6 inline-block rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
           {t("signInAgain")}
         </Link>
+        <Link href="/logout" className="mt-4 block text-sm text-muted underline underline-offset-2">
+          {t("signOutEverywhere")}
+        </Link>
       </div>
     </main>
   );

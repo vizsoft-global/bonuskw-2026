@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
@@ -228,6 +229,13 @@ function LoginForm() {
         </div>
 
         <LegalNote />
+        <Link
+          href="/logout"
+          title={t("signOutEverywhereHint")}
+          className="-mt-4 self-start text-[12px] font-medium text-[#808080] underline underline-offset-2 hover:text-white"
+        >
+          {t("signOutEverywhere")}
+        </Link>
       </div>
     </AuthShell>
   );
