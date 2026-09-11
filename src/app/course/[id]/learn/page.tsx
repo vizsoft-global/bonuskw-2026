@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
 import { InstructorCard } from "@/components/course/instructor-card";
-import { LearnAside } from "@/components/course/learn-aside";
+import { LearnMobileTabs, LessonGroups, ResourcesPanel } from "@/components/course/learn-aside";
 import { QuizPlayer } from "@/components/course/quiz-player";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
@@ -108,7 +108,9 @@ function LearnBody() {
       last += 15;
     }, 15000);
     return () => window.clearInterval(tick);
-  }, [user, lesson, id, quizId]);
+    // lessonDuration restarts the ticker once real runtimes resolve, so the
+    // posted duration (and completion) is truthful from the first tick.
+  }, [user, lesson, lessonDuration, id, quizId]);
 
   // Playback analytics: pauses, seeks, buffering, watched time, estimated bandwidth.
   useEffect(() => {
@@ -232,98 +234,115 @@ function LearnBody() {
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
 
+  const asideLabels = {
+    currentlyPlaying: t("currentlyPlaying"),
+    nextLessons: t("nextLessons"),
+    lessons: t("lessons"),
+    resources: t("resources"),
+    resourcesCount: t("resourcesCount"),
+    assetsCount: t("assetsCount"),
+    takeTheTest: t("takeTheTest"),
+    download: t("download"),
+    test: t("test"),
+    tests: t("tests"),
+    questions: t("questions"),
+    minShort: t("minShort"),
+  };
+
+  function scrollToResources() {
+    document.getElementById("learn-resources-panel")?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
   return (
     <AppShell loading={loading} title={String(course.data?.name || t("lessons"))} skeleton={<ListPageSkeleton rows={6} />}>
       {outline.length ? (
-        <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
-          <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-            {activeQuiz ? (
-              <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
-                <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
-                {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
-                  <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
-                ) : (
-                  <QuizPlayer key={activeQuiz.id} quiz={activeQuiz} onExit={() => lesson && openLesson(lesson.id)} />
-                )}
-              </div>
-            ) : (
-              <>
-                <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
-                  {src ? (
-                    <iframe
-                      ref={iframeRef}
-                      key={src}
-                      title={String(lesson?.name || "Lesson")}
-                      src={src}
-                      className="h-full w-full"
-                      allow="fullscreen; autoplay; encrypted-media"
-                      onLoad={(e) => {
-                        e.currentTarget.dataset.loaded = "1";
-                      }}
-                    />
-                  ) : otpBusy ? (
-                    <div className="grid h-full w-full place-items-center">
-                      <Loader size="page" />
-                    </div>
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-3 lg:grid-cols-[minmax(0,7fr)_minmax(0,3fr)]">
+            <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+              {activeQuiz ? (
+                <div className="rounded-[16px] border border-white/10 p-4 lg:rounded-3xl">
+                  <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
+                  {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
+                    <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
                   ) : (
-                    <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
-                      {t("start")}
-                    </button>
+                    <QuizPlayer key={activeQuiz.id} quiz={activeQuiz} onExit={() => lesson && openLesson(lesson.id)} />
                   )}
                 </div>
-                <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
-                {instructor.data ? (
-                  <InstructorCard
-                    href={`/instructor/${instructor.data.id}`}
-                    name={String(instructor.data.display_name || t("instructor"))}
-                    bio={instructor.data.bio}
-                    photo={instructor.data.photo_url}
-                    rating={Number(course.data?.totalRatting || 0)}
-                    ratingLabel={t("rating")}
-                    verified={instructor.data.instuctorStatus === "Approved"}
-                  />
-                ) : null}
-              </>
-            )}
+              ) : (
+                <>
+                  <div className="aspect-video overflow-hidden rounded-[16px] bg-black lg:rounded-3xl">
+                    {src ? (
+                      <iframe
+                        ref={iframeRef}
+                        key={src}
+                        title={String(lesson?.name || "Lesson")}
+                        src={src}
+                        className="h-full w-full"
+                        allow="fullscreen; autoplay; encrypted-media"
+                        onLoad={(e) => {
+                          e.currentTarget.dataset.loaded = "1";
+                        }}
+                      />
+                    ) : otpBusy ? (
+                      <div className="grid h-full w-full place-items-center">
+                        <Loader size="page" />
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => void play()} className="grid h-full w-full place-items-center text-white">
+                        {t("start")}
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-3 font-medium">{String(lesson?.name || course.data?.name || "")}</p>
+                  {instructor.data ? (
+                    <InstructorCard
+                      href={`/instructor/${instructor.data.id}`}
+                      name={String(instructor.data.display_name || t("instructor"))}
+                      bio={instructor.data.bio}
+                      photo={instructor.data.photo_url}
+                      rating={Number(course.data?.totalRatting || 0)}
+                      ratingLabel={t("rating")}
+                      verified={instructor.data.instuctorStatus === "Approved"}
+                    />
+                  ) : null}
+                </>
+              )}
+            </div>
+            <aside className="hidden min-w-0 overflow-y-auto rounded-3xl border border-line lg:block lg:max-h-[calc(100vh-120px)] lg:p-4">
+              <ResourcesPanel items={outline} labels={asideLabels} />
+            </aside>
           </div>
-          <aside className="min-w-0 overflow-y-auto rounded-[16px] border border-line lg:max-h-[calc(100vh-120px)] lg:rounded-3xl">
-            <LearnAside
+          <div className="lg:hidden">
+            <LearnMobileTabs
               items={outline}
               activeLessonId={quizId ? undefined : lesson?.id}
               activeQuizId={quizId || undefined}
-              current={
-                lesson && !quizId
-                  ? {
-                      thumb:
-                        typeof lesson.image === "string"
-                          ? lesson.image
-                          : posters[lesson.id],
-                      title: String(lesson.name || ""),
-                      duration: lessonDuration,
-                    }
-                  : null
-              }
-              labels={{
-                currentlyPlaying: t("currentlyPlaying"),
-                nextLessons: t("nextLessons"),
-                lessons: t("lessons"),
-                download: t("download"),
-                test: t("test"),
-                tests: t("tests"),
-                questions: t("questions"),
-                minShort: t("minShort"),
-              }}
+              labels={asideLabels}
               onLesson={openLesson}
               onQuiz={openQuiz}
             />
-            <label className="mt-4 block text-sm">
+          </div>
+          <section className="hidden lg:block">
+            <h2 className="pb-3 text-[16px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
+            <LessonGroups
+              items={outline}
+              activeLessonId={quizId ? undefined : lesson?.id}
+              activeQuizId={quizId || undefined}
+              labels={asideLabels}
+              onLesson={openLesson}
+              onQuiz={openQuiz}
+              onResources={scrollToResources}
+            />
+          </section>
+          <div>
+            <label className="mt-1 block text-sm">
               {t("rating")}
               <input type="number" min={1} max={5} value={review} onChange={(e) => setReview(Number(e.target.value))} className="ms-2 w-16 bg-transparent" />
             </label>
             <button type="button" className="mt-2 text-sm" onClick={() => void leaveReview()}>
               {t("finish")}
             </button>
-          </aside>
+          </div>
         </div>
       ) : (
         <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
