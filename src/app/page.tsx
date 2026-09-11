@@ -9,9 +9,7 @@ import {
   doc,
   getDoc,
   getDocs,
-  query,
   updateDoc,
-  where,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Splash } from "@/components/auth/splash";
@@ -51,6 +49,7 @@ import type { CourseDoc, SettingsDoc } from "@/lib/types/firestore";
 import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
 import { loadContinueItems } from "@/lib/course/continue-items";
+import { loadLiveEnrollments } from "@/lib/course/enrollments";
 import { courseThumb } from "@/lib/course/thumb";
 
 const SPLASH_KEY = "ba_splash_done";
@@ -132,17 +131,12 @@ function HomeBody({ uid }: { uid: string }) {
   });
   const subs = useQuery({
     queryKey: ["subs", uid],
-    queryFn: async () => {
-      const snap = await getDocs(
-        query(collection(getDb(), collections.subscription), where("userRef", "==", doc(getDb(), collections.users, uid))),
-      );
-      return snap.docs.filter((d) => d.get("status") === "Ongoing");
-    },
+    queryFn: () => loadLiveEnrollments(uid),
   });
   const continueLearning = useQuery({
     queryKey: ["continue", uid, (subs.data ?? []).map((d) => d.id).join(",")],
     enabled: Boolean(subs.data),
-    queryFn: () => loadContinueItems(uid, (subs.data ?? []).map((d) => d.get("courseRef")?.id as string | undefined)),
+    queryFn: () => loadContinueItems(uid, (subs.data ?? []).map((d) => d.courseId)),
   });
 
   const published = exploreCourses(courses.data ?? []);

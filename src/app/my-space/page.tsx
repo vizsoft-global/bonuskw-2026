@@ -13,6 +13,7 @@ import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getCourse } from "@/lib/catalog/queries";
 import { loadContinueItems } from "@/lib/course/continue-items";
+import { loadLiveEnrollments } from "@/lib/course/enrollments";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { ebookPageCount } from "@/lib/format";
@@ -38,12 +39,7 @@ export default function MySpacePage() {
   const courses = useQuery({
     queryKey: ["my-subs", uid],
     enabled: Boolean(uid),
-    queryFn: async () => {
-      const snap = await getDocs(
-        query(collection(getDb(), collections.subscription), where("userRef", "==", doc(getDb(), collections.users, uid!))),
-      );
-      return snap.docs.filter((d) => d.get("status") === "Ongoing");
-    },
+    queryFn: () => loadLiveEnrollments(uid!),
   });
   const books = useQuery({
     queryKey: ["my-books", uid],
@@ -58,7 +54,7 @@ export default function MySpacePage() {
   const continueLearning = useQuery({
     queryKey: ["continue", uid, (courses.data ?? []).map((d) => d.id).join(",")],
     enabled: Boolean(uid && courses.data),
-    queryFn: () => loadContinueItems(uid!, (courses.data ?? []).map((d) => d.get("courseRef")?.id as string | undefined)),
+    queryFn: () => loadContinueItems(uid!, (courses.data ?? []).map((d) => d.courseId)),
   });
   const bookIds = (books.data ?? []).map((d) => d.get("courseRef")?.id as string | undefined).filter(Boolean) as string[];
   const ebookDocs = useQuery({
