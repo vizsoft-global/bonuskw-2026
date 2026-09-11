@@ -14,7 +14,7 @@ export type StudentConfig = {
   devicePolicy?: { maxDevices30d?: number; maxCitiesPerDay?: number };
   supportWhatsapp?: string;
   supportEmail?: string;
-  maintenance?: { enabled?: boolean; message?: { en?: string; ar?: string } };
+  maintenance?: { enabled?: boolean; until?: number; message?: { en?: string; ar?: string } };
   /** Fail-safe purchase switches (Settings > Purchases & dev mode). */
   purchases?: PurchaseControls;
 };

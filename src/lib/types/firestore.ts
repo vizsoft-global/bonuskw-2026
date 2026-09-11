@@ -946,3 +946,9 @@ export type PurchaseControls = {
   /** Testers may unlock the app and buy through the test gateway. */
   devMode?: boolean;
 };
+
+/** `adminConfig/studentApp.maintenance` — public countdown; password stays server-side. */
+export type MaintenanceWindow = {
+  enabled?: boolean;
+  until?: number;
+};
