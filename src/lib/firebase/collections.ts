@@ -73,6 +73,8 @@ export const collections = {
   userStats: "userStats",
   /** Student web: hashed WhatsApp/SMS OTP. */
   otpRequests: "otpRequests",
+  /** Student web: hashed single-use sign-in links minted by admins. */
+  signInLinks: "signInLinks",
   /** Student web: account-sharing flags. */
   deviceFlags: "deviceFlags",
   /** Student web: generated invoice PDFs. */

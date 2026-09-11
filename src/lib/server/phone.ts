@@ -85,3 +85,19 @@ export async function findLegacyUserByPhone(db: Firestore, e164: string, notUid?
   const docs = (await usersByPhone(db, e164)).filter((d) => d.id !== notUid);
   return pickPrimary(docs);
 }
+
+/**
+ * The legacy account registered with this email, excluding `notUid`. Only call
+ * with an address the ID token marks as verified — matching an unverified
+ * email would let anyone claim an account by typing its address. Legacy docs
+ * stored the address as typed, so both the raw and lower-cased spellings are
+ * tried.
+ */
+export async function findLegacyUserByEmail(db: Firestore, email: string, notUid?: string) {
+  const trimmed = email.trim();
+  if (!trimmed.includes("@")) return null;
+  const variants = [...new Set([trimmed, trimmed.toLowerCase()])];
+  const snap = await db.collection(collections.users).where("email", "in", variants).limit(10).get();
+  const docs = snap.docs.filter((d) => d.id !== notUid);
+  return pickPrimary(docs);
+}

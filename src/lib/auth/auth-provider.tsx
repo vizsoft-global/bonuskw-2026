@@ -63,6 +63,8 @@ type AuthState = {
   signInGoogle: () => Promise<SignInResult>;
   signInApple: () => Promise<SignInResult>;
   signInEmail: (email: string, password: string) => Promise<SignInResult>;
+  /** Redeems a single-use sign-in link an admin sent to the student. */
+  signInWithLink: (token: string) => Promise<SignInResult>;
   resetPassword: (email: string) => Promise<void>;
   /** Onboarding: send a code to attach a phone to the signed-in account. */
   sendLinkSms: (phone: string) => Promise<void>;
@@ -89,8 +91,14 @@ function lacksPhone(profile: UserDoc | null) {
   return !profile?.phone_number?.trim();
 }
 
+/**
+ * Only the academic details are required. A verified phone used to be a hard
+ * step for Google/Apple/email sign-ins, but Kuwaiti carriers block enough
+ * verification SMS that it kept real students out; legacy accounts are now
+ * matched by verified email as well as by phone.
+ */
 function computeNeedsOnboarding(profile: UserDoc | null) {
-  return needsAcademic(profile) || lacksPhone(profile);
+  return needsAcademic(profile);
 }
 
 async function bearer(user: User) {
@@ -217,20 +225,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Resolves the Firestore profile for a fresh Firebase session. Phone sign-ins
-   * first try to land on the legacy account that owns the number (Flutter app
-   * users), otherwise the profile is created / completed for this uid.
+   * Resolves the Firestore profile for a fresh Firebase session. Every sign-in
+   * first tries to land on the legacy account (Flutter app users) that owns the
+   * verified phone or verified email in the ID token; otherwise the profile is
+   * created / completed for this uid.
    */
   const afterSignIn = useCallback(
-    async (signed: User, phone?: string): Promise<SignInResult> => {
+    async (signed: User, phone?: string, opts?: { skipLegacyLink?: boolean }): Promise<SignInResult> => {
       const token = await signed.getIdToken();
-      if (phone) {
+      if (!opts?.skipLegacyLink) {
         const link = await fetch("/api/auth/legacy-link", {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-          body: JSON.stringify({ phone }),
-        });
-        const json = (await link.json().catch(() => ({}))) as { customToken?: string };
+          body: JSON.stringify(phone ? { phone } : {}),
+        }).catch(() => null);
+        const json = ((await link?.json().catch(() => ({}))) ?? {}) as { customToken?: string };
         if (json.customToken) {
           const linked = await signInWithCustomToken(getFirebaseAuth(), json.customToken);
           const profile = await loadProfile(linked.user.uid);
@@ -307,6 +316,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signInEmail: async (email, password) => {
         const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
         return afterSignIn(cred.user);
+      },
+      signInWithLink: async (linkToken) => {
+        const res = await fetch("/api/auth/link/exchange", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: linkToken }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { customToken?: string; error?: string };
+        if (!res.ok || !json.customToken) {
+          const err = new Error(json.error || "invalid") as Error & { code?: string };
+          err.code = `link/${json.error || "invalid"}`;
+          throw err;
+        }
+        const cred = await signInWithCustomToken(getFirebaseAuth(), json.customToken);
+        // The admin chose this exact account; never hop to another legacy match.
+        return afterSignIn(cred.user, undefined, { skipLegacyLink: true });
       },
       resetPassword: async (email) => {
         await sendPasswordResetEmail(getFirebaseAuth(), email.trim());

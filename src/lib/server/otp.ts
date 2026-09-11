@@ -3,7 +3,7 @@ import { createHash, randomInt, timingSafeEqual } from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { getAdminAuth, getAdminDb } from "@/lib/firebase/admin";
 import { collections } from "@/lib/firebase/collections";
-import { findLegacyUserByPhone } from "@/lib/server/phone";
+import { findLegacyUserByEmail, findLegacyUserByPhone } from "@/lib/server/phone";
 
 const TTL_MS = 5 * 60 * 1000;
 const PHONE_COOLDOWN_MS = 30_000;
@@ -246,5 +246,18 @@ export async function legacyLinkToken(currentUid: string, phone: string) {
   if (!legacy) return null;
   // Stamp the canonical number so the next lookup is a single indexed hit.
   await legacy.ref.set({ phoneE164: phone, phoneVerified: true }, { merge: true }).catch(() => undefined);
+  return getAdminAuth().createCustomToken(legacy.id);
+}
+
+/**
+ * Same as `legacyLinkToken` but keyed by a *verified* email (Google / Apple /
+ * verified password accounts). Lets students whose carriers block the
+ * verification SMS reach their existing account without a phone code.
+ */
+export async function legacyLinkTokenByEmail(currentUid: string, email: string) {
+  const db = getAdminDb();
+  const legacy = await findLegacyUserByEmail(db, email, currentUid);
+  if (!legacy) return null;
+  await legacy.ref.set({ emailVerifed: true }, { merge: true }).catch(() => undefined);
   return getAdminAuth().createCustomToken(legacy.id);
 }
