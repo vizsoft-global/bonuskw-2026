@@ -192,14 +192,34 @@ export async function startSession(
     return { ok: false, conflict };
   }
 
+  // Same browser again (new tab, reload, PWA relaunch): keep the session it
+  // already has instead of replacing it. Replacing flipped the old doc to
+  // isActive:false, and a tab still listening to it signed the whole browser
+  // out — Firebase auth state is shared across tabs.
+  const mine = active.docs
+    .filter((doc) => String(doc.get("uniqueId") ?? "") === input.deviceId)
+    .sort((a, b) => {
+      const at = toDate(a.get("loginDateTime") as DateLike)?.getTime() ?? 0;
+      const bt = toDate(b.get("loginDateTime") as DateLike)?.getTime() ?? 0;
+      return bt - at;
+    });
+  const keep = mine[0] ?? null;
+
   const batch = db.batch();
-  active.docs.forEach((doc) =>
+  active.docs.forEach((doc) => {
+    if (keep && doc.id === keep.id) return;
     batch.update(doc.ref, {
       isActive: false,
       endedAt: FieldValue.serverTimestamp(),
       ...(others.some((o) => o.id === doc.id) ? { endedBy: "takeover", endedFrom: model } : {}),
-    }),
-  );
+    });
+  });
+
+  if (keep) {
+    batch.update(keep.ref, { lastSeenAt: FieldValue.serverTimestamp() });
+    await batch.commit();
+    return { ok: true, sessionId: keep.id };
+  }
 
   const sessionRef = db.collection(collections.sessions).doc();
   batch.set(sessionRef, {

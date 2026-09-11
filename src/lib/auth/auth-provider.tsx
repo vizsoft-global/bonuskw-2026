@@ -193,11 +193,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const sessionId = outcome.sessionId;
       stopSession = onSnapshot(doc(getDb(), collections.sessions, sessionId), (snap) => {
         const data = snap.data() as { isActive?: boolean } | undefined;
-        if (data && data.isActive === false && getStoredSessionId() === sessionId) {
+        if (!data || data.isActive !== false) return;
+        // Another tab in this same browser may have just started a newer
+        // session and be about to overwrite the stored id; give it a moment
+        // before deciding this was a take-over from a different device.
+        window.setTimeout(() => {
+          if (cancelled || getStoredSessionId() !== sessionId) return;
           setKicked(true);
           setStoredSessionId(null);
           void signOut(getFirebaseAuth());
-        }
+        }, 1500);
       });
       beat = window.setInterval(() => {
         void user.getIdToken().then((t) => heartbeat(t, sessionId));
