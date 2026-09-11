@@ -409,16 +409,23 @@ html:not(.dark) .bg-primary img {
 }
 
 @media (min-width: 1024px) {
+  /* Fixed 70/30 split; the video letterboxes inside its 70% column. */
   .learn-player {
-    width: min(calc(var(--learn-player-h) * 16 / 9), calc(100% - var(--learn-resources-min) - 12px));
-    max-height: var(--learn-player-h);
-    height: auto;
+    width: calc(70% - 4px);
+    height: var(--learn-player-h);
+    max-height: none;
+    aspect-ratio: auto;
     flex: 0 0 auto;
   }
 
+  .learn-video {
+    width: min(100%, calc(var(--learn-player-h) * 16 / 9));
+    aspect-ratio: 16 / 9;
+  }
+
   .learn-resources {
-    min-width: var(--learn-resources-min);
-    flex: 1 1 0;
+    width: calc(30% - 4px);
+    flex: 0 0 auto;
   }
 }
 

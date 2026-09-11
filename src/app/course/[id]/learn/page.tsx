@@ -289,9 +289,9 @@ function LearnBody() {
       {outline.length ? (
         <div className="learn-fit flex flex-col gap-2">
           <div className="flex min-h-0 flex-col gap-2 lg:flex-row lg:items-stretch">
-            <div className={cn("min-w-0", !activeQuiz && "learn-player")}>
+            <div className="learn-player min-w-0">
               {activeQuiz ? (
-                <div className="learn-player overflow-auto rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4">
+                <div className="overflow-auto rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4 lg:h-full">
                   <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
                   {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
                     <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
@@ -301,71 +301,74 @@ function LearnBody() {
                 </div>
               ) : (
                 <div
-                  className="relative h-full w-full overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
-                  style={{ background: "#1d1d1d" }}
+                  className="relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
+                  style={{ background: "#0a0a0a" }}
                 >
-                  {src ? (
-                    <iframe
-                      ref={iframeRef}
-                      key={src}
-                      title={String(lesson?.name || "Lesson")}
-                      src={src}
-                      className="h-full w-full"
-                      allow="fullscreen; autoplay; encrypted-media"
-                      onLoad={(e) => {
-                        e.currentTarget.dataset.loaded = "1";
-                      }}
+                  {/* 16:9 stage centred in its column; the letterbox fills the rest. */}
+                  <div className="learn-video relative h-full w-full lg:h-auto" style={{ background: "#1d1d1d" }}>
+                    {src ? (
+                      <iframe
+                        ref={iframeRef}
+                        key={src}
+                        title={String(lesson?.name || "Lesson")}
+                        src={src}
+                        className="absolute inset-0 h-full w-full"
+                        allow="fullscreen; autoplay; encrypted-media"
+                        onLoad={(e) => {
+                          e.currentTarget.dataset.loaded = "1";
+                        }}
+                      />
+                    ) : otpBusy ? (
+                      <div className="grid h-full w-full place-items-center">
+                        <Loader size="page" />
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void play()}
+                        className="grid h-full w-full place-items-center"
+                        style={{ color: "#fff" }}
+                      >
+                        {t("start")}
+                      </button>
+                    )}
+                    {/* Title strip and previous/next lesson, over the top edge of the video. */}
+                    <div
+                      className="pointer-events-none absolute inset-x-0 top-0 h-[58px] lg:h-[72px]"
+                      style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)" }}
                     />
-                  ) : otpBusy ? (
-                    <div className="grid h-full w-full place-items-center">
-                      <Loader size="page" />
+                    <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
+                      <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
+                        {String(lesson?.name || courseName)}
+                      </p>
+                      <p className="text-[10px] leading-4 lg:text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
+                        {courseName}
+                      </p>
                     </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => void play()}
-                      className="grid h-full w-full place-items-center"
-                      style={{ color: "#fff" }}
-                    >
-                      {t("start")}
-                    </button>
-                  )}
-                  {/* Title strip and previous/next lesson, over the top edge of the video. */}
-                  <div
-                    className="pointer-events-none absolute inset-x-0 top-0 h-[58px] lg:h-[72px]"
-                    style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)" }}
-                  />
-                  <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
-                    <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
-                      {String(lesson?.name || courseName)}
-                    </p>
-                    <p className="text-[10px] leading-4 lg:text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
-                      {courseName}
-                    </p>
-                  </div>
-                  <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
-                    {prevLesson ? (
-                      <button
-                        type="button"
-                        onClick={() => openLesson(prevLesson.id)}
-                        className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
-                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
-                      >
-                        <SkipIcon direction="back" />
-                        <span className="hidden sm:inline">{t("previousLessonBtn")}</span>
-                      </button>
-                    ) : null}
-                    {nextLesson ? (
-                      <button
-                        type="button"
-                        onClick={() => openLesson(nextLesson.id)}
-                        className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
-                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
-                      >
-                        {t("nextLessonBtn")}
-                        <SkipIcon direction="forward" />
-                      </button>
-                    ) : null}
+                    <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
+                      {prevLesson ? (
+                        <button
+                          type="button"
+                          onClick={() => openLesson(prevLesson.id)}
+                          className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                        >
+                          <SkipIcon direction="back" />
+                          <span className="hidden sm:inline">{t("previousLessonBtn")}</span>
+                        </button>
+                      ) : null}
+                      {nextLesson ? (
+                        <button
+                          type="button"
+                          onClick={() => openLesson(nextLesson.id)}
+                          className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                        >
+                          {t("nextLessonBtn")}
+                          <SkipIcon direction="forward" />
+                        </button>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               )}
