@@ -5,7 +5,7 @@ import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
-import { Avatar } from "@/components/layout/avatar";
+import { EditableAvatar } from "@/components/profile/avatar-editor";
 import { HomeIcon } from "@/components/home/icon";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { DevModeSheet } from "@/components/profile/dev-mode-sheet";
@@ -14,7 +14,6 @@ import { LangRadio, MenuRow, PushToggle, SectionLabel } from "@/components/profi
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb, getFirebaseApp } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
-import { avatarSrc } from "@/lib/avatar";
 import { useI18n } from "@/lib/i18n/locale";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import { SHORT_VERSION } from "@/lib/version";
@@ -116,7 +115,7 @@ export function ProfileHub() {
   return (
     <div className="flex w-full max-w-[365px] flex-col items-center">
       <DevModeBanner className="mb-3 w-full" />
-      <Avatar src={avatarSrc(profile, user?.uid)} name={name} className="size-[75px] text-2xl lg:size-[100px]" />
+      <EditableAvatar className="size-[75px] text-2xl lg:size-[100px]" />
       <p className="mt-2.5 text-[14px] font-bold text-[#fafafa]">{name}</p>
       {subtitle ? <p className="text-[12px] text-[#999]">{subtitle}</p> : null}
 

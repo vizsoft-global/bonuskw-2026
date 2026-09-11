@@ -32,6 +32,35 @@ export function generatedAvatar(seed: string) {
   return `${DICEBEAR}?seed=${encodeURIComponent(seed)}`;
 }
 
+/**
+ * A fresh seed for the "shuffle" button. Short and readable so it can double
+ * as the character's name if the person wants to type it back in later.
+ */
+export function randomAvatarSeed() {
+  const words = [
+    "atlas", "birch", "comet", "delta", "ember", "fjord", "gale", "harbor", "indigo", "juniper",
+    "kite", "lumen", "maple", "nova", "orbit", "pebble", "quill", "river", "saffron", "tundra",
+    "umber", "velvet", "willow", "xenon", "yarrow", "zephyr",
+  ];
+  const pick = () => words[Math.floor(Math.random() * words.length)];
+  return `${pick()}-${pick()}-${Math.floor(Math.random() * 900 + 100)}`;
+}
+
+/** Turns free text ("Captain Falafel") into a stable seed. */
+export function seedFromText(text: string) {
+  return text.trim().toLowerCase().replace(/\s+/g, "-").slice(0, 64);
+}
+
+/** Reads the seed back out of a generated-avatar URL, if it is one. */
+export function seedOfGeneratedAvatar(url?: string | null) {
+  if (!isGeneratedAvatar(url)) return null;
+  try {
+    return new URL(url!).searchParams.get("seed");
+  } catch {
+    return null;
+  }
+}
+
 /** The uploaded photo when there is one, otherwise the generated avatar. */
 export function avatarSrc(person?: AvatarPerson | null, id?: string | null) {
   const photo = person?.photo_url?.trim();

@@ -11,13 +11,12 @@ import {
   isAcademicComplete,
   type AcademicValue,
 } from "@/components/taxonomy/academic-fields";
-import { Avatar } from "@/components/layout/avatar";
+import { EditableAvatar } from "@/components/profile/avatar-editor";
 import { ProfileField, ProfileTabs, SectionLabel } from "@/components/profile/ui";
 import { ProfilePane } from "@/components/profile/pane";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
-import { avatarSrc } from "@/lib/avatar";
 import { useI18n } from "@/lib/i18n/locale";
 import { useTaxonomy } from "@/lib/taxonomy/use-taxonomy";
 
@@ -93,7 +92,7 @@ export default function PersonalPage() {
       {tab === "personal" ? (
         <div className="flex flex-col">
           <div className="flex justify-center py-5">
-            <Avatar src={avatarSrc(profile, user?.uid)} name={name || profile?.display_name} className="size-[75px] text-2xl" />
+            <EditableAvatar className="size-[75px] text-2xl" />
           </div>
           <SectionLabel>{t("basicDetails")}</SectionLabel>
           <div className="mt-[15px] flex flex-col gap-[15px]">
