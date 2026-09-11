@@ -1,15 +1,14 @@
 import { asDate } from "@/lib/format";
-import { isPublished } from "@/lib/course/status";
 import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
 
 /**
  * Whether an enrollment still grants access, beyond `subscription.status`.
  *
  * A term ends when its batch ends: the batch must be Ongoing and its end date
- * not yet passed. A course pulled back to Draft (or archived / trashed) is off
- * the air for everyone, including students who bought it. Both rules are
- * applied wherever owned content is listed or played, so a batch nobody
- * remembered to close can no longer keep videos alive.
+ * not yet passed. Applied wherever owned content is listed or played, so a
+ * batch nobody remembered to close cannot keep videos alive until the nightly
+ * clean-up archives the enrolments. Publish state does not affect students
+ * who already enrolled — only a trashed course goes dark.
  */
 export function batchIsLive(
   batch?: Pick<BatchDoc, "status" | "endDate"> | null,
@@ -20,12 +19,12 @@ export function batchIsLive(
   return !end || now <= end;
 }
 
-export function courseIsLive(course?: Pick<CourseDoc, "status" | "trashed"> | null) {
-  return Boolean(course) && !course!.trashed && isPublished(course);
+export function courseIsLive(course?: Pick<CourseDoc, "trashed"> | null) {
+  return Boolean(course) && !course!.trashed;
 }
 
 export function accessIsLive(
-  course?: Pick<CourseDoc, "status" | "trashed"> | null,
+  course?: Pick<CourseDoc, "trashed"> | null,
   batch?: Pick<BatchDoc, "status" | "endDate"> | null,
   now = new Date(),
 ) {

@@ -5,6 +5,8 @@ import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
 import type { BatchDoc, CourseDoc, PurchaseControls, UserDoc } from "@/lib/types/firestore";
 import { canPurchase } from "@/lib/auth/purchase-access";
+import { batchIsLive } from "@/lib/course/access-window";
+import { isPublished } from "@/lib/course/status";
 
 export const runtime = "nodejs";
 
@@ -48,22 +50,25 @@ export async function POST(req: NextRequest) {
   }
 
   const userRef = db.collection(collections.users).doc(user.uid);
+  // Only a live enrolment counts as "already in": a student whose earlier
+  // term was archived may enrol again in the new batch.
   const existing = await db
     .collection(collections.subscription)
     .where("userRef", "==", userRef)
     .where("courseRef", "==", courseRef)
+    .where("status", "==", "Ongoing")
     .limit(1)
     .get();
   if (!existing.empty) return NextResponse.json({ ok: true, already: true });
 
-  const batchesRef = course.batchesRef
-    ? db.collection(collections.batches).doc(course.batchesRef.id)
-    : null;
-  if (batchesRef) {
-    const batch = (await batchesRef.get()).data() as BatchDoc | undefined;
-    if (!batch || batch.status !== "Ongoing") {
-      return NextResponse.json({ error: "No batch is running" }, { status: 400 });
-    }
+  // Enrolment needs a published course linked to a batch that is running.
+  if (course.trashed || !isPublished(course) || !course.batchesRef) {
+    return NextResponse.json({ error: "No batch is running" }, { status: 400 });
+  }
+  const batchesRef = db.collection(collections.batches).doc(course.batchesRef.id);
+  const batch = (await batchesRef.get()).data() as BatchDoc | undefined;
+  if (!batchIsLive(batch)) {
+    return NextResponse.json({ error: "No batch is running" }, { status: 400 });
   }
 
   await db.collection(collections.subscription).add({

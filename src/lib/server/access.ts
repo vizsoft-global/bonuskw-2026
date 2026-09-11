@@ -48,7 +48,7 @@ export async function loadAccess(db: Firestore, uid: string, courseId: string) {
       .get(),
   ]);
   const course = courseSnap.exists ? (courseSnap.data() as CourseDoc) : null;
-  // A drafted / archived / trashed course is off the air for everyone.
+  // A trashed course is off the air for everyone.
   if (!courseIsLive(course)) {
     return { subscription: null, purchased: new Set<string>() };
   }
