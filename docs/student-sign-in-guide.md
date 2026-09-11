@@ -86,8 +86,8 @@ Happens when they used a different email/phone than the one on file.
 ### Plan D — Fixed test code (emergency, tech team only)
 Firebase Console → Authentication → Sign-in method → Phone → *Phone numbers for testing*: add the number with a fixed 6-digit code, tell it to the student, remove after use. Max 10 numbers at a time.
 
-### Verification-code screen fallbacks
-If the student reached the "Enter code" screen but no SMS came, the screen also offers **Resend**, **Send via WhatsApp** and **Send via SMS** (academy's own gateway). These only work while the gateway account is active.
+### "Contact support on WhatsApp" button
+When the SMS fails on the login screen, or on the "Enter code" screen, the app shows **Resend code** and **Contact support on WhatsApp**. The support button opens WhatsApp to **+965 9991 4714** with a prefilled message that includes the number they tried, so the team can go straight to Plan A or B.
 
 ---
 

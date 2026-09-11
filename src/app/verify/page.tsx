@@ -6,6 +6,7 @@ import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CtaButton } from "@/components/auth/cta-button";
 import { OtpInput } from "@/components/auth/otp-input";
 import { PageLoader } from "@/components/shared/loader";
+import { SupportLink } from "@/components/auth/support-link";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
@@ -20,13 +21,11 @@ function maskPhone(phone: string) {
 
 function VerifyForm() {
   const { t } = useI18n();
-  const { confirmSms, sendSms, sendFallback, confirmFallback } = useAuth();
+  const { confirmSms, sendSms } = useAuth();
   const router = useRouter();
   const [code, setCode] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
-  /** Which sender issued the code being typed; verification must match it. */
-  const [channel, setChannel] = useState<"firebase" | "whatsapp" | "sms">("firebase");
   const [notice, setNotice] = useState("");
   const [phone] = useState(
     () => (typeof window !== "undefined" ? window.sessionStorage.getItem("ba_phone") || "" : ""),
@@ -38,7 +37,7 @@ function VerifyForm() {
     try {
       // The result carries the fresh profile state, so the redirect never
       // reads a stale `needsOnboarding` from before the sign-in.
-      const result = channel === "firebase" ? await confirmSms(code) : await confirmFallback(phone, code);
+      const result = await confirmSms(code);
       router.replace(result.needsOnboarding ? "/onboarding" : "/");
     } catch (err) {
       setError(authErrorMessage(err, t));
@@ -47,14 +46,12 @@ function VerifyForm() {
     }
   }
 
-  async function resend(via: "firebase" | "whatsapp" | "sms") {
+  async function resend() {
     setBusy(true);
     setError("");
     setNotice("");
     try {
-      if (via === "firebase") await sendSms(phone);
-      else await sendFallback(phone, via);
-      setChannel(via);
+      await sendSms(phone);
       setCode("");
       setNotice(t("codeResent"));
     } catch (err) {
@@ -87,33 +84,18 @@ function VerifyForm() {
             {t("verifyContinue")}
           </CtaButton>
         </div>
-        <div className="flex flex-col gap-2 rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
+        <div className="flex flex-col gap-3 rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
           <p className="text-[13px] text-white/60">{t("didntGetCode")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               disabled={busy}
               className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
-              onClick={() => void resend("firebase")}
+              onClick={() => void resend()}
             >
               {t("resendFirebase")}
             </button>
-            <button
-              type="button"
-              disabled={busy}
-              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
-              onClick={() => void resend("whatsapp")}
-            >
-              {t("sendViaWhatsapp")}
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
-              onClick={() => void resend("sms")}
-            >
-              {t("sendViaSms")}
-            </button>
+            <SupportLink phone={phone} />
           </div>
         </div>
       </div>

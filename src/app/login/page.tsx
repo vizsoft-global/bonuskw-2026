@@ -10,6 +10,7 @@ import { Field } from "@/components/auth/field";
 import { LegalNote } from "@/components/auth/legal-note";
 import { SocialButton } from "@/components/auth/social-button";
 import { PageLoader } from "@/components/shared/loader";
+import { SupportLink } from "@/components/auth/support-link";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
@@ -145,6 +146,12 @@ function LoginForm() {
             <CtaButton loading={busy} disabled={busy || !phoneReady} onClick={() => void submitPhone()}>
               {t("continue")}
             </CtaButton>
+            {error ? (
+              <div className="flex flex-col gap-2 pt-1">
+                <p className="text-[13px] text-white/60">{t("noSmsHint")}</p>
+                <SupportLink phone={phoneReady ? `+965 ${phone}` : undefined} className="self-start" />
+              </div>
+            ) : null}
           </div>
         ) : (
           <div className="flex flex-col gap-3">
