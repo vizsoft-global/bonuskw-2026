@@ -225,12 +225,12 @@ export function StoryViewer({
     <div
       className={
         embedded
-          ? "fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
-          : "relative min-h-dvh overflow-clip bg-app-top text-[#fafafa]"
+          ? "fixed inset-0 z-[100] flex overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
+          : "relative flex min-h-dvh overflow-y-auto bg-black/90 text-[#fafafa]"
       }
-      onClick={embedded ? (e) => e.target === e.currentTarget && close() : undefined}
-      role={embedded ? "dialog" : undefined}
-      aria-modal={embedded ? true : undefined}
+      onClick={(e) => e.target === e.currentTarget && close()}
+      role="dialog"
+      aria-modal
     >
       {!embedded ? (
         <>
@@ -240,14 +240,9 @@ export function StoryViewer({
           <div className="hidden h-[81px] shrink-0 lg:block" />
         </>
       ) : null}
-      <div
-        className={
-          embedded
-            ? "flex w-full flex-col items-center px-[15px] py-[24px] lg:px-0"
-            : "flex flex-col items-center px-[15px] pt-safe-header lg:px-0 lg:pt-0"
-        }
-      >
-        <div className="flex w-full max-w-[384px] flex-col items-center gap-[15px] lg:gap-[25px]">
+      {/* Shrink-wrapped (w-auto) so clicks outside the card hit the backdrop and dismiss. */}
+      <div className="m-auto flex w-auto max-w-[80vw] flex-col items-center p-4">
+        <div className="flex w-auto max-w-full flex-col items-center gap-[15px] lg:gap-[25px]">
           <header className="flex w-full items-center justify-between">
             <div className="flex min-w-0 flex-1 items-center gap-2.5 pe-[50px]">
               <span className="size-[55px] shrink-0 overflow-hidden rounded-full border-[0.5px] border-white/20 bg-[#141414]">
@@ -268,7 +263,7 @@ export function StoryViewer({
           </header>
 
           <div
-            className="relative h-[min(643px,calc(100dvh-220px))] w-full touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-white/20 bg-[#1d1d1d] lg:h-[643px]"
+            className="relative aspect-[9/16] h-[min(620px,calc(80dvh-190px))] min-h-[300px] w-auto max-w-[80vw] touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-white/20 bg-[#1d1d1d]"
             onPointerDown={onPointerDown}
             onPointerUp={onPointerUp}
             onPointerCancel={() => {
