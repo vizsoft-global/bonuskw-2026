@@ -216,8 +216,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSessionAttempt((n) => n + 1);
   }, []);
 
+  /**
+   * A fresh invisible reCAPTCHA for every send. Reusing one across attempts
+   * (or after a client-side navigation re-mounted the container) makes the
+   * widget throw "reCAPTCHA has already been rendered in this element", which
+   * surfaced to students as an unexplained failure on the phone screen.
+   */
   const ensureVerifier = () => {
-    if (verifier) return verifier;
+    try {
+      verifier?.clear();
+    } catch {
+      /* already cleared */
+    }
+    verifier = null;
+    const container = document.getElementById("ba-recaptcha");
+    if (container) container.innerHTML = "";
     verifier = new RecaptchaVerifier(getFirebaseAuth(), "ba-recaptcha", {
       size: "invisible",
     });

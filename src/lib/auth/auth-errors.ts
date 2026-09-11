@@ -78,5 +78,12 @@ export function authErrorMessage(err: unknown, t: (key: AuthErrorKey) => string)
   if (key === "authErrGeneric" && err instanceof Error && err.message && !err.message.startsWith("Firebase:")) {
     return err.message;
   }
+  if (key === "authErrGeneric") {
+    // Unmapped Firebase code: keep it visible in small print so a support
+    // screenshot tells us what actually failed.
+    const code =
+      typeof err === "object" && err && "code" in err ? String((err as { code?: string }).code ?? "") : "";
+    if (code) return `${t(key)} (${code})`;
+  }
   return t(key);
 }
