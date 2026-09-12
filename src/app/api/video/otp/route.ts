@@ -33,7 +33,6 @@ export async function POST(req: NextRequest) {
     return ticket(db, {
       videoRefId: course.videoRef?.id,
       videoId: course.video,
-      annotate: await annotation(db, user),
     });
   }
 
@@ -60,19 +59,12 @@ export async function POST(req: NextRequest) {
   return ticket(db, {
     videoRefId: lesson.videoRef?.id,
     videoId: lesson.video,
-    annotate: await annotation(db, user),
   });
-}
-
-async function annotation(db: Firestore, user: { uid: string; phone_number?: string } | null) {
-  if (!user) return "Preview";
-  const profile = await db.collection(collections.users).doc(user.uid).get();
-  return String(profile.get("display_name") || user.phone_number || user.uid);
 }
 
 async function ticket(
   db: Firestore,
-  input: { videoRefId?: string; videoId?: string; annotate: string },
+  input: { videoRefId?: string; videoId?: string },
 ) {
   const videoSnap = input.videoRefId
     ? await db.collection(collections.videos).doc(input.videoRefId).get()
@@ -103,19 +95,7 @@ async function ticket(
         "Content-Type": "application/json",
         Accept: "application/json",
       },
-      body: JSON.stringify({
-        ttl: 300,
-        annotate: JSON.stringify([
-          {
-            type: "rtext",
-            text: input.annotate,
-            alpha: "0.6",
-            color: "0xFFFFFF",
-            size: "15",
-            interval: "5000",
-          },
-        ]),
-      }),
+      body: JSON.stringify({ ttl: 300 }),
     },
   );
   const json = (await res.json().catch(() => ({}))) as { otp?: string; playbackInfo?: string };

@@ -475,6 +475,25 @@ html:not(.dark) .bg-primary img {
     0 12px 32px rgba(0, 0, 0, 0.55),
     0 0 0 0.5px rgba(255, 255, 255, 0.18);
   animation: learn-dock-in 180ms ease-out;
+  touch-action: none;
+}
+
+.learn-video--moved {
+  inset: auto;
+  animation: none;
+}
+
+.learn-video--dragging {
+  cursor: grabbing;
+}
+
+.learn-video--dragging .learn-pip-handle {
+  cursor: grabbing;
+}
+
+.learn-pip-handle {
+  cursor: grab;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0) 100%);
 }
 
 @media (min-width: 1024px) {

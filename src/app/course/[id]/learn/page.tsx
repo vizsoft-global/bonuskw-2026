@@ -1,10 +1,10 @@
 "use client";
 
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { addDoc, collection, doc, getDoc, serverTimestamp } from "firebase/firestore";
+import { getDoc } from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
 import { ChapterSections } from "@/components/course/chapter-sections";
 import { isPreviewable } from "@/components/course/file-art";
@@ -21,8 +21,6 @@ import { buildOutline, type OutlineFile } from "@/lib/course/outline";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
-import { getDb } from "@/lib/firebase/client";
-import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
@@ -73,7 +71,6 @@ function LearnBody() {
   const [otp, setOtp] = useState<PlaybackTicket | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [otpBusy, setOtpBusy] = useState(false);
-  const [review, setReview] = useState(5);
   const [mobileTab, setMobileTab] = useState<"lessons" | "resources">("lessons");
   const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
   // Mini player: once the stage scrolls off the top, the video docks to a
@@ -228,17 +225,6 @@ function LearnBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- autoplay only when the lesson changes
   }, [user, lesson?.id, quizId]);
 
-  async function leaveReview() {
-    if (!user) return;
-    await addDoc(collection(getDb(), collections.review), {
-      userRef: doc(getDb(), collections.users, user.uid),
-      courseRef: doc(getDb(), collections.course, id),
-      rating: review,
-      review: "Completed",
-      createdAt: serverTimestamp(),
-    });
-  }
-
   function openLesson(nextId: string) {
     setQuizId("");
     setLessonId(nextId);
@@ -255,6 +241,7 @@ function LearnBody() {
   const src = playerSrc(otp);
   // Keep the dock through the brief OTP refetch when the user picks another lesson.
   const docked = scrolledPast && !dockHidden && !activeQuiz && Boolean(src || otpBusy);
+  const { videoElRef, pos: pipPos, dragging: pipDragging, onPointerDown, onPointerMove, onPointerUp } = usePipDrag(docked);
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
 
@@ -338,8 +325,17 @@ function LearnBody() {
                   ) : null}
                   {/* 16:9 stage centred in its column; the letterbox fills the rest. */}
                   <div
-                    className={cn("learn-video relative h-full w-full lg:h-auto", docked && "learn-video--docked")}
-                    style={{ background: "#1d1d1d" }}
+                    ref={videoElRef}
+                    className={cn(
+                      "learn-video relative h-full w-full lg:h-auto",
+                      docked && "learn-video--docked",
+                      docked && pipPos && "learn-video--moved",
+                      pipDragging && "learn-video--dragging",
+                    )}
+                    style={{
+                      background: "#1d1d1d",
+                      ...(docked && pipPos ? { left: pipPos.x, top: pipPos.y } : null),
+                    }}
                   >
                     {src ? (
                       <iframe
@@ -373,16 +369,61 @@ function LearnBody() {
                       style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)" }}
                     />
                     {docked ? (
-                      <button
-                        type="button"
-                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                        aria-label={t("pipExpand")}
-                        title={t("pipExpand")}
-                        className="absolute start-2 top-2 grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
-                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                      <div
+                        className="learn-pip-handle absolute inset-x-0 top-0 z-10 flex h-10 items-center justify-between gap-1 px-2"
+                        onPointerDown={onPointerDown}
+                        onPointerMove={onPointerMove}
+                        onPointerUp={onPointerUp}
+                        onPointerCancel={onPointerUp}
                       >
-                        <DockIcon kind="expand" />
-                      </button>
+                        <button
+                          type="button"
+                          onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                          aria-label={t("pipExpand")}
+                          title={t("pipExpand")}
+                          className="grid size-7 shrink-0 place-items-center rounded-[8px] backdrop-blur-sm"
+                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                        >
+                          <DockIcon kind="expand" />
+                        </button>
+                        <span className="min-w-0 flex-1 cursor-grab text-center text-[10px] font-medium text-white/70" aria-label={t("pipDrag")}>
+                          {t("pipDrag")}
+                        </span>
+                        <div className="flex shrink-0 items-center gap-1">
+                          {prevLesson ? (
+                            <button
+                              type="button"
+                              onClick={() => openLesson(prevLesson.id)}
+                              aria-label={t("previousLessonBtn")}
+                              className="grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
+                              style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                            >
+                              <SkipIcon direction="back" />
+                            </button>
+                          ) : null}
+                          {nextLesson ? (
+                            <button
+                              type="button"
+                              onClick={() => openLesson(nextLesson.id)}
+                              aria-label={t("nextLessonBtn")}
+                              className="grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
+                              style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                            >
+                              <SkipIcon direction="forward" />
+                            </button>
+                          ) : null}
+                          <button
+                            type="button"
+                            onClick={() => setDockHidden(true)}
+                            aria-label={t("pipClose")}
+                            title={t("pipClose")}
+                            className="grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
+                            style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                          >
+                            <DockIcon kind="close" />
+                          </button>
+                        </div>
+                      </div>
                     ) : (
                       <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
                         <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
@@ -393,55 +434,34 @@ function LearnBody() {
                         </p>
                       </div>
                     )}
-                    <div
-                      className={cn(
-                        "absolute flex items-center gap-1.5",
-                        docked ? "end-2 top-2 gap-1" : "end-3 top-2.5 lg:end-5 lg:top-4",
-                      )}
-                    >
-                      {prevLesson ? (
-                        <button
-                          type="button"
-                          onClick={() => openLesson(prevLesson.id)}
-                          aria-label={t("previousLessonBtn")}
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium backdrop-blur-sm",
-                            docked ? "size-7 justify-center" : "h-7 px-2.5 lg:h-8 lg:px-3 lg:text-[12px]",
-                          )}
-                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
-                        >
-                          <SkipIcon direction="back" />
-                          {docked ? null : <span className="hidden sm:inline">{t("previousLessonBtn")}</span>}
-                        </button>
-                      ) : null}
-                      {nextLesson ? (
-                        <button
-                          type="button"
-                          onClick={() => openLesson(nextLesson.id)}
-                          aria-label={t("nextLessonBtn")}
-                          className={cn(
-                            "flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium backdrop-blur-sm",
-                            docked ? "size-7 justify-center" : "h-7 px-2.5 lg:h-8 lg:px-3 lg:text-[12px]",
-                          )}
-                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
-                        >
-                          {docked ? null : t("nextLessonBtn")}
-                          <SkipIcon direction="forward" />
-                        </button>
-                      ) : null}
-                      {docked ? (
-                        <button
-                          type="button"
-                          onClick={() => setDockHidden(true)}
-                          aria-label={t("pipClose")}
-                          title={t("pipClose")}
-                          className="grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
-                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
-                        >
-                          <DockIcon kind="close" />
-                        </button>
-                      ) : null}
-                    </div>
+                    {docked ? null : (
+                      <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
+                        {prevLesson ? (
+                          <button
+                            type="button"
+                            onClick={() => openLesson(prevLesson.id)}
+                            aria-label={t("previousLessonBtn")}
+                            className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                            style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                          >
+                            <SkipIcon direction="back" />
+                            <span className="hidden sm:inline">{t("previousLessonBtn")}</span>
+                          </button>
+                        ) : null}
+                        {nextLesson ? (
+                          <button
+                            type="button"
+                            onClick={() => openLesson(nextLesson.id)}
+                            aria-label={t("nextLessonBtn")}
+                            className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                            style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                          >
+                            {t("nextLessonBtn")}
+                            <SkipIcon direction="forward" />
+                          </button>
+                        ) : null}
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -517,26 +537,6 @@ function LearnBody() {
             />
           </section>
 
-          <div className="flex items-center gap-3 rounded-[12px] bg-surface px-3 py-2.5 text-[12px] text-text">
-            <label className="flex items-center gap-2">
-              {t("rating")}
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={review}
-                onChange={(e) => setReview(Number(e.target.value))}
-                className="w-14 rounded-md bg-surface px-2 py-1 text-center"
-              />
-            </label>
-            <button
-              type="button"
-              className="h-8 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
-              onClick={() => void leaveReview()}
-            >
-              {t("finish")}
-            </button>
-          </div>
         </div>
       ) : (
         <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
@@ -544,6 +544,94 @@ function LearnBody() {
       {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>
   );
+}
+
+const PIP_POS_KEY = "ba_learn_pip_pos";
+
+type PipPos = { x: number; y: number };
+
+function clampPip(x: number, y: number, w: number, h: number): PipPos {
+  const pad = 8;
+  return {
+    x: Math.min(Math.max(pad, window.innerWidth - w - pad), Math.max(pad, x)),
+    y: Math.min(Math.max(pad, window.innerHeight - h - pad), Math.max(pad, y)),
+  };
+}
+
+/** Drag the docked mini player; the last spot is kept for this tab session. */
+function readPipPos(): PipPos | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(PIP_POS_KEY);
+    return raw ? (JSON.parse(raw) as PipPos) : null;
+  } catch {
+    return null;
+  }
+}
+
+function usePipDrag(docked: boolean) {
+  const videoElRef = useRef<HTMLDivElement>(null);
+  const [pos, setPos] = useState<PipPos | null>(readPipPos);
+  const [dragging, setDragging] = useState(false);
+  const drag = useRef<{ px: number; py: number; ox: number; oy: number } | null>(null);
+  const latest = useRef<PipPos | null>(pos);
+
+  useEffect(() => {
+    if (!docked) return;
+    function onResize() {
+      const el = videoElRef.current;
+      const current = latest.current;
+      if (!el || !current) return;
+      const next = clampPip(current.x, current.y, el.offsetWidth, el.offsetHeight);
+      latest.current = next;
+      setPos(next);
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, [docked]);
+
+  function onPointerDown(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!docked || (e.target as HTMLElement).closest("button")) return;
+    const el = videoElRef.current;
+    if (!el) return;
+    e.preventDefault();
+    const rect = el.getBoundingClientRect();
+    drag.current = { px: e.clientX, py: e.clientY, ox: rect.left, oy: rect.top };
+    if (!latest.current) {
+      const seed = { x: rect.left, y: rect.top };
+      latest.current = seed;
+      setPos(seed);
+    }
+    el.setPointerCapture(e.pointerId);
+    setDragging(true);
+  }
+
+  function onPointerMove(e: ReactPointerEvent<HTMLDivElement>) {
+    if (!drag.current) return;
+    const el = videoElRef.current;
+    if (!el) return;
+    const next = clampPip(
+      drag.current.ox + (e.clientX - drag.current.px),
+      drag.current.oy + (e.clientY - drag.current.py),
+      el.offsetWidth,
+      el.offsetHeight,
+    );
+    latest.current = next;
+    setPos(next);
+  }
+
+  function onPointerUp() {
+    if (!drag.current) return;
+    drag.current = null;
+    setDragging(false);
+    try {
+      if (latest.current) sessionStorage.setItem(PIP_POS_KEY, JSON.stringify(latest.current));
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return { videoElRef, pos, dragging, onPointerDown, onPointerMove, onPointerUp };
 }
 
 /** Skip-to-next / skip-to-previous glyph for the player overlay. */
