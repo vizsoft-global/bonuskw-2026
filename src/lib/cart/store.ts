@@ -22,6 +22,8 @@ export type CartLine = {
   emiAmounts?: number[];
   emiAvailable?: boolean;
   batch?: string;
+  /** Batch the course was in when added; lets the cart re-check it is still open. */
+  batchId?: string;
   addedAt: number;
 };
 

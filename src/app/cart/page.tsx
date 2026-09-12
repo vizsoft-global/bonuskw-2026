@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useQuery } from "@tanstack/react-query";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { LineCard, PayCta, SavedCard } from "@/components/cart/line-card";
 import { PaymentMethods } from "@/components/cart/payment-method";
@@ -14,6 +15,11 @@ import { canPurchase } from "@/lib/auth/purchase-access";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { type Quote, quoteErrorKey, quoteLineFor, suggestionText } from "@/lib/cart/quote";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
+import { getDocsByIds } from "@/lib/catalog/queries";
+import { batchTone, type BatchTone } from "@/lib/course/batch-status";
+import { enrolmentBlock } from "@/lib/course/enrol";
+import { collections } from "@/lib/firebase/collections";
+import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
@@ -58,6 +64,39 @@ export default function CartPage() {
       })
       .finally(() => setReady(true));
   }, [user]);
+
+  // Live batch state for every course in the cart. A line added weeks ago can
+  // outlive its batch, so the chip and the Pay button follow today's data,
+  // not what was true when the student tapped "Add to cart".
+  const courseIds = [...new Set(cart.lines.filter((l) => l.kind !== "ebook").map((l) => l.courseId))].sort();
+  const batchState = useQuery({
+    queryKey: ["cart-batches", courseIds.join(",")],
+    enabled: courseIds.length > 0,
+    staleTime: 60_000,
+    queryFn: async () => {
+      const courses = await getDocsByIds(collections.course, courseIds);
+      const batchIds = [
+        ...new Set(
+          Object.values(courses)
+            .map((c) => (c as CourseDoc).batchesRef?.id)
+            .filter((id): id is string => Boolean(id)),
+        ),
+      ];
+      const batches = batchIds.length ? await getDocsByIds(collections.batches, batchIds) : {};
+      const out: Record<string, { name: string; tone: BatchTone; blocked: boolean }> = {};
+      for (const id of courseIds) {
+        const course = courses[id] as CourseDoc | undefined;
+        const batch = course?.batchesRef?.id ? (batches[course.batchesRef.id] as BatchDoc | undefined) : undefined;
+        out[id] = {
+          name: batch?.name || "",
+          tone: batchTone(batch),
+          // Installment lines pay for something already owned; never block them.
+          blocked: Boolean(course) && enrolmentBlock(course, batch) !== null,
+        };
+      }
+      return out;
+    },
+  });
 
   async function fetchQuote(next: CartState, couponCode: string | undefined) {
     if (!user) return { ok: false, body: {} as Quote };
@@ -190,6 +229,13 @@ export default function CartPage() {
     }
   }
 
+  const batchFor = (line: CartLine) =>
+    line.kind === "ebook" || line.kind === "installment" ? undefined : batchState.data?.[line.courseId];
+  const closedLines = cart.lines.filter((line) => batchFor(line)?.blocked);
+  const closedNames = [...new Set(closedLines.map((line) => line.title || line.courseId))].join(", ");
+  const toneLabel = (tone: BatchTone) =>
+    t(tone === "active" ? "batchOpen" : tone === "upcoming" ? "batchUpcoming" : "batchClosed");
+
   const listTotal = cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
   const due = quote?.dueNow ?? listTotal;
   const quotedInstallments = (line: CartLine) => quoteLineFor(quote, line)?.installments ?? undefined;
@@ -223,6 +269,7 @@ export default function CartPage() {
     !quoting &&
     Boolean(quote) &&
     !quoteError &&
+    closedLines.length === 0 &&
     cart.lines.length > 0 &&
     !staffViewer &&
     !paused;
@@ -269,7 +316,11 @@ export default function CartPage() {
           : null}
         {summaryRow(t("totalDueNow"), quoting ? "…" : dueLabel, "strong")}
       </div>
-      {quoteError ? (
+      {closedLines.length ? (
+        <p className="rounded-[10px] bg-[#f24822]/10 p-3 text-[12px] leading-relaxed text-[#f24822]">
+          {t("cartClosedLines", { courses: closedNames })}
+        </p>
+      ) : quoteError ? (
         <p className="rounded-[10px] bg-[#f24822]/10 p-3 text-[12px] leading-relaxed text-[#f24822]">
           {quoteError}
         </p>
@@ -347,6 +398,9 @@ export default function CartPage() {
                 installments={quotedInstallments(line)}
                 quoted={quoteLineFor(quote, line)}
                 couponTag={t("couponTag")}
+                batchTone={batchFor(line)?.tone}
+                batchLabel={batchFor(line) ? toneLabel(batchFor(line)!.tone) : undefined}
+                closed={Boolean(batchFor(line)?.blocked)}
                 onPayType={(type) => setPay(line, type)}
                 onSaveLater={() =>
                   void persist({

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BatchBadge, CourseThumb } from "./course-thumb";
 import { HomeIcon } from "./icon";
+import type { BatchTone } from "@/lib/course/batch-status";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
 
@@ -20,6 +21,8 @@ export type ExploreItem = {
   hours?: number;
   pages?: number;
   batch?: string;
+  /** Colour of the batch chip; omitted = unknown (grey). */
+  batchTone?: BatchTone;
   saved?: boolean;
   href?: string;
   aspect?: "5/3" | "3/4";
@@ -193,7 +196,7 @@ export function ExploreListCard({
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
             <ThumbOverlay item={item} />
-            {item.batch ? <BatchBadge label={item.batch} /> : null}
+            {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
@@ -228,7 +231,7 @@ export function ExploreGridCard({
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full">
             <ThumbOverlay item={item} />
-            {item.batch ? <BatchBadge label={item.batch} /> : null}
+            {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}

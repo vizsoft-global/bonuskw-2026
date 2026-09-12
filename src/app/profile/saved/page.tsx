@@ -11,15 +11,17 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
-import { getBatch, getCourse, getDocsByIds } from "@/lib/catalog/queries";
+import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { toast } from "@/components/ui/toaster";
+import { getCourse, getDocsByIds } from "@/lib/catalog/queries";
 import { avatarSrc } from "@/lib/avatar";
+import { batchInfo, type BatchInfo } from "@/lib/course/batch-status";
 import { isEbookCourse } from "@/lib/format";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import type { CourseDoc } from "@/lib/types/firestore";
+import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
 import { courseThumb } from "@/lib/course/thumb";
 
@@ -53,14 +55,10 @@ export default function SavedPage() {
           },
         ]),
       );
+      const batchRows = await getDocsByIds(collections.batches, batchIds);
       const batches = Object.fromEntries(
-        await Promise.all(
-          batchIds.map(async (id) => {
-            const row = await getBatch(id);
-            return [id, row?.name || ""] as const;
-          }),
-        ),
-      );
+        Object.entries(batchRows).map(([id, row]) => [id, batchInfo(row as BatchDoc)]),
+      ) as Record<string, BatchInfo>;
       return { rows, authors, batches };
     },
   });
@@ -76,7 +74,8 @@ export default function SavedPage() {
       authorPhoto: course.authorRef?.id ? data.authors[course.authorRef.id]?.photo : undefined,
       lessons: Number(course.numberLessons || 0),
       hours: Number(course.totalHours || course.totalCourseHour || 0),
-      batch: course.batchesRef?.id ? data.batches[course.batchesRef.id] : undefined,
+      batch: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.name : undefined,
+      batchTone: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.tone : undefined,
       saved: true,
       href: isEbookCourse(course) ? `/store/${course.id}` : `/course/${course.id}`,
     }));
@@ -96,20 +95,13 @@ export default function SavedPage() {
   async function enrol(id: string) {
     if (!user) return;
     const course = saved.data?.rows.find((row) => row.id === id);
-    if (gate.blockFor(purchaseKindFor(course))) return;
-    const cart = await loadCart(user.uid);
-    await saveCart(
-      user.uid,
-      upsertLine(cart, {
-        kind: course && isEbookCourse(course) ? "ebook" : "course",
-        courseId: id,
-        paymentType: "Full payment",
-        title: course?.name,
-        image: course ? courseThumb(course) : undefined,
-        price: Number(course?.price) || 0,
-        addedAt: Date.now(),
-      }),
-    );
+    if (!course || gate.blockFor(purchaseKindFor(course))) return;
+    try {
+      await addCourseLine(user.uid, course);
+    } catch (err) {
+      toast.error(enrolmentClosedMessage(err, t));
+      return;
+    }
     router.push("/cart");
   }
 

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import { HomeIcon } from "@/components/home/icon";
+import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { cn } from "@/lib/utils";
 
 /**
@@ -21,6 +22,8 @@ export function CourseCover({
   image,
   seed,
   batchName,
+  batchTone,
+  batchToneLabel,
   aspect = "5/3",
   video,
 }: {
@@ -28,6 +31,10 @@ export function CourseCover({
   /** Course id: colour of the default artwork. */
   seed?: string | null;
   batchName?: string;
+  /** Green/amber/red chip so a student sees at once whether they can enrol. */
+  batchTone?: BatchTone;
+  /** Translated "Open" / "Starts soon" / "Closed" shown next to the name. */
+  batchToneLabel?: string;
   aspect?: "5/3" | "3/4" | "16/9";
   video?: CoverVideo;
 }) {
@@ -82,10 +89,16 @@ export function CourseCover({
           ) : null}
           {batchName ? (
             <span
-              className="absolute bottom-3 end-3 rounded-full px-2.5 py-1 text-[11px]"
-              style={{ background: "rgba(0,0,0,0.7)", color: "#fafafa" }}
+              className={cn(
+                "absolute bottom-3 end-3 inline-flex items-center gap-1.5 rounded-full border-[0.5px] px-2.5 py-1 text-[11px] font-medium",
+                batchTone ? BATCH_TONE_CLASS[batchTone] : "border-transparent bg-black/70 text-[#fafafa]",
+              )}
             >
+              {batchTone ? <span aria-hidden className="size-1.5 rounded-full bg-white/90" /> : null}
               {batchName}
+              {batchTone && batchToneLabel ? (
+                <span className="opacity-90">· {batchToneLabel}</span>
+              ) : null}
             </span>
           ) : null}
         </>

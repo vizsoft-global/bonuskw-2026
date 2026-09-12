@@ -1,4 +1,5 @@
 import { BrandThumb } from "@/components/shared/brand-thumb";
+import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { cn } from "@/lib/utils";
 
 export function hasThumb(src?: string | null) {
@@ -43,9 +44,19 @@ export function CourseThumb({
   );
 }
 
-export function BatchBadge({ label }: { label: string }) {
+/**
+ * Batch chip on a thumbnail. Green = open for enrolment, amber = starts later,
+ * red = closed. No tone (unknown) keeps the neutral grey.
+ */
+export function BatchBadge({ label, tone }: { label: string; tone?: BatchTone }) {
   return (
-    <span className="absolute bottom-1.5 end-1.5 rounded-[6px] border-[0.5px] border-white bg-[#545454] px-[5px] py-[2px] text-[10px] font-medium text-white">
+    <span
+      className={cn(
+        "absolute bottom-1.5 end-1.5 inline-flex items-center gap-1 rounded-[6px] border-[0.5px] px-[5px] py-[2px] text-[10px] font-medium",
+        tone ? BATCH_TONE_CLASS[tone] : "border-white bg-[#545454] text-white",
+      )}
+    >
+      {tone ? <span aria-hidden className="size-1.5 rounded-full bg-white/90" /> : null}
       {label}
     </span>
   );

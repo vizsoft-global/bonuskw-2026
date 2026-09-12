@@ -18,8 +18,10 @@ import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { canPurchase } from "@/lib/auth/purchase-access";
 import { EnrolledCta, StaffViewOnlyNotice } from "@/components/course/enrolled-cta";
+import { addCourseLine, EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
+import { batchTone } from "@/lib/course/batch-status";
 import { enrolmentBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
 import { buildOutline, outlineCounts, type OutlineFile, type OutlineLesson } from "@/lib/course/outline";
@@ -114,26 +116,16 @@ export default function CoursePage() {
         router.push(`/course/${id}/learn`);
         return;
       }
-      const cart = await loadCart(user.uid);
-      await saveCart(
-        user.uid,
-        upsertLine(cart, {
-          kind: "course",
-          courseId: id,
-          paymentType,
-          title: c.name,
-          image: courseThumb(c),
-          price: Number(c.price) || 0,
-          emiAvailable: Boolean(c.emiPaymentStatus),
-          ...(c.emiPaymentStatus
-            ? { emiCount: courseEmiCount(c), emiAmounts: emiPlan(c) }
-            : {}),
-          ...(batch.data?.name ? { batch: batch.data.name } : {}),
-          addedAt: Date.now(),
-        }),
-      );
+      // Re-reads the batch and refuses if enrolment is closed, even when the
+      // page was opened before the batch ended.
+      await addCourseLine(user.uid, { ...c, id }, paymentType);
       router.push("/cart");
     } catch (err) {
+      if (err instanceof EnrolmentClosedError) {
+        setCartError(enrolmentClosedMessage(err, t));
+        void batch.refetch();
+        return;
+      }
       setCartError(err instanceof Error ? err.message : "Could not add to cart");
     } finally {
       setBusy(false);
@@ -160,6 +152,12 @@ export default function CoursePage() {
     setBusy(true);
     setCartError("");
     try {
+      // Chapters sell against the same batch as the course.
+      const liveBatch = await getBatch(c.batchesRef?.id);
+      const reason = enrolmentBlock(c, liveBatch);
+      if (reason) {
+        throw new EnrolmentClosedError(reason);
+      }
       const cart = await loadCart(user.uid);
       await saveCart(
         user.uid,
@@ -171,12 +169,18 @@ export default function CoursePage() {
           title: `${c.name ?? ""} › ${chapter.name ?? ""}`.trim(),
           image: courseThumb(c),
           price: Number(chapter.price) || 0,
-          ...(batch.data?.name ? { batch: batch.data.name } : {}),
+          ...(liveBatch?.name ? { batch: liveBatch.name } : {}),
+          ...(c.batchesRef?.id ? { batchId: c.batchesRef.id } : {}),
           addedAt: Date.now(),
         }),
       );
       router.push("/cart");
     } catch (err) {
+      if (err instanceof EnrolmentClosedError) {
+        setCartError(enrolmentClosedMessage(err, t));
+        void batch.refetch();
+        return;
+      }
       setCartError(err instanceof Error ? err.message : "Could not add to cart");
     } finally {
       setBusy(false);
@@ -281,6 +285,18 @@ export default function CoursePage() {
           image={courseThumb(c)}
           seed={id}
           batchName={batch.data?.name}
+          batchTone={batch.isFetched ? batchTone(batch.data) : undefined}
+          batchToneLabel={
+            batch.isFetched
+              ? t(
+                  batchTone(batch.data) === "active"
+                    ? "batchOpen"
+                    : batchTone(batch.data) === "upcoming"
+                      ? "batchUpcoming"
+                      : "batchClosed",
+                )
+              : undefined
+          }
           aspect="16/9"
           video={
             hasIntro

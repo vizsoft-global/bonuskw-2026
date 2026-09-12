@@ -32,7 +32,8 @@ import { PageLoader } from "@/components/shared/loader";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { CATALOG_STALE_MS, exploreCourses, getCourse, getDocsByIds, listCourses } from "@/lib/catalog/queries";
+import { CATALOG_STALE_MS, exploreCourses, getCourse, listCourses } from "@/lib/catalog/queries";
+import { useBatches } from "@/lib/catalog/use-batches";
 import { TaxonomyPicker } from "@/components/taxonomy/taxonomy-picker";
 import {
   EMPTY_SELECTION,
@@ -41,7 +42,8 @@ import {
   useTaxonomy,
   type TaxonomySelection,
 } from "@/lib/taxonomy/use-taxonomy";
-import { upsertLine, loadCart, saveCart } from "@/lib/cart/store";
+import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { toast } from "@/components/ui/toaster";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
@@ -151,15 +153,7 @@ function HomeBody({ uid }: { uid: string }) {
   const batchIds = [...new Set(explore.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
 
   const authors = useAuthors(authorIds);
-  const batches = useQuery({
-    queryKey: ["home-batches", batchIds.join(",")],
-    enabled: batchIds.length > 0,
-    staleTime: CATALOG_STALE_MS,
-    queryFn: async () => {
-      const rows = await getDocsByIds(collections.batches, batchIds);
-      return Object.fromEntries(Object.entries(rows).map(([id, row]) => [id, String(row.name || "")]));
-    },
-  });
+  const batches = useBatches(batchIds);
 
   const hours = Math.round((stats.data?.studySeconds || 0) / 3600);
   const savedKey = (profile?.fvrtCourseList ?? []).map((ref) => ref.id).join(",");
@@ -175,7 +169,8 @@ function HomeBody({ uid }: { uid: string }) {
         authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
         hours: Number(course.totalHours || course.totalCourseHour || 0),
-        batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id] : undefined,
+        batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.name : undefined,
+        batchTone: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.tone : undefined,
         saved: savedIds.has(course.id),
       })),
     [explore, authors.data, batches.data, locale, savedIds],
@@ -183,7 +178,12 @@ function HomeBody({ uid }: { uid: string }) {
 
   async function enrol(course: CourseDoc & { id: string }) {
     if (gate.blockFor("course")) return;
-    await addCourseToCart(uid, course);
+    try {
+      await addCourseLine(uid, course);
+    } catch (err) {
+      toast.error(enrolmentClosedMessage(err, t));
+      return;
+    }
     router.push("/cart");
   }
 
@@ -332,18 +332,3 @@ function HomeBody({ uid }: { uid: string }) {
   );
 }
 
-async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) {
-  const cart = await loadCart(uid);
-  await saveCart(
-    uid,
-    upsertLine(cart, {
-      kind: "course",
-      courseId: course.id,
-      paymentType: "Full payment",
-      title: course.name,
-      image: courseThumb(course),
-      price: course.price,
-      addedAt: Date.now(),
-    }),
-  );
-}

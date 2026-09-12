@@ -4,6 +4,7 @@ import { HomeIcon } from "@/components/home/icon";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import type { QuoteLine } from "@/lib/cart/quote";
 import type { CartLine } from "@/lib/cart/store";
+import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { EMI_COUNT, splitEmi } from "@/lib/course/emi";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { cn } from "@/lib/utils";
@@ -41,6 +42,9 @@ export function LineCard({
   installments,
   quoted,
   couponTag,
+  batchTone,
+  batchLabel,
+  closed,
 }: {
   line: CartLine;
   locale: Locale;
@@ -50,6 +54,12 @@ export function LineCard({
   quoted?: QuoteLine;
   /** Label shown on the line the coupon was applied to. */
   couponTag?: string;
+  /** Today's batch state for this course: colours the batch chip. */
+  batchTone?: BatchTone;
+  /** Translated "Open" / "Starts soon" / "Closed" for the chip. */
+  batchLabel?: string;
+  /** Enrolment is closed: the card dims and the chip turns red. */
+  closed?: boolean;
   onPayType: (type: "Full payment" | "EMI") => void;
   onSaveLater: () => void;
   onRemove: () => void;
@@ -60,9 +70,14 @@ export function LineCard({
   const finalAmount = discounted ? (quoted?.amountTotal ?? listAmount) : listAmount;
   const hasCoupon = discounted && (quoted?.couponDiscount ?? 0) > 0;
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn("flex flex-col gap-2", closed ? "rounded-[12px] ring-1 ring-[#f24822]/50" : undefined)}>
       <div className="flex gap-3 overflow-hidden rounded-[12px] p-1">
-        <div className="relative h-[68px] w-[120px] shrink-0 overflow-hidden rounded-[8px] border-[0.5px] border-white/15 bg-[#1d1d1d] lg:h-[90px] lg:w-[160px]">
+        <div
+          className={cn(
+            "relative h-[68px] w-[120px] shrink-0 overflow-hidden rounded-[8px] border-[0.5px] border-white/15 bg-[#1d1d1d] lg:h-[90px] lg:w-[160px]",
+            closed ? "opacity-60 grayscale" : undefined,
+          )}
+        >
           {hasThumb(line.image) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={line.image} alt="" className="h-full w-full object-cover" />
@@ -75,9 +90,18 @@ export function LineCard({
             {line.title || line.courseId}
           </p>
           <div className="flex items-end justify-between gap-2 px-1 pb-0.5">
-            {line.batch ? (
-              <span className="rounded-[6px] border-[0.5px] border-white bg-[#545454] px-1.5 py-[3px] text-[12px] font-medium text-white">
-                {line.batch}
+            {line.batch || batchTone ? (
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 rounded-[6px] border-[0.5px] px-1.5 py-[3px] text-[12px] font-medium",
+                  batchTone ? BATCH_TONE_CLASS[batchTone] : "border-white bg-[#545454] text-white",
+                )}
+              >
+                {batchTone ? <span aria-hidden className="size-1.5 rounded-full bg-white/90" /> : null}
+                {line.batch || batchLabel}
+                {line.batch && batchTone && batchLabel ? (
+                  <span className="opacity-90">· {batchLabel}</span>
+                ) : null}
               </span>
             ) : (
               <span />
