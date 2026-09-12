@@ -76,6 +76,12 @@ function LearnBody() {
   const [review, setReview] = useState(5);
   const [mobileTab, setMobileTab] = useState<"lessons" | "resources">("lessons");
   const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
+  // Mini player: once the stage scrolls off the top, the video docks to a
+  // corner (same iframe, so playback never restarts) until the user scrolls
+  // back or dismisses it for this scroll.
+  const [stageEl, setStageEl] = useState<HTMLDivElement | null>(null);
+  const [scrolledPast, setScrolledPast] = useState(false);
+  const [dockHidden, setDockHidden] = useState(false);
 
   const outline = useMemo(
     () =>
@@ -96,6 +102,20 @@ function LearnBody() {
   const lesson = (lessons.data ?? []).find((item) => item.id === lessonId) || lessons.data?.[0];
   const activeQuiz = quizId ? ((quizzes.data ?? []).find((q) => q.id === quizId) as (QuizDoc & { id: string }) | undefined) : undefined;
   const lessonDuration = Number(lesson?.videoDuration || (lesson ? durations[lesson.id] : 0) || 0);
+
+  useEffect(() => {
+    if (!stageEl) return;
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const past = entry.boundingClientRect.top < 0 && entry.intersectionRatio < 0.35;
+        setScrolledPast(past);
+        if (!past) setDockHidden(false);
+      },
+      { threshold: [0, 0.35, 0.7, 1] },
+    );
+    io.observe(stageEl);
+    return () => io.disconnect();
+  }, [stageEl]);
 
   useEffect(() => {
     if (!user || !lesson || quizId) return;
@@ -233,6 +253,8 @@ function LearnBody() {
   }
 
   const src = playerSrc(otp);
+  // Keep the dock through the brief OTP refetch when the user picks another lesson.
+  const docked = scrolledPast && !dockHidden && !activeQuiz && Boolean(src || otpBusy);
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
 
@@ -301,11 +323,24 @@ function LearnBody() {
                 </div>
               ) : (
                 <div
+                  ref={setStageEl}
                   className="relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
                   style={{ background: "#0a0a0a" }}
                 >
+                  {docked ? (
+                    <button
+                      type="button"
+                      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                      className="text-[12px] text-[#999]"
+                    >
+                      {t("pipPlayingBelow")}
+                    </button>
+                  ) : null}
                   {/* 16:9 stage centred in its column; the letterbox fills the rest. */}
-                  <div className="learn-video relative h-full w-full lg:h-auto" style={{ background: "#1d1d1d" }}>
+                  <div
+                    className={cn("learn-video relative h-full w-full lg:h-auto", docked && "learn-video--docked")}
+                    style={{ background: "#1d1d1d" }}
+                  >
                     {src ? (
                       <iframe
                         ref={iframeRef}
@@ -337,35 +372,73 @@ function LearnBody() {
                       className="pointer-events-none absolute inset-x-0 top-0 h-[58px] lg:h-[72px]"
                       style={{ background: "linear-gradient(180deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0) 100%)" }}
                     />
-                    <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
-                      <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
-                        {String(lesson?.name || courseName)}
-                      </p>
-                      <p className="text-[10px] leading-4 lg:text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
-                        {courseName}
-                      </p>
-                    </div>
-                    <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
+                    {docked ? (
+                      <button
+                        type="button"
+                        onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+                        aria-label={t("pipExpand")}
+                        title={t("pipExpand")}
+                        className="absolute start-2 top-2 grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
+                        style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                      >
+                        <DockIcon kind="expand" />
+                      </button>
+                    ) : (
+                      <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
+                        <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
+                          {String(lesson?.name || courseName)}
+                        </p>
+                        <p className="text-[10px] leading-4 lg:text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
+                          {courseName}
+                        </p>
+                      </div>
+                    )}
+                    <div
+                      className={cn(
+                        "absolute flex items-center gap-1.5",
+                        docked ? "end-2 top-2 gap-1" : "end-3 top-2.5 lg:end-5 lg:top-4",
+                      )}
+                    >
                       {prevLesson ? (
                         <button
                           type="button"
                           onClick={() => openLesson(prevLesson.id)}
-                          className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                          aria-label={t("previousLessonBtn")}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium backdrop-blur-sm",
+                            docked ? "size-7 justify-center" : "h-7 px-2.5 lg:h-8 lg:px-3 lg:text-[12px]",
+                          )}
                           style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
                         >
                           <SkipIcon direction="back" />
-                          <span className="hidden sm:inline">{t("previousLessonBtn")}</span>
+                          {docked ? null : <span className="hidden sm:inline">{t("previousLessonBtn")}</span>}
                         </button>
                       ) : null}
                       {nextLesson ? (
                         <button
                           type="button"
                           onClick={() => openLesson(nextLesson.id)}
-                          className="flex h-7 items-center gap-1.5 rounded-[8px] px-2.5 text-[11px] font-medium backdrop-blur-sm lg:h-8 lg:px-3 lg:text-[12px]"
+                          aria-label={t("nextLessonBtn")}
+                          className={cn(
+                            "flex items-center gap-1.5 rounded-[8px] text-[11px] font-medium backdrop-blur-sm",
+                            docked ? "size-7 justify-center" : "h-7 px-2.5 lg:h-8 lg:px-3 lg:text-[12px]",
+                          )}
                           style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
                         >
-                          {t("nextLessonBtn")}
+                          {docked ? null : t("nextLessonBtn")}
                           <SkipIcon direction="forward" />
+                        </button>
+                      ) : null}
+                      {docked ? (
+                        <button
+                          type="button"
+                          onClick={() => setDockHidden(true)}
+                          aria-label={t("pipClose")}
+                          title={t("pipClose")}
+                          className="grid size-7 place-items-center rounded-[8px] backdrop-blur-sm"
+                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                        >
+                          <DockIcon kind="close" />
                         </button>
                       ) : null}
                     </div>
@@ -484,6 +557,27 @@ function SkipIcon({ direction }: { direction: "forward" | "back" }) {
     >
       <path d="M5 5.5v13l9-6.5z" />
       <rect x="16" y="5.5" width="2.5" height="13" rx="0.8" />
+    </svg>
+  );
+}
+
+/** Mini-player controls: return to the full player, or dismiss the dock. */
+function DockIcon({ kind }: { kind: "expand" | "close" }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {kind === "expand" ? (
+        <>
+          <path d="M15 3h6v6" />
+          <path d="M21 3l-7 7" />
+          <path d="M9 21H3v-6" />
+          <path d="M3 21l7-7" />
+        </>
+      ) : (
+        <>
+          <path d="M6 6l12 12" />
+          <path d="M18 6L6 18" />
+        </>
+      )}
     </svg>
   );
 }

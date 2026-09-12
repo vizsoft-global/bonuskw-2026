@@ -431,6 +431,46 @@ html:not(.dark) .bg-primary img {
   }
 }
 
+/*
+ * Mini player: the same stage (and iframe) is pinned to a corner once it
+ * scrolls off the top, so the lesson keeps playing while browsing chapters.
+ * The stage wrapper keeps its box, so the page layout doesn't jump.
+ */
+.learn-video--docked {
+  position: fixed;
+  z-index: 60;
+  inset-inline-end: 12px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+  width: min(62vw, 320px);
+  height: auto;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow:
+    0 12px 32px rgba(0, 0, 0, 0.55),
+    0 0 0 0.5px rgba(255, 255, 255, 0.18);
+  animation: learn-dock-in 180ms ease-out;
+}
+
+@media (min-width: 1024px) {
+  .learn-video--docked {
+    inset-inline-end: 20px;
+    bottom: 20px;
+    width: min(32vw, 400px);
+  }
+}
+
+@keyframes learn-dock-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
 @media (max-width: 1023px) {
   .learn-fit {
     --learn-chrome: calc(env(safe-area-inset-top, 0px) + 68px);
