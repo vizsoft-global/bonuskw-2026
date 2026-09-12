@@ -12,9 +12,11 @@ import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { canPurchase } from "@/lib/auth/purchase-access";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
+import { type Quote, quoteErrorKey, quoteLineFor, suggestionText } from "@/lib/cart/quote";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
+import { cn } from "@/lib/utils";
 
 type CreateResponse = {
   orderId?: string;
@@ -32,12 +34,13 @@ export default function CartPage() {
   const { t, locale } = useI18n();
   const router = useRouter();
   const [cart, setCart] = useState<CartState>({ lines: [], savedForLater: [] });
-  const [quote, setQuote] = useState<{
-    dueNow?: number;
-    suggestions?: Array<{ name?: string }>;
-    lines?: Array<{ kind: string; courseRef: string; installments?: number[] | null }>;
-  } | null>(null);
+  const [quote, setQuote] = useState<Quote | null>(null);
   const [coupon, setCoupon] = useState("");
+  // Why the coupon in the cart was rejected (the rest of the cart still prices).
+  const [couponError, setCouponError] = useState("");
+  // Why the whole cart cannot be priced (blocks checkout).
+  const [quoteError, setQuoteError] = useState("");
+  const [quoting, setQuoting] = useState(false);
   const [ready, setReady] = useState(false);
   const [accept, setAccept] = useState(false);
   const [error, setError] = useState("");
@@ -56,12 +59,8 @@ export default function CartPage() {
       .finally(() => setReady(true));
   }, [user]);
 
-  async function refreshQuote(next: CartState) {
-    if (!user) return;
-    if (!next.lines.length) {
-      setQuote(null);
-      return;
-    }
+  async function fetchQuote(next: CartState, couponCode: string | undefined) {
+    if (!user) return { ok: false, body: {} as Quote };
     const token = await user.getIdToken();
     const res = await fetch("/api/checkout/quote", {
       method: "POST",
@@ -74,10 +73,57 @@ export default function CartPage() {
           installmentId: line.installmentId,
           paymentType: line.paymentType,
         })),
-        couponCode: next.couponCode,
+        couponCode: couponCode?.trim() || undefined,
       }),
     });
-    setQuote(await res.json());
+    const body = (await res.json().catch(() => ({}))) as Quote;
+    return { ok: res.ok && !body.error, body };
+  }
+
+  /**
+   * Prices the cart server-side. The server prices everything or nothing, so
+   * when the coupon is the reason it fails we re-price without it: totals stay
+   * right and the student sees why the code was refused instead of nothing.
+   */
+  async function refreshQuote(next: CartState) {
+    if (!user) return;
+    if (!next.lines.length) {
+      setQuote(null);
+      setCouponError("");
+      setQuoteError("");
+      return;
+    }
+    setQuoting(true);
+    try {
+      const withCoupon = await fetchQuote(next, next.couponCode);
+      if (withCoupon.ok) {
+        setQuote(withCoupon.body);
+        setCouponError("");
+        setQuoteError("");
+        return;
+      }
+      if (next.couponCode?.trim()) {
+        const bare = await fetchQuote(next, undefined);
+        if (bare.ok) {
+          setQuote(bare.body);
+          setCouponError(t(quoteErrorKey(withCoupon.body.error)));
+          setQuoteError("");
+          return;
+        }
+        setQuote(null);
+        setCouponError("");
+        setQuoteError(t(quoteErrorKey(bare.body.error)));
+        return;
+      }
+      setQuote(null);
+      setCouponError("");
+      setQuoteError(t(quoteErrorKey(withCoupon.body.error)));
+    } catch {
+      setQuote(null);
+      setQuoteError(t("quoteFailed"));
+    } finally {
+      setQuoting(false);
+    }
   }
 
   async function persist(next: CartState) {
@@ -144,19 +190,42 @@ export default function CartPage() {
     }
   }
 
-  const due =
-    quote?.dueNow ?? cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
-  const quotedInstallments = (line: CartLine) =>
-    quote?.lines?.find(
-      (q) => q.kind === "course" && q.courseRef.endsWith(`/${line.courseId}`) && q.installments,
-    )?.installments ?? undefined;
+  const listTotal = cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
+  const due = quote?.dueNow ?? listTotal;
+  const quotedInstallments = (line: CartLine) => quoteLineFor(quote, line)?.installments ?? undefined;
+  // Coupon lands on exactly one line server-side; surface which one.
+  const couponLine = quote?.lines?.find((q) => (q.couponDiscount ?? 0) > 0);
+  const couponCartLine = couponLine
+    ? cart.lines.find((line) => quoteLineFor(quote, line) === couponLine)
+    : undefined;
+  const promoTotal = quote
+    ? (quote.lines ?? []).reduce((sum, q) => sum + (q.owned ? 0 : q.promotionDiscount || 0), 0)
+    : 0;
+  const couponTotal = quote
+    ? (quote.lines ?? []).reduce((sum, q) => sum + (q.owned ? 0 : q.couponDiscount || 0), 0)
+    : 0;
+  const suggestionTexts = Array.from(
+    new Set((quote?.suggestions ?? []).map((item) => suggestionText(item.message, locale))),
+  ).filter(Boolean);
+  const summaryTotal = quote
+    ? (quote.lines ?? []).reduce((sum, q) => sum + (q.owned ? 0 : q.amountTotal || 0), 0)
+    : listTotal;
   // "Pay all in EMI" is only offered when at least one course allows it.
   const emiEligible = cart.lines.filter((l) => l.kind === "course" && l.emiAvailable !== false);
   const allEmi = emiEligible.length > 0 && emiEligible.every((l) => l.paymentType === "EMI");
   const dueLabel = formatKwdLocale(due, locale);
   // First paused line wins: the checkout API refuses the whole order anyway.
   const paused = cart.lines.map((line) => gate.blockFor(line.kind)).find(Boolean);
-  const canPay = accept && !busy && !redirecting && cart.lines.length > 0 && !staffViewer && !paused;
+  const canPay =
+    accept &&
+    !busy &&
+    !redirecting &&
+    !quoting &&
+    Boolean(quote) &&
+    !quoteError &&
+    cart.lines.length > 0 &&
+    !staffViewer &&
+    !paused;
   const lineLabels = {
     fullPay: t("fullPay"),
     emi: t("emi"),
@@ -169,8 +238,42 @@ export default function CartPage() {
   // touching the payment gateway, so the payment section is not shown.
   const freeCheckout = Boolean(quote) && due <= 0 && cart.lines.length > 0;
 
+  const summaryRow = (label: string, value: string, tone?: "muted" | "accent" | "strong") => (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 text-[12px]",
+        tone === "accent" ? "text-[#1f9d4d]" : tone === "strong" ? "text-[#fafafa]" : "text-[#999]",
+      )}
+    >
+      <span className={tone === "strong" ? "font-medium" : undefined}>{label}</span>
+      <span className={tone === "strong" ? "text-[14px] font-semibold" : "font-medium"}>{value}</span>
+    </div>
+  );
+
   const checkoutBlock = (
     <div className="flex flex-col gap-[25px] rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
+      <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
+        {summaryRow(t("subtotal"), formatKwdLocale(listTotal, locale))}
+        {promoTotal > 0
+          ? summaryRow(t("discountLabel"), `− ${formatKwdLocale(promoTotal, locale)}`, "accent")
+          : null}
+        {couponTotal > 0
+          ? summaryRow(
+              `${t("coupon")} · ${quote?.couponCode ?? ""}`,
+              `− ${formatKwdLocale(couponTotal, locale)}`,
+              "accent",
+            )
+          : null}
+        {summaryTotal !== due
+          ? summaryRow(t("orderTotal"), formatKwdLocale(summaryTotal, locale))
+          : null}
+        {summaryRow(t("totalDueNow"), quoting ? "…" : dueLabel, "strong")}
+      </div>
+      {quoteError ? (
+        <p className="rounded-[10px] bg-[#f24822]/10 p-3 text-[12px] leading-relaxed text-[#f24822]">
+          {quoteError}
+        </p>
+      ) : null}
       {freeCheckout ? (
         <div className="flex items-start gap-3 rounded-[12px] bg-[#1f9d4d]/15 p-3">
           <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#1f9d4d] text-[11px] font-bold text-white">
@@ -242,6 +345,8 @@ export default function CartPage() {
                 locale={locale}
                 labels={lineLabels}
                 installments={quotedInstallments(line)}
+                quoted={quoteLineFor(quote, line)}
+                couponTag={t("couponTag")}
                 onPayType={(type) => setPay(line, type)}
                 onSaveLater={() =>
                   void persist({
@@ -273,24 +378,68 @@ export default function CartPage() {
                 {allEmi ? t("payAllFull") : t("payAllEmi")}
               </button>
             ) : null}
-            <div className="flex gap-2">
-              <input
-                value={coupon}
-                onChange={(e) => setCoupon(e.target.value)}
-                placeholder={t("coupon")}
-                className="h-[50px] flex-1 rounded-[12px] bg-[#141414] px-3 text-[12px] text-[#fafafa] outline-none placeholder:text-[#999]"
-              />
-              <button
-                type="button"
-                onClick={() => void persist({ ...cart, couponCode: coupon })}
-                className="h-[50px] rounded-[12px] bg-[#141414] px-4 text-[12px] font-medium text-[#fafafa]"
-              >
-                {t("apply")}
-              </button>
-            </div>
-            {(quote?.suggestions ?? []).map((item, i) => (
-              <p key={i} className="text-[12px] text-[#0c5eff]">
-                {item.name}
+            <form
+              className="flex flex-col gap-2"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void persist({ ...cart, couponCode: coupon.trim() });
+              }}
+            >
+              <div className="flex gap-2">
+                <input
+                  value={coupon}
+                  onChange={(e) => setCoupon(e.target.value)}
+                  placeholder={t("coupon")}
+                  autoCapitalize="characters"
+                  autoCorrect="off"
+                  spellCheck={false}
+                  aria-invalid={Boolean(couponError)}
+                  className={cn(
+                    "h-[50px] flex-1 rounded-[12px] bg-[#141414] px-3 text-[12px] text-[#fafafa] outline-none placeholder:text-[#999]",
+                    couponError ? "ring-1 ring-[#f24822]" : undefined,
+                  )}
+                />
+                <button
+                  type="submit"
+                  disabled={quoting || !coupon.trim()}
+                  className="h-[50px] rounded-[12px] bg-[#141414] px-4 text-[12px] font-medium text-[#fafafa] disabled:opacity-50"
+                >
+                  {t("apply")}
+                </button>
+              </div>
+              {couponError ? (
+                <p role="alert" className="text-[12px] text-[#f24822]">
+                  {couponError}
+                </p>
+              ) : null}
+              {quote?.couponCode && couponLine ? (
+                <div className="flex items-start justify-between gap-3 rounded-[10px] bg-[#1f9d4d]/10 p-3 text-[12px] text-[#cfe9d6]">
+                  <p className="leading-relaxed">
+                    {t("couponApplied", {
+                      code: quote.couponCode,
+                      course: couponCartLine?.title || couponLine.courseName || "",
+                    })}
+                    {" · "}
+                    <span className="font-semibold text-[#1f9d4d]">
+                      − {formatKwdLocale(couponLine.couponDiscount ?? 0, locale)}
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCoupon("");
+                      void persist({ ...cart, couponCode: "" });
+                    }}
+                    className="shrink-0 text-[11px] text-[#999] underline-offset-2 hover:underline"
+                  >
+                    {t("couponRemove")}
+                  </button>
+                </div>
+              ) : null}
+            </form>
+            {suggestionTexts.map((text) => (
+              <p key={text} className="text-[12px] text-[#0c5eff]">
+                {text}
               </p>
             ))}
           </div>

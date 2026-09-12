@@ -2,6 +2,7 @@
 
 import { HomeIcon } from "@/components/home/icon";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
+import type { QuoteLine } from "@/lib/cart/quote";
 import type { CartLine } from "@/lib/cart/store";
 import { EMI_COUNT, splitEmi } from "@/lib/course/emi";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
@@ -13,9 +14,11 @@ function linePriceLabel(
   locale: Locale,
   emiMonths: string,
   quoted?: number[],
+  amount = Number(line.price) || 0,
+  paymentType: string | undefined = line.paymentType,
 ) {
-  const amount = Number(line.price) || 0;
-  if (line.paymentType !== "EMI") return formatKwdLocale(amount, locale);
+  // Nothing left to split (e.g. coupon covers the price) → plain amount.
+  if (paymentType !== "EMI" || amount <= 0) return formatKwdLocale(amount, locale);
   // Server quote wins (it knows promotions/coupons); fall back to the course plan.
   const plan =
     quoted && quoted.length >= 2
@@ -36,16 +39,26 @@ export function LineCard({
   onRemove,
   labels,
   installments,
+  quoted,
+  couponTag,
 }: {
   line: CartLine;
   locale: Locale;
   /** Quoted installment amounts for this line when paying by EMI. */
   installments?: number[];
+  /** Server-priced version of this line (discounts land here, not on `line`). */
+  quoted?: QuoteLine;
+  /** Label shown on the line the coupon was applied to. */
+  couponTag?: string;
   onPayType: (type: "Full payment" | "EMI") => void;
   onSaveLater: () => void;
   onRemove: () => void;
   labels: { fullPay: string; emi: string; emiMonths: string; saveLater: string; remove: string };
 }) {
+  const listAmount = Number(line.price) || 0;
+  const discounted = Boolean(quoted) && !quoted?.owned && (quoted?.discount ?? 0) > 0;
+  const finalAmount = discounted ? (quoted?.amountTotal ?? listAmount) : listAmount;
+  const hasCoupon = discounted && (quoted?.couponDiscount ?? 0) > 0;
   return (
     <div className="flex flex-col gap-2">
       <div className="flex gap-3 overflow-hidden rounded-[12px] p-1">
@@ -69,9 +82,33 @@ export function LineCard({
             ) : (
               <span />
             )}
-            <p className="max-w-[58%] shrink-0 text-end text-[13px] font-semibold leading-tight text-[#fafafa]">
-              {linePriceLabel(line, locale, labels.emiMonths, installments)}
-            </p>
+            <div className="flex max-w-[58%] shrink-0 flex-col items-end gap-0.5 text-end">
+              {discounted ? (
+                <span className="text-[11px] leading-tight text-[#999] line-through">
+                  {formatKwdLocale(quoted?.originalPrice ?? listAmount, locale)}
+                </span>
+              ) : null}
+              <p
+                className={cn(
+                  "text-[13px] font-semibold leading-tight",
+                  discounted ? "text-[#1f9d4d]" : "text-[#fafafa]",
+                )}
+              >
+                {linePriceLabel(
+                  line,
+                  locale,
+                  labels.emiMonths,
+                  installments,
+                  finalAmount,
+                  quoted?.paymentType ?? line.paymentType,
+                )}
+              </p>
+              {hasCoupon && couponTag ? (
+                <span className="rounded-[6px] bg-[#1f9d4d]/15 px-1.5 py-[2px] text-[10px] font-medium text-[#1f9d4d]">
+                  {couponTag}
+                </span>
+              ) : null}
+            </div>
           </div>
         </div>
       </div>
