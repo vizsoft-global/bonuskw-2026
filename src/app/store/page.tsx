@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthors } from "@/lib/catalog/use-authors";
 import {
   arrayRemove,
   arrayUnion,
@@ -95,19 +96,7 @@ export default function StorePage() {
   const explore = filterCoursesByTaxonomy(books, selection);
 
   const authorIds = [...new Set([...featured, ...explore].map((c) => c.authorRef?.id).filter(Boolean))] as string[];
-  const authors = useQuery({
-    queryKey: ["authors", authorIds.join(",")],
-    enabled: authorIds.length > 0,
-    queryFn: async () => {
-      const pairs = await Promise.all(
-        authorIds.map(async (id) => {
-          const snap = await getDoc(doc(getDb(), collections.users, id));
-          return [id, String(snap.get("display_name") || "")] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<string, string>;
-    },
-  });
+  const authors = useAuthors(authorIds);
 
   const hours = Math.round((stats.data?.studySeconds || 0) / 3600);
   const savedKey = (profile?.fvrtCourseList ?? []).map((ref) => ref.id).join(",");
@@ -120,7 +109,8 @@ export default function StorePage() {
       name: localizedField(book.name, book.nameManualTranslate, book.nameAutoTranslate, locale),
       image: book.image,
       rating: Number(book.totalRatting || 0),
-      author: book.authorRef?.id ? authors.data?.[book.authorRef.id] : undefined,
+      author: book.authorRef?.id ? authors.data?.[book.authorRef.id]?.name : undefined,
+      authorPhoto: book.authorRef?.id ? authors.data?.[book.authorRef.id]?.photo : undefined,
       pages: pages > 0 ? pages : undefined,
       saved: savedIds.has(book.id),
       href: `/store/${book.id}`,

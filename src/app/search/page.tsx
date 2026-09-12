@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthors } from "@/lib/catalog/use-authors";
 import { ArrowUpDown, Clock, Shapes, Star, X } from "lucide-react";
-import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
+import { arrayRemove, arrayUnion, collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { HomeIcon } from "@/components/home/icon";
 import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -172,19 +173,7 @@ export default function SearchPage() {
 
   const authorIds = [...new Set(results.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
   const batchIds = [...new Set(results.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
-  const authors = useQuery({
-    queryKey: ["search-authors", authorIds.join(",")],
-    enabled: authorIds.length > 0,
-    queryFn: async () => {
-      const pairs = await Promise.all(
-        authorIds.map(async (id) => {
-          const snap = await getDoc(doc(getDb(), collections.users, id));
-          return [id, String(snap.get("display_name") || "")] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<string, string>;
-    },
-  });
+  const authors = useAuthors(authorIds);
   const batches = useQuery({
     queryKey: ["search-batches", batchIds.join(",")],
     enabled: batchIds.length > 0,
@@ -209,7 +198,8 @@ export default function SearchPage() {
         name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
         image: courseThumb(course),
         rating: Number(course.totalRatting || 0),
-        author: course.authorRef?.id ? authors.data?.[course.authorRef.id] : undefined,
+        author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
+        authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
         hours: Number(course.totalHours || course.totalCourseHour || 0),
         batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id] : undefined,

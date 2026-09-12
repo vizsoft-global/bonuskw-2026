@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthors } from "@/lib/catalog/use-authors";
 import {
   arrayRemove,
   arrayUnion,
@@ -149,15 +150,7 @@ function HomeBody({ uid }: { uid: string }) {
   const authorIds = [...new Set(explore.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
   const batchIds = [...new Set(explore.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
 
-  const authors = useQuery({
-    queryKey: ["authors", authorIds.join(",")],
-    enabled: authorIds.length > 0,
-    staleTime: CATALOG_STALE_MS,
-    queryFn: async () => {
-      const rows = await getDocsByIds(collections.users, authorIds);
-      return Object.fromEntries(Object.entries(rows).map(([id, row]) => [id, String(row.display_name || "")]));
-    },
-  });
+  const authors = useAuthors(authorIds);
   const batches = useQuery({
     queryKey: ["home-batches", batchIds.join(",")],
     enabled: batchIds.length > 0,
@@ -179,7 +172,8 @@ function HomeBody({ uid }: { uid: string }) {
         name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
         image: courseThumb(course),
         rating: Number(course.totalRatting || 0),
-        author: course.authorRef?.id ? authors.data?.[course.authorRef.id] : undefined,
+        author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
+        authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
         hours: Number(course.totalHours || course.totalCourseHour || 0),
         batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id] : undefined,

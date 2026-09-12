@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
-import { arrayRemove, doc, getDoc, updateDoc } from "firebase/firestore";
+import { arrayRemove, doc, updateDoc } from "firebase/firestore";
 import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
 import { ProfilePane } from "@/components/profile/pane";
 import { ProfileTabs } from "@/components/profile/ui";
@@ -12,7 +12,8 @@ import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
-import { getBatch, getCourse } from "@/lib/catalog/queries";
+import { getBatch, getCourse, getDocsByIds } from "@/lib/catalog/queries";
+import { avatarSrc } from "@/lib/avatar";
 import { isEbookCourse } from "@/lib/format";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -39,13 +40,18 @@ export default function SavedPage() {
       );
       const authorIds = [...new Set(rows.map((c) => c.authorRef?.id).filter(Boolean) as string[])];
       const batchIds = [...new Set(rows.map((c) => c.batchesRef?.id).filter(Boolean) as string[])];
+      const authorRows = await getDocsByIds(collections.users, authorIds);
       const authors = Object.fromEntries(
-        await Promise.all(
-          authorIds.map(async (id) => {
-            const snap = await getDoc(doc(getDb(), collections.users, id));
-            return [id, String(snap.get("display_name") || "")] as const;
-          }),
-        ),
+        Object.entries(authorRows).map(([id, row]) => [
+          id,
+          {
+            name: String(row.display_name || ""),
+            photo: avatarSrc(
+              { display_name: row.display_name, email: row.email, photo_url: row.photo_url, phoneE164: row.phoneE164 },
+              id,
+            ),
+          },
+        ]),
       );
       const batches = Object.fromEntries(
         await Promise.all(
@@ -67,7 +73,8 @@ export default function SavedPage() {
       name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
       image: courseThumb(course),
       rating: Number(course.totalRatting || 0),
-      author: course.authorRef?.id ? data.authors[course.authorRef.id] : undefined,
+      author: course.authorRef?.id ? data.authors[course.authorRef.id]?.name : undefined,
+      authorPhoto: course.authorRef?.id ? data.authors[course.authorRef.id]?.photo : undefined,
       lessons: Number(course.numberLessons || 0),
       hours: Number(course.totalHours || course.totalCourseHour || 0),
       batch: course.batchesRef?.id ? data.batches[course.batchesRef.id] : undefined,

@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { useAuthors } from "@/lib/catalog/use-authors";
 import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { CourseHeaderActions } from "@/components/course/header-actions";
 import { CourseCover, CourseInfo } from "@/components/course/hero";
@@ -77,19 +78,7 @@ export default function EbookPage() {
   }, [book.data?.authorRef?.id, courses.data, id]);
 
   const relatedAuthorIds = [...new Set(related.map((row) => row.authorRef?.id).filter(Boolean))] as string[];
-  const relatedAuthors = useQuery({
-    queryKey: ["authors", relatedAuthorIds.join(",")],
-    enabled: relatedAuthorIds.length > 0,
-    queryFn: async () => {
-      const pairs = await Promise.all(
-        relatedAuthorIds.map(async (authorId) => {
-          const snap = await getDoc(doc(getDb(), collections.users, authorId));
-          return [authorId, String(snap.get("display_name") || "")] as const;
-        }),
-      );
-      return Object.fromEntries(pairs) as Record<string, string>;
-    },
-  });
+  const relatedAuthors = useAuthors(relatedAuthorIds);
 
   const savedKey = (profile?.fvrtCourseList ?? []).map((ref) => ref.id).join(",");
   const savedIds = useMemo(() => new Set(savedKey ? savedKey.split(",") : []), [savedKey]);
@@ -103,7 +92,8 @@ export default function EbookPage() {
           name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
           image: courseThumb(row),
           rating: Number(row.totalRatting || 0),
-          author: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id] : instructor.data?.display_name,
+          author: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id]?.name : instructor.data?.display_name,
+          authorPhoto: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id]?.photo : undefined,
           pages: pages > 0 ? pages : undefined,
           saved: savedIds.has(row.id),
           href: `/store/${row.id}`,

@@ -15,6 +15,7 @@ export type ExploreItem = {
   image?: string;
   rating: number;
   author?: string;
+  authorPhoto?: string;
   lessons?: number;
   hours?: number;
   pages?: number;
@@ -59,39 +60,55 @@ function Meta({
   }
 
   return (
-    <div className="flex min-w-0 flex-col gap-[5px]">
-      <div className="flex items-center gap-[5px]">
+    <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
+      <span className="flex items-center gap-[4px]">
         <span className="size-[10px] shrink-0 lg:size-3">
           <HomeIcon src="/home/lesson.svg" />
         </span>
-        <p className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
+        <span className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
           {item.lessons ?? 0} {labels.lessons}
-        </p>
-      </div>
-      <div className="flex items-center gap-[5px]">
+        </span>
+      </span>
+      <span className="flex items-center gap-[4px]">
         <span className="size-[10px] shrink-0 lg:size-3">
           <HomeIcon src="/home/duration.svg" />
         </span>
-        <p className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
+        <span className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
           {item.hours ?? 0} {labels.hrs}
-        </p>
-      </div>
+        </span>
+      </span>
     </div>
   );
 }
 
-function RatingRow({ item }: { item: ExploreItem }) {
+/** Top-left stack on the thumbnail: rating badge, then the instructor's photo
+ *  that expands into their name on hover (always expanded on touch devices). */
+function ThumbOverlay({ item }: { item: ExploreItem }) {
   return (
-    <div className="flex items-center gap-[5px]">
-      <span className="flex items-center gap-[2px]">
-        <span className="size-3 shrink-0">
+    <div className="absolute start-1.5 top-1.5 flex max-w-[calc(100%-12px)] flex-col items-start gap-1">
+      <span className="inline-flex items-center gap-[3px] rounded-full bg-black/60 px-[6px] py-[3px] text-[10px] font-medium leading-none text-white backdrop-blur-sm">
+        <span className="size-[10px] shrink-0">
           <HomeIcon src="/home/star.svg" />
         </span>
-        <span className="text-[10px] leading-none text-[#999] lg:text-[12px]">{item.rating.toFixed(1)}</span>
+        {item.rating.toFixed(1)}
       </span>
-      <span className="h-[10px] w-px bg-white/20 lg:h-3" />
       {item.author ? (
-        <p className="truncate text-[10px] leading-none text-[#999] lg:text-[12px]">{item.author}</p>
+        <span
+          className="group/author inline-flex max-w-full items-center gap-1.5 rounded-full bg-black/60 p-[2px] text-[10px] font-medium leading-none text-white backdrop-blur-sm transition-[padding] duration-200 hover:pe-2 [@media(hover:none)]:pe-2"
+          title={item.author}
+        >
+          {item.authorPhoto ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={item.authorPhoto} alt="" loading="lazy" className="size-[18px] shrink-0 rounded-full bg-white/20 object-cover" />
+          ) : (
+            <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-white/20 text-[9px] uppercase">
+              {item.author.trim().charAt(0)}
+            </span>
+          )}
+          <span className="max-w-0 truncate opacity-0 transition-all duration-200 group-hover/author:max-w-[120px] group-hover/author:opacity-100 [@media(hover:none)]:max-w-[120px] [@media(hover:none)]:opacity-100">
+            {item.author}
+          </span>
+        </span>
       ) : null}
     </div>
   );
@@ -139,7 +156,7 @@ function CardActions({
   enrollBlocked?: string;
 }) {
   return (
-    <div className="mt-auto flex w-full items-end justify-between gap-2.5 px-1 pb-1">
+    <div className="mt-auto flex w-full items-center justify-between gap-2.5 px-1 pb-0.5">
       <Meta item={item} labels={labels} />
       <button
         type="button"
@@ -181,18 +198,16 @@ export function ExploreListCard({
       <div className={cn("relative shrink-0", portrait ? "w-[110px]" : "w-[154px]")}>
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
+            <ThumbOverlay item={item} />
             {item.batch ? <BatchBadge label={item.batch} /> : null}
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
       </div>
-      <div className="flex min-w-0 flex-1 flex-col justify-between gap-2 py-0.5">
-        <div className="flex flex-col gap-1.5 px-1">
-          <Link href={href} className="line-clamp-2 text-[14px] font-medium leading-[18px] text-[#fafafa]">
-            {item.name}
-          </Link>
-          <RatingRow item={item} />
-        </div>
+      <div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5 py-0.5">
+        <Link href={href} className="line-clamp-2 px-1 text-[14px] font-medium leading-[18px] text-[#fafafa]">
+          {item.name}
+        </Link>
         <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
       </div>
     </article>
@@ -218,18 +233,16 @@ export function ExploreGridCard({
       <div className="relative shrink-0">
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full">
+            <ThumbOverlay item={item} />
             {item.batch ? <BatchBadge label={item.batch} /> : null}
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col justify-between gap-2.5 pt-2.5 lg:gap-3 lg:pt-3">
-        <div className="flex flex-col gap-1.5 px-1">
-          <Link href={href} className="line-clamp-2 text-[12px] font-medium leading-[16px] text-[#fafafa]">
-            {item.name}
-          </Link>
-          <RatingRow item={item} />
-        </div>
+      <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-2 lg:gap-2">
+        <Link href={href} className="line-clamp-2 px-1 text-[12px] font-medium leading-[16px] text-[#fafafa]">
+          {item.name}
+        </Link>
         <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
       </div>
     </article>

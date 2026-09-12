@@ -77,6 +77,7 @@ export default function InstructorPage() {
       image: courseThumb(row),
       rating: Number(row.totalRatting || 0),
       author: name,
+      authorPhoto: instructor.data ? avatarSrc(instructor.data, id) : undefined,
       lessons: ebook ? undefined : Number(row.numberLessons || 0),
       hours: ebook ? undefined : Number(row.totalHours || row.totalCourseHour || 0),
       pages: ebook ? pages : undefined,
