@@ -8,7 +8,6 @@ export function InstructorHero({
   name,
   bio,
   verified,
-  rating,
   courseCount,
   ebookCount,
   labels,
@@ -17,11 +16,9 @@ export function InstructorHero({
   name: string;
   bio?: string;
   verified?: boolean;
-  rating: number;
   courseCount: number;
   ebookCount: number;
   labels: {
-    rating: string;
     totalCourses: string;
     ebooks: string;
     coursesUnit: string;
@@ -69,7 +66,6 @@ export function InstructorHero({
           </div>
           <div className="hidden lg:block">
             <InstructorStats
-              rating={rating}
               courseCount={courseCount}
               ebookCount={ebookCount}
               labels={labels}
@@ -79,23 +75,20 @@ export function InstructorHero({
       </div>
 
       <div className="mt-5 lg:hidden">
-        <InstructorStats rating={rating} courseCount={courseCount} ebookCount={ebookCount} labels={labels} />
+        <InstructorStats courseCount={courseCount} ebookCount={ebookCount} labels={labels} />
       </div>
     </div>
   );
 }
 
 function InstructorStats({
-  rating,
   courseCount,
   ebookCount,
   labels,
 }: {
-  rating: number;
   courseCount: number;
   ebookCount: number;
   labels: {
-    rating: string;
     totalCourses: string;
     ebooks: string;
     coursesUnit: string;
@@ -103,11 +96,6 @@ function InstructorStats({
   };
 }) {
   const cols = [
-    {
-      label: labels.rating,
-      icon: "/home/star.svg",
-      value: rating.toFixed(1),
-    },
     {
       label: labels.totalCourses,
       icon: "/home/book-bookmark.svg",

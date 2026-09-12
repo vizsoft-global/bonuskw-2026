@@ -108,7 +108,6 @@ export default function StorePage() {
       id: book.id,
       name: localizedField(book.name, book.nameManualTranslate, book.nameAutoTranslate, locale),
       image: book.image,
-      rating: Number(book.totalRatting || 0),
       author: book.authorRef?.id ? authors.data?.[book.authorRef.id]?.name : undefined,
       authorPhoto: book.authorRef?.id ? authors.data?.[book.authorRef.id]?.photo : undefined,
       pages: pages > 0 ? pages : undefined,

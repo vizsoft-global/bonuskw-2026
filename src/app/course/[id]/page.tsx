@@ -293,8 +293,6 @@ export default function CoursePage() {
             sku={c.sku || id.slice(0, 8)}
             language={language}
             title={title}
-            rating={Number(c.totalRatting || 0)}
-            ratingLabel={t("rating")}
             enrolled={Number(c.bookedCount || 0)}
             enrolledLabel={t("studentsEnrolled")}
             description={c.description}
@@ -351,8 +349,6 @@ export default function CoursePage() {
           name={instructor.data.display_name || t("instructor")}
           photo={avatarSrc(instructor.data, instructor.data.id)}
           bio={instructor.data.bio}
-          rating={Number(c.totalRatting || 0)}
-          ratingLabel={t("rating")}
           verified={instructor.data.instuctorStatus === "Approved"}
         />
       ) : null}

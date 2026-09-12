@@ -13,7 +13,7 @@ export type ExploreItem = {
   id: string;
   name: string;
   image?: string;
-  rating: number;
+  rating?: number;
   author?: string;
   authorPhoto?: string;
   lessons?: number;
@@ -81,17 +81,11 @@ function Meta({
   );
 }
 
-/** Top-left stack on the thumbnail: rating badge, then the instructor's photo
- *  that expands into their name on hover (always expanded on touch devices). */
+/** Top-left stack on the thumbnail: the instructor's photo that expands into
+ *  their name on hover (always expanded on touch devices). */
 function ThumbOverlay({ item }: { item: ExploreItem }) {
   return (
     <div className="absolute start-1.5 top-1.5 flex max-w-[calc(100%-12px)] flex-col items-start gap-1">
-      <span className="inline-flex items-center gap-[3px] rounded-full bg-black/60 px-[6px] py-[3px] text-[10px] font-medium leading-none text-white backdrop-blur-sm">
-        <span className="size-[10px] shrink-0">
-          <HomeIcon src="/home/star.svg" />
-        </span>
-        {item.rating.toFixed(1)}
-      </span>
       {item.author ? (
         <span
           className="group/author inline-flex max-w-full items-center gap-1.5 rounded-full bg-black/60 p-[2px] text-[10px] font-medium leading-none text-white backdrop-blur-sm transition-[padding] duration-200 hover:pe-2 [@media(hover:none)]:pe-2"

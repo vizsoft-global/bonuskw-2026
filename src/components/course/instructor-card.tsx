@@ -15,16 +15,12 @@ export function InstructorCard({
   name,
   bio,
   photo,
-  rating,
-  ratingLabel,
   verified,
 }: {
   href: string;
   name: string;
   bio?: string;
   photo?: string;
-  rating: number;
-  ratingLabel: string;
   verified?: boolean;
 }) {
   return (
@@ -50,13 +46,6 @@ export function InstructorCard({
           ) : null}
         </span>
         {bio ? <span className="mt-0.5 block truncate text-[12px] text-[#999]">{bio}</span> : null}
-        <span className="mt-1 flex items-center gap-1 text-[12px] text-[#999]">
-          <span className="size-3">
-            <HomeIcon src="/course/star.svg" />
-          </span>
-          <span className="text-[#fafafa]">{rating.toFixed(1)}</span>
-          {ratingLabel}
-        </span>
       </span>
       <span className="size-4 shrink-0 rtl:rotate-180">
         <HomeIcon src="/course/chevron.svg" />

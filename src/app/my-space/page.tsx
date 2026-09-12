@@ -75,7 +75,6 @@ export default function MySpacePage() {
           id: book.id,
           name: localizedField(book.name, book.nameManualTranslate, book.nameAutoTranslate, locale),
           image: book.image,
-          rating: Number(book.totalRatting || 0),
           pages: pages > 0 ? pages : undefined,
           href: `/store/${book.id}`,
           aspect: "3/4" as const,

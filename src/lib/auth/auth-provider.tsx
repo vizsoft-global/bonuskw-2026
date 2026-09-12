@@ -37,6 +37,7 @@ import { collections } from "@/lib/firebase/collections";
 import { normalizePhone } from "@/lib/utils";
 import {
   heartbeat,
+  endCurrentSession,
   getStoredSessionId,
   startSession,
   setStoredSessionId,
@@ -423,6 +424,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user) await loadProfile(user.uid);
       },
       logout: async () => {
+        const current = getFirebaseAuth().currentUser;
+        const token = current ? await current.getIdToken().catch(() => null) : null;
+        await endCurrentSession(token);
         setStoredSessionId(null);
         await signOut(getFirebaseAuth());
         setKicked(false);

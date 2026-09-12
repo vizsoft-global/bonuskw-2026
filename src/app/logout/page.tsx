@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { signOut } from "firebase/auth";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { PageLoader } from "@/components/shared/loader";
-import { setStoredSessionId } from "@/lib/auth/session-client";
+import { endCurrentSession, setStoredSessionId } from "@/lib/auth/session-client";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useI18n } from "@/lib/i18n/locale";
 
@@ -21,6 +21,9 @@ export default function LogoutPage() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const current = getFirebaseAuth().currentUser;
+      const token = current ? await current.getIdToken().catch(() => null) : null;
+      await endCurrentSession(token);
       setStoredSessionId(null);
       try {
         await signOut(getFirebaseAuth());

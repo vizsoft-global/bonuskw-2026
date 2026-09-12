@@ -91,7 +91,6 @@ export default function EbookPage() {
           id: row.id,
           name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
           image: courseThumb(row),
-          rating: Number(row.totalRatting || 0),
           author: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id]?.name : instructor.data?.display_name,
           authorPhoto: row.authorRef?.id ? relatedAuthors.data?.[row.authorRef.id]?.photo : undefined,
           pages: pages > 0 ? pages : undefined,
@@ -202,7 +201,6 @@ export default function EbookPage() {
     pages: t("pages"),
   };
   const ctaStats = [
-    { icon: "/course/star.svg", text: Number(data.totalRatting || 0).toFixed(1) },
     { icon: "/course/lessons.svg", text: t("studentsEnrolled").replace("{n}", String(data.bookedCount || 0)) },
     ...(pages > 0 ? [{ icon: "/course/book.svg", text: `${pages} ${t("pages")}` }] : []),
   ];
@@ -216,8 +214,6 @@ export default function EbookPage() {
             sku={data.sku || id.slice(0, 8)}
             language={language}
             title={title}
-            rating={Number(data.totalRatting || 0)}
-            ratingLabel={t("rating")}
             enrolled={Number(data.bookedCount || 0)}
             enrolledLabel={t("studentsEnrolled")}
             description={data.description}
@@ -252,8 +248,6 @@ export default function EbookPage() {
           name={instructor.data.display_name || t("instructor")}
           photo={avatarSrc(instructor.data, instructor.data.id)}
           bio={instructor.data.bio}
-          rating={Number(data.totalRatting || 0)}
-          ratingLabel={t("rating")}
           verified={instructor.data.instuctorStatus === "Approved"}
         />
       ) : null}

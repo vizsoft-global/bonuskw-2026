@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bookmark, Clock, Lock, LockOpen, PlaySquare, Star } from "lucide-react";
+import { Bookmark, Clock, Lock, LockOpen, PlaySquare } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,24 +26,6 @@ export function PriceTag({
           {formatKwdLocale(compareAt, locale)}
         </span>
       ) : null}
-    </span>
-  );
-}
-
-export function RatingStars({
-  value,
-  count,
-  className,
-}: {
-  value?: number | null;
-  count?: number;
-  className?: string;
-}) {
-  return (
-    <span className={cn("inline-flex items-center gap-1 text-xs text-muted", className)}>
-      <Star className="size-3.5 fill-accent text-accent" aria-hidden />
-      <span className="font-medium text-text">{(Number(value) || 0).toFixed(1)}</span>
-      {typeof count === "number" ? <span>({count})</span> : null}
     </span>
   );
 }
@@ -120,7 +102,6 @@ export type CourseCardProps = {
   title: string;
   image?: string;
   instructor?: string;
-  rating?: number | null;
   lessons?: number;
   hours?: number | string;
   price?: string;
@@ -140,7 +121,6 @@ export function CourseCard({
   title,
   image,
   instructor,
-  rating,
   lessons,
   hours,
   price,
@@ -194,10 +174,9 @@ export function CourseCard({
             </button>
           ) : null}
         </div>
-        {rating != null || instructor ? (
+        {instructor ? (
           <p className="flex min-w-0 items-center gap-2 text-xs text-muted">
-            {rating != null ? <RatingStars value={rating} /> : null}
-            {instructor ? <span className="truncate">{instructor}</span> : null}
+            <span className="truncate">{instructor}</span>
           </p>
         ) : null}
         {lessons != null || hours != null ? (

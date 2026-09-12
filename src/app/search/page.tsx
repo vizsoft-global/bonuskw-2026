@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthors } from "@/lib/catalog/use-authors";
-import { ArrowUpDown, Clock, Shapes, Star, X } from "lucide-react";
+import { ArrowUpDown, Clock, Shapes, X } from "lucide-react";
 import { arrayRemove, arrayUnion, collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { HomeIcon } from "@/components/home/icon";
 import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
@@ -72,7 +72,6 @@ export default function SearchPage() {
   const gate = usePurchaseGate();
   const router = useRouter();
   const [q, setQ] = useState("");
-  const [rating, setRating] = useState(0);
   const [sort, setSort] = useState("");
   const [topic, setTopic] = useState("");
   const [focused, setFocused] = useState(true);
@@ -123,10 +122,10 @@ export default function SearchPage() {
     },
   });
   const remote = useQuery({
-    queryKey: ["algolia", q, rating, sort],
+    queryKey: ["algolia", q, sort],
     enabled: q.length > 1,
     queryFn: async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&rating=${rating}&sort=${sort}`);
+      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&sort=${sort}`);
       return (await res.json()) as { hits?: Array<{ objectID: string; name?: string }> };
     },
   });
@@ -156,7 +155,6 @@ export default function SearchPage() {
       );
       return words.every((w) => hay.includes(w));
     });
-    if (rating) rows = rows.filter((c) => (c.totalRatting || 0) >= rating);
     if (topic) rows = rows.filter((c) => c.branchRef?.id === topic);
     rows = [...rows].sort((a, b) => {
       if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
@@ -164,7 +162,7 @@ export default function SearchPage() {
       return 0;
     });
     return rows;
-  }, [courses.data, instructors.data, q, rating, sort, topic]);
+  }, [courses.data, instructors.data, q, sort, topic]);
 
   // Topics that at least one course is filed under, shown by name.
   const topicIds = new Set((courses.data ?? []).map((c) => c.branchRef?.id).filter(Boolean));
@@ -197,7 +195,6 @@ export default function SearchPage() {
         id: course.id,
         name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
         image: courseThumb(course),
-        rating: Number(course.totalRatting || 0),
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
         authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
@@ -275,30 +272,6 @@ export default function SearchPage() {
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
         <aside className="hidden space-y-4 rounded-[16px] border border-white/10 bg-[#1a1a1a] p-4 text-sm lg:block">
           <h2 className="text-lg font-semibold">{t("filter")}</h2>
-          <div>
-            <p className="mb-2 flex items-center gap-2 text-[#999]">
-              <Star className="size-4" />
-              {t("rating")}
-            </p>
-            <div className="flex items-center gap-1">
-              {[1, 2, 3, 4, 5].map((n) => (
-                <button
-                  key={n}
-                  type="button"
-                  aria-label={`${n}`}
-                  onClick={() => setRating(rating === n ? 0 : n)}
-                  className="grid size-8 place-items-center"
-                >
-                  <Star
-                    className={cn(
-                      "size-5",
-                      n <= rating ? "fill-[#f6360b] text-[#f6360b]" : "text-white/30",
-                    )}
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
           <label className="block">
             <span className="mb-2 flex items-center gap-2 text-[#999]">
               <ArrowUpDown className="size-4" />

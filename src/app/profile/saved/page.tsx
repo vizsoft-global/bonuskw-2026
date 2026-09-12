@@ -72,7 +72,6 @@ export default function SavedPage() {
       id: course.id,
       name: localizedField(course.name, course.nameManualTranslate, course.nameAutoTranslate, locale),
       image: courseThumb(course),
-      rating: Number(course.totalRatting || 0),
       author: course.authorRef?.id ? data.authors[course.authorRef.id]?.name : undefined,
       authorPhoto: course.authorRef?.id ? data.authors[course.authorRef.id]?.photo : undefined,
       lessons: Number(course.numberLessons || 0),

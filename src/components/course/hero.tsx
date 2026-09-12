@@ -106,8 +106,6 @@ export function CourseInfo({
   sku,
   language,
   title,
-  rating,
-  ratingLabel,
   enrolled,
   enrolledLabel,
   description,
@@ -117,8 +115,6 @@ export function CourseInfo({
   sku?: string;
   language?: string;
   title: string;
-  rating: number;
-  ratingLabel: string;
   enrolled: number;
   enrolledLabel: string;
   description?: string;
@@ -146,13 +142,6 @@ export function CourseInfo({
       <p className="text-[18px] font-semibold leading-6 text-[#fafafa] lg:text-[22px] lg:leading-7">{title}</p>
 
       <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#999]">
-        <span className="flex items-center gap-1 rounded-full bg-[#141414] px-2.5 py-1 text-[#fafafa]">
-          <span className="size-3.5">
-            <HomeIcon src="/course/star.svg" />
-          </span>
-          <span className="font-medium">{rating.toFixed(1)}</span>
-          <span className="text-[#999]">{ratingLabel}</span>
-        </span>
         <span className="flex items-center gap-2">
           <span className="flex -space-x-2 rtl:space-x-reverse">
             {["B", "A", "S"].map((letters) => (

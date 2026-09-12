@@ -65,8 +65,6 @@ export default function InstructorPage() {
   const savedIds = useMemo(() => new Set(savedKey ? savedKey.split(",") : []), [savedKey]);
 
   const name = instructor.data?.display_name || t("instructor");
-  const ratings = mine.map((c) => Number(c.totalRatting || 0)).filter((n) => n > 0);
-  const rating = ratings.length ? ratings.reduce((sum, n) => sum + n, 0) / ratings.length : 0;
 
   const items: ExploreItem[] = visible.map((row) => {
     const ebook = isEbookCourse(row);
@@ -75,7 +73,6 @@ export default function InstructorPage() {
       id: row.id,
       name: localizedField(row.name, row.nameManualTranslate, row.nameAutoTranslate, locale),
       image: courseThumb(row),
-      rating: Number(row.totalRatting || 0),
       author: name,
       authorPhoto: instructor.data ? avatarSrc(instructor.data, id) : undefined,
       lessons: ebook ? undefined : Number(row.numberLessons || 0),
@@ -172,11 +169,9 @@ export default function InstructorPage() {
         name={name}
         bio={instructor.data.bio}
         verified={instructor.data.instuctorStatus === "Approved"}
-        rating={rating}
         courseCount={courseRows.length}
         ebookCount={ebookRows.length}
         labels={{
-          rating: t("rating"),
           totalCourses: t("totalCourses"),
           ebooks: t("ebooks"),
           coursesUnit: t("coursesUnit"),

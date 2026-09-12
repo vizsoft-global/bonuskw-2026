@@ -27,6 +27,25 @@ export function setStoredSessionId(id: string | null) {
   else window.localStorage.setItem(SESSION_KEY, id);
 }
 
+/**
+ * Voluntary sign-out: mark this device's `sessions` row ended so the admin
+ * Activity feed shows a logout time. Best-effort; never blocks sign-out.
+ */
+export async function endCurrentSession(idToken: string | null) {
+  const sessionId = getStoredSessionId();
+  if (!sessionId || !idToken) return;
+  try {
+    await fetch("/api/session/kick", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+      body: JSON.stringify({ sessionId }),
+      keepalive: true,
+    });
+  } catch {
+    /* offline or already ended */
+  }
+}
+
 export async function startSession(idToken: string, opts: { force?: boolean } = {}): Promise<StartSessionOutcome> {
   const device = deviceLabel();
   const res = await fetch("/api/session/start", {
