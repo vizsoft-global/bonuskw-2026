@@ -55,7 +55,7 @@ function Meta({
         <span className="size-[10px] shrink-0 lg:size-3">
           <HomeIcon src="/home/book-bookmark.svg" />
         </span>
-        <p className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
+        <p className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
           {item.pages} {labels.pages}
         </p>
       </div>
@@ -68,7 +68,7 @@ function Meta({
         <span className="size-[10px] shrink-0 lg:size-3">
           <HomeIcon src="/home/lesson.svg" />
         </span>
-        <span className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
+        <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
           {item.lessons ?? 0} {labels.lessons}
         </span>
       </span>
@@ -76,7 +76,7 @@ function Meta({
         <span className="size-[10px] shrink-0 lg:size-3">
           <HomeIcon src="/home/duration.svg" />
         </span>
-        <span className="truncate text-[10px] font-medium leading-none text-[#999] lg:text-[12px]">
+        <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
           {item.hours ?? 0} {labels.hrs}
         </span>
       </span>
@@ -132,7 +132,7 @@ function SaveButton({
       aria-pressed={item.saved}
       className="absolute end-0.5 top-0.5 z-10 flex size-10 items-center justify-center"
     >
-      <span className="flex size-7 items-center justify-center rounded-full bg-[#292929]">
+      <span className="flex size-7 items-center justify-center rounded-full bg-surface-2">
         <span className="size-3.5">
           <HomeIcon src={item.saved ? "/home/bookmark-filled.svg" : "/home/bookmark.svg"} />
         </span>
@@ -166,7 +166,7 @@ function CardActions({
         }}
         className={cn(
           "ms-auto flex h-7 shrink-0 items-center justify-center rounded-[16px] px-[15px] text-[12px] font-medium leading-none whitespace-nowrap lg:h-8",
-          enrollBlocked ? "cursor-not-allowed bg-[#2a2a2a] text-[#999]" : "bg-[#0c5eff] text-white",
+          enrollBlocked ? "cursor-not-allowed bg-surface-2 text-muted" : "bg-[#0c5eff] text-white",
         )}
       >
         {enrollBlocked || labels.enroll}
@@ -191,7 +191,7 @@ export function ExploreListCard({
   const href = itemHref(item);
   const portrait = item.aspect === "3/4";
   return (
-    <article className="relative flex w-full gap-3 overflow-hidden rounded-[12px] bg-[#141414] p-1.5">
+    <article className="relative flex w-full gap-3 overflow-hidden rounded-[12px] border border-line bg-surface p-1.5">
       <div className={cn("relative shrink-0", portrait ? "w-[110px]" : "w-[154px]")}>
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
@@ -202,7 +202,7 @@ export function ExploreListCard({
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
       </div>
       <div className="flex min-w-0 flex-1 flex-col justify-between gap-1.5 py-0.5">
-        <Link href={href} className="line-clamp-2 px-1 text-[14px] font-medium leading-[18px] text-[#fafafa]">
+        <Link href={href} className="line-clamp-2 px-1 text-[14px] font-medium leading-[18px] text-text">
           {item.name}
         </Link>
         <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
@@ -226,7 +226,7 @@ export function ExploreGridCard({
 }) {
   const href = itemHref(item);
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[12px] bg-[#141414] p-1.5 lg:p-1">
+    <article className="flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full">
@@ -237,7 +237,7 @@ export function ExploreGridCard({
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-2 lg:gap-2">
-        <Link href={href} className="line-clamp-2 px-1 text-[12px] font-medium leading-[16px] text-[#fafafa]">
+        <Link href={href} className="line-clamp-2 px-1 text-[12px] font-medium leading-[16px] text-text">
           {item.name}
         </Link>
         <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />

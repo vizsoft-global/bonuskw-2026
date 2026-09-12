@@ -60,7 +60,7 @@ function LinkSignIn() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2.5">
           <AuthHeading>{t("linkFailedTitle")}</AuthHeading>
-          <p className="text-[14px] leading-relaxed text-white/60">{message}</p>
+          <p className="text-[14px] leading-relaxed text-muted">{message}</p>
         </div>
         <CtaButton onClick={() => router.replace("/login")}>{t("linkGoToLogin")}</CtaButton>
       </div>

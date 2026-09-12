@@ -46,7 +46,7 @@ export function NotificationsMenu() {
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen((v) => !v)}
-        className="relative flex cursor-pointer items-center rounded-[47px] border-[0.5px] border-white/15 bg-white/5 p-[5px] backdrop-blur-[15px]"
+        className="relative flex cursor-pointer items-center rounded-[47px] border-[0.5px] border-line bg-surface-2 p-[5px] backdrop-blur-[15px]"
       >
         <span className="relative size-10 overflow-visible rounded-[28px]">
           <span className="absolute start-2.5 top-[10px] size-5">
@@ -59,10 +59,10 @@ export function NotificationsMenu() {
         <div
           role="dialog"
           aria-label={t("notifications")}
-          className="absolute end-0 top-[calc(100%+8px)] z-50 flex w-[393px] max-w-[min(393px,calc(100vw-40px))] flex-col rounded-[24px] border-[0.7px] border-white/20 bg-white/10 px-[15px] pb-[15px] pt-[5px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] backdrop-blur-[35px]"
+          className="absolute end-0 top-[calc(100%+8px)] z-50 flex w-[393px] max-w-[min(393px,calc(100vw-40px))] flex-col rounded-[24px] border-[0.7px] border-line-strong bg-surface px-[15px] pb-[15px] pt-[5px] shadow-[0_16px_40px_rgba(0,0,0,0.5)] backdrop-blur-[35px]"
         >
           <div className="flex h-10 items-center justify-between">
-            <p className="min-w-0 truncate text-[14px] font-semibold text-[#fafafa]">{t("notifications")}</p>
+            <p className="min-w-0 truncate text-[14px] font-semibold text-text">{t("notifications")}</p>
             <ClearAllButton className="cursor-pointer text-[12px] font-medium text-[#fc522c]" />
           </div>
           <div className="max-h-[min(420px,60vh)] overflow-y-auto">

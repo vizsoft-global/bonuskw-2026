@@ -107,23 +107,23 @@ function PayBody() {
 
   return (
     <AppShell loading={loading} title={t("dueRequestTitle")} skeleton={<ListPageSkeleton rows={3} />}>
-      <div className="flex flex-col gap-4 rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
-        <p className="text-[14px] text-[#fafafa]">{error || body}</p>
+      <div className="flex flex-col gap-4 rounded-[12px] border border-line-strong bg-white/[0.06] p-[15px]">
+        <p className="text-[14px] text-text">{error || body}</p>
         {data?.status === "open" ? (
           <>
             <ul className="flex flex-col gap-2">
               {data.lines.map((line) => (
                 <li key={line.installmentId} className="flex items-center justify-between text-[13px]">
-                  <span className="text-[#fafafa]">
+                  <span className="text-text">
                     {line.courseName}
                     {line.index ? (
-                      <span className="ms-1 text-[11px] text-[#999]">
+                      <span className="ms-1 text-[11px] text-muted">
                         ({line.index}
                         {line.count ? `/${line.count}` : ""})
                       </span>
                     ) : null}
                   </span>
-                  <span className="font-semibold text-[#fafafa]">{formatKwdLocale(line.amount, locale)}</span>
+                  <span className="font-semibold text-text">{formatKwdLocale(line.amount, locale)}</span>
                 </li>
               ))}
             </ul>

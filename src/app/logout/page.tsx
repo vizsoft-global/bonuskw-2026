@@ -49,7 +49,7 @@ export default function LogoutPage() {
     <AuthShell showBack={false}>
       <div className="flex flex-col items-center gap-4 py-10 text-center">
         <PageLoader />
-        <p className="text-[14px] text-white/60">{t("signingOut")}</p>
+        <p className="text-[14px] text-muted">{t("signingOut")}</p>
       </div>
     </AuthShell>
   );

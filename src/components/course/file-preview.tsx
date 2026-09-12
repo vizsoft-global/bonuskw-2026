@@ -68,7 +68,7 @@ export function FilePreview({ file, onClose }: { file: OutlineFile; onClose: () 
             </svg>
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-hidden rounded-[16px] bg-[#1d1d1d] ring-1 ring-white/10">
+        <div className="min-h-0 flex-1 overflow-hidden rounded-[16px] bg-surface ring-1 ring-white/10">
           {!previewable ? (
             <div className="grid h-full place-items-center px-6 text-center text-[13px]" style={{ color: "rgba(255,255,255,0.7)" }}>
               {t("previewUnavailable")}

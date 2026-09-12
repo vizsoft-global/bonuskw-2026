@@ -31,17 +31,17 @@ export function SessionConflictDialog({
       aria-labelledby="session-conflict-title"
       className="fixed inset-0 z-[120] grid place-items-center bg-black/70 px-5 backdrop-blur-sm"
     >
-      <div className="w-full max-w-[400px] rounded-[20px] border border-white/10 bg-[#141414] p-5 shadow-2xl">
+      <div className="w-full max-w-[400px] rounded-[20px] border border-line bg-surface p-5 shadow-2xl">
         <div className="mb-3 grid size-11 place-items-center rounded-full bg-[#ff7a00]/15 text-[#ff7a00]">
           <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden>
             <rect x="3" y="4" width="18" height="12" rx="2" />
             <path d="M8 20h8M12 16v4" />
           </svg>
         </div>
-        <h2 id="session-conflict-title" className="text-[17px] font-semibold text-[#fafafa]">
+        <h2 id="session-conflict-title" className="text-[17px] font-semibold text-text">
           {t("sessionConflictTitle")}
         </h2>
-        <p className="mt-1.5 text-[13px] leading-relaxed text-[#999]">
+        <p className="mt-1.5 text-[13px] leading-relaxed text-muted">
           {anyLive ? t("sessionConflictBodyLive") : t("sessionConflictBodyIdle")}
         </p>
 
@@ -52,8 +52,8 @@ export function SessionConflictDialog({
               className="flex items-center justify-between gap-3 rounded-[12px] bg-white/[0.05] px-3 py-2.5"
             >
               <div className="min-w-0">
-                <p className="truncate text-[13px] font-medium text-[#fafafa]">{s.label}</p>
-                <p className="truncate text-[11px] text-[#999]">
+                <p className="truncate text-[13px] font-medium text-text">{s.label}</p>
+                <p className="truncate text-[11px] text-muted">
                   {[s.location, s.lastSeenAt ? formatDistanceToNow(new Date(s.lastSeenAt), { addSuffix: true }) : null]
                     .filter(Boolean)
                     .join(" · ")}
@@ -62,8 +62,8 @@ export function SessionConflictDialog({
               <span
                 className={
                   s.live
-                    ? "shrink-0 rounded-full bg-[#1f9d4d]/20 px-2 py-0.5 text-[10px] font-semibold text-[#4ade80]"
-                    : "shrink-0 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold text-[#999]"
+                    ? "shrink-0 rounded-full bg-[#1f9d4d]/20 px-2 py-0.5 text-[10px] font-semibold text-[#1f7a45]"
+                    : "shrink-0 rounded-full bg-surface px-2 py-0.5 text-[10px] font-semibold text-muted"
                 }
               >
                 {s.live ? t("sessionActiveNow") : t("sessionIdle")}
@@ -85,12 +85,12 @@ export function SessionConflictDialog({
             type="button"
             disabled={busy}
             onClick={onSignOut}
-            className="h-11 w-full rounded-full text-[13px] font-medium text-[#999] hover:text-[#fafafa] disabled:opacity-70"
+            className="h-11 w-full rounded-full text-[13px] font-medium text-muted hover:text-text disabled:opacity-70"
           >
             {t("sessionKeepOther")}
           </button>
         </div>
-        <p className="mt-3 text-center text-[11px] text-[#666]">{t("sessionConflictHint")}</p>
+        <p className="mt-3 text-center text-[11px] text-faint">{t("sessionConflictHint")}</p>
       </div>
     </div>
   );

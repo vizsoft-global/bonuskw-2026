@@ -26,9 +26,9 @@ export function InstructorCard({
   return (
     <Link
       href={href}
-      className="mt-3 flex items-center gap-3 rounded-[16px] bg-[#141414] px-3 py-2.5"
+      className="mt-3 flex items-center gap-3 rounded-[16px] bg-surface px-3 py-2.5"
     >
-      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border border-[#666] bg-[#2a2a2a] text-sm font-semibold text-[#c8c8c8]">
+      <span className="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full border border-[#666] bg-surface-2 text-sm font-semibold text-muted">
         {photo ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={photo} alt="" className="h-full w-full object-cover" />
@@ -38,14 +38,14 @@ export function InstructorCard({
       </span>
       <span className="min-w-0 flex-1">
         <span className="flex items-center gap-1.5">
-          <span className="truncate text-[14px] font-semibold text-[#fafafa]">{name}</span>
+          <span className="truncate text-[14px] font-semibold text-text">{name}</span>
           {verified ? (
             <span className="size-3.5 shrink-0">
               <HomeIcon src="/course/verified.svg" />
             </span>
           ) : null}
         </span>
-        {bio ? <span className="mt-0.5 block truncate text-[12px] text-[#999]">{bio}</span> : null}
+        {bio ? <span className="mt-0.5 block truncate text-[12px] text-muted">{bio}</span> : null}
       </span>
       <span className="size-4 shrink-0 rtl:rotate-180">
         <HomeIcon src="/course/chevron.svg" />

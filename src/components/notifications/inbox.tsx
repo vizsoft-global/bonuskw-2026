@@ -31,7 +31,7 @@ function InboxSkeleton() {
   return (
     <div className="flex flex-col" role="status" aria-label="Loading">
       {Array.from({ length: 3 }).map((_, i) => (
-        <div key={i} className="flex items-center gap-2.5 border-b border-white/10 py-[10px] last:border-0">
+        <div key={i} className="flex items-center gap-2.5 border-b border-line py-[10px] last:border-0">
           <Skeleton className="size-[35px] rounded-full" />
           <Skeleton className="h-3 flex-1" />
           <Skeleton className="h-2.5 w-12" />

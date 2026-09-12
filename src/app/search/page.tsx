@@ -56,7 +56,7 @@ function FilterSelect({
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full appearance-none rounded-xl border border-white/10 bg-[#141414] py-2.5 ps-3 pe-10 text-[#fafafa]"
+        className="mt-1 w-full appearance-none rounded-xl border border-line bg-surface py-2.5 ps-3 pe-10 text-text"
       >
         {children}
       </select>
@@ -249,15 +249,15 @@ export default function SearchPage() {
             }
           }}
           placeholder={t("search")}
-          className="h-11 w-full bg-transparent text-[14px] text-[#fafafa] outline-none placeholder:text-[#999]"
+          className="h-11 w-full bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
         />
       }
     >
       <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden space-y-4 rounded-[16px] border border-white/10 bg-[#1a1a1a] p-4 text-sm lg:block">
+        <aside className="hidden space-y-4 rounded-[16px] border border-line bg-surface p-4 text-sm lg:block">
           <h2 className="text-lg font-semibold">{t("filter")}</h2>
           <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-[#999]">
+            <span className="mb-2 flex items-center gap-2 text-muted">
               <ArrowUpDown className="size-4" />
               {t("sort")}
             </span>
@@ -268,7 +268,7 @@ export default function SearchPage() {
             </FilterSelect>
           </label>
           <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-[#999]">
+            <span className="mb-2 flex items-center gap-2 text-muted">
               <Shapes className="size-4" />
               {t("topic")}
             </span>
@@ -288,7 +288,7 @@ export default function SearchPage() {
               "mt-2 hidden h-[51px] w-full items-center gap-2.5 rounded-[47px] border-[0.5px] bg-black/25 px-[15px] backdrop-blur-[15px] transition lg:flex",
               focused
                 ? "border-[#f6360b]/70 ring-2 ring-[#f6360b]/30"
-                : "border-white/15",
+                : "border-line",
             )}
           >
             <span className="size-5 shrink-0">
@@ -310,20 +310,20 @@ export default function SearchPage() {
                 }
               }}
               placeholder={t("search")}
-              className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-[#fafafa] outline-none placeholder:text-[#999]"
+              className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
             />
           </label>
           {showRecents ? (
             <div className="mt-3">
               <div className="mb-2 flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-[12px] text-[#999]">
+                <p className="flex items-center gap-1.5 text-[12px] text-muted">
                   <Clock className="size-3.5" />
                   {t("recentSearches")}
                 </p>
                 <button
                   type="button"
                   onClick={() => setRecents(clearRecentSearches())}
-                  className="text-[12px] text-[#999] hover:text-[#fafafa]"
+                  className="text-[12px] text-muted hover:text-text"
                 >
                   {t("clear")}
                 </button>
@@ -332,7 +332,7 @@ export default function SearchPage() {
                 {recents.map((item) => (
                   <span
                     key={item}
-                    className="flex min-h-11 items-center gap-1 rounded-full border border-white/10 bg-white/5 py-1 ps-3 pe-1.5 text-[12px] text-[#fafafa]"
+                    className="flex min-h-11 items-center gap-1 rounded-full border border-line bg-surface-2 py-1 ps-3 pe-1.5 text-[12px] text-text"
                   >
                     <button
                       type="button"
@@ -350,7 +350,7 @@ export default function SearchPage() {
                       aria-label={t("clear")}
                       onMouseDown={(e) => e.preventDefault()}
                       onClick={() => setRecents(removeRecentSearch(item))}
-                      className="grid size-8 place-items-center rounded-full text-[#999] hover:text-[#fafafa]"
+                      className="grid size-8 place-items-center rounded-full text-muted hover:text-text"
                     >
                       <X className="size-3" />
                     </button>

@@ -55,11 +55,11 @@ export function EnrollCta({
 
   return (
     <div className="mt-3 flex flex-col gap-2">
-      <div className="flex flex-col gap-2.5 rounded-[20px] bg-[#141414] p-3">
+      <div className="flex flex-col gap-2.5 rounded-[20px] bg-surface p-3">
         {stats.length ? (
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             {stats.map((stat) => (
-              <div key={stat.text} className="flex min-w-0 items-center gap-1.5 text-[12px] text-[#999]">
+              <div key={stat.text} className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted">
                 <span className="size-3.5 shrink-0">
                   <HomeIcon src={stat.icon} />
                 </span>
@@ -77,7 +77,7 @@ export function EnrollCta({
           }}
           className={cn(
             "relative flex h-12 w-full items-center justify-between rounded-full px-4",
-            block ? "cursor-not-allowed bg-[#2a2a2a]" : "bg-[#0c5eff] disabled:opacity-70",
+            block ? "cursor-not-allowed bg-surface-2" : "bg-[#0c5eff] disabled:opacity-70",
           )}
         >
           {busy ? (
@@ -86,10 +86,10 @@ export function EnrollCta({
             </span>
           ) : (
             <>
-              <span className={cn("text-[14px] font-semibold", block ? "text-[#999]" : "text-white")}>
+              <span className={cn("text-[14px] font-semibold", block ? "text-muted" : "text-white")}>
                 {price}
               </span>
-              <span className={cn("flex items-center gap-2 text-[14px] font-semibold", block ? "text-[#999]" : "text-white")}>
+              <span className={cn("flex items-center gap-2 text-[14px] font-semibold", block ? "text-muted" : "text-white")}>
                 {block || enrollLabel}
                 {block ? null : (
                   <span className="size-3.5 -scale-x-100 rtl:scale-x-100">
@@ -113,8 +113,8 @@ export function EnrollCta({
               </span>
             ) : (
               <>
-                <span className="text-[14px] font-semibold text-white">{emiPrice}</span>
-                <span className="flex items-center gap-2 text-[14px] font-semibold text-white">
+                <span className="text-[14px] font-semibold text-text">{emiPrice}</span>
+                <span className="flex items-center gap-2 text-[14px] font-semibold text-text">
                   {emiLabel}
                   <span className="size-3.5 -scale-x-100 rtl:scale-x-100">
                     <HomeIcon src="/course/enroll-arrow.svg" />
@@ -125,7 +125,7 @@ export function EnrollCta({
           </button>
         ) : null}
       </div>
-      <p className="text-center text-[11px] text-[#999]">{secure}</p>
+      <p className="text-center text-[11px] text-muted">{secure}</p>
     </div>
   );
 }

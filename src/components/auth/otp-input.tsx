@@ -70,7 +70,7 @@ export function OtpInput({
             setDigits(pasted);
             refs.current[Math.min(pasted.length, length - 1)]?.focus();
           }}
-          className="h-[59px] min-w-0 flex-1 rounded-[12px] border-[1.5px] border-white/20 bg-transparent text-center text-[16px] font-medium text-white outline-none placeholder:text-white/40"
+          className="h-[59px] min-w-0 flex-1 rounded-[12px] border-[1.5px] border-line-strong bg-transparent text-center text-[16px] font-medium text-text outline-none placeholder:text-muted"
         />
       ))}
     </div>

@@ -116,39 +116,36 @@ export function ProfileHub() {
     <div className="flex w-full max-w-[365px] flex-col items-center">
       <DevModeBanner className="mb-3 w-full" />
       <EditableAvatar className="size-[75px] text-2xl lg:size-[100px]" />
-      <p className="mt-2.5 text-[14px] font-bold text-[#fafafa]">{name}</p>
-      {subtitle ? <p className="text-[12px] text-[#999]">{subtitle}</p> : null}
+      <p className="mt-2.5 text-[14px] font-bold text-text">{name}</p>
+      {subtitle ? <p className="text-[12px] text-muted">{subtitle}</p> : null}
 
-      <div className="mt-4 flex w-full items-center justify-between rounded-[12px] bg-[#141414] px-[19px] py-3.5">
+      <div className="mt-4 flex w-full items-center justify-between rounded-[12px] border border-line bg-surface px-[19px] py-3.5">
         <div className="flex flex-1 flex-col items-center gap-[5px]">
-          <p className="text-[10px] text-[#999]">{t("enrolledCourses")}</p>
+          <p className="text-[10px] text-muted">{t("enrolledCourses")}</p>
           <div className="flex items-center gap-[3px]">
             <span className="size-4">
               <HomeIcon src="/profile/book.svg" />
             </span>
-            <p className="text-[12px] font-medium text-[#fafafa]">
+            <p className="text-[12px] font-medium text-text">
               {enrolledCount} {t("coursesUnit")}
             </p>
           </div>
         </div>
-        <span className="h-[22px] w-px bg-white/15" />
+        <span className="h-[22px] w-px bg-line" />
         <div className="flex flex-1 flex-col items-center gap-[5px]">
-          <p className="text-[10px] text-[#999]">{t("learningHours")}</p>
+          <p className="text-[10px] text-muted">{t("learningHours")}</p>
           <div className="flex items-center gap-[3px]">
             <span className="size-4">
               <HomeIcon src="/profile/clock.svg" />
             </span>
-            <p className="text-[12px] font-medium text-[#fafafa]">
+            <p className="text-[12px] font-medium text-text">
               {hours} {t("hoursUnit")}
             </p>
           </div>
         </div>
       </div>
 
-      <div
-        className="mt-4 flex w-full flex-col gap-5 rounded-[12px] px-[15px] py-5"
-        style={{ backgroundImage: "linear-gradient(162deg, #1c1c1c 3%, #141414 90%)" }}
-      >
+      <div className="profile-menu-card mt-4 flex w-full flex-col gap-5 rounded-[12px] px-[15px] py-5">
         <div className="flex flex-col gap-[15px]">
           <SectionLabel>{t("account")}</SectionLabel>
           <MenuRow href="/profile/personal" icon="/profile/info.svg" label={t("personal")} active={path === "/profile/personal"} />
@@ -166,7 +163,7 @@ export function ProfileHub() {
             onClick={() => void togglePush()}
             trailing={<PushToggle on={pushOn} disabled={pushBusy} />}
           />
-          <div className="flex min-h-11 w-full items-center gap-2.5 border-b-[0.8px] border-[#fafafa]/10 py-2.5">
+          <div className="flex min-h-11 w-full items-center gap-2.5 border-b-[0.8px] border-line py-2.5">
             <button
               type="button"
               onClick={() => setLangOpen(true)}
@@ -175,13 +172,13 @@ export function ProfileHub() {
               <span className="size-4 shrink-0">
                 <HomeIcon src="/profile/translate.svg" />
               </span>
-              <span className="text-[14px] font-medium text-[#fafafa]">{t("language")}</span>
+              <span className="text-[14px] font-medium text-text">{t("language")}</span>
             </button>
             <span className="hidden items-center gap-3 lg:flex">
               <button
                 type="button"
                 onClick={() => setLocale("en")}
-                className="flex items-center gap-1.5 text-[12px] text-[#fafafa]"
+                className="flex items-center gap-1.5 text-[12px] text-text"
               >
                 <LangRadio selected={locale === "en"} />
                 {t("english")}
@@ -189,7 +186,7 @@ export function ProfileHub() {
               <button
                 type="button"
                 onClick={() => setLocale("ar")}
-                className="flex items-center gap-1.5 text-[12px] text-[#fafafa]"
+                className="flex items-center gap-1.5 text-[12px] text-text"
               >
                 <LangRadio selected={locale === "ar"} />
                 {t("arabic")}
@@ -214,7 +211,7 @@ export function ProfileHub() {
             setDevOpen(true);
           }
         }}
-        className="mt-4 text-[11px] text-[#666]"
+        className="mt-4 text-[11px] text-faint"
       >
         {t("version")} {SHORT_VERSION}
       </button>

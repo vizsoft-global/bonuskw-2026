@@ -210,7 +210,7 @@ export function VersionGuard() {
   return (
     <div
       role="alert"
-      className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-3 bg-app-top px-4 pb-2.5 text-[13px] text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] pt-[calc(env(safe-area-inset-top,0px)+10px)]"
+      className="fixed inset-x-0 top-0 z-[100] flex items-center justify-center gap-3 bg-app-top px-4 pb-2.5 text-[13px] text-text shadow-[0_8px_24px_rgba(0,0,0,0.35)] pt-[calc(env(safe-area-inset-top,0px)+10px)]"
     >
       <span>{t("updateAvailable")}</span>
       <button

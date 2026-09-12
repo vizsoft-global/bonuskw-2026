@@ -13,7 +13,7 @@ export function ProfilePane({
 }) {
   return (
     <div className="min-w-0">
-      <h1 className="mb-4 hidden text-[20px] font-semibold text-[#fafafa] lg:block">{title}</h1>
+      <h1 className="mb-4 hidden text-[20px] font-semibold text-text lg:block">{title}</h1>
       {loading ? (skeleton ?? <ListPageSkeleton />) : children}
     </div>
   );

@@ -28,12 +28,12 @@ export function InstructorHero({
   return (
     <div>
       <div className="relative">
-        <div className="relative h-[107px] overflow-hidden rounded-[12px] bg-[#141414] lg:h-[138px]">
+        <div className="relative h-[107px] overflow-hidden rounded-[12px] bg-surface lg:h-[138px]">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/instructor/banner.png" alt="" className="absolute inset-0 size-full object-cover object-[center_32%]" />
           <div className="absolute inset-0 bg-black/20" />
           <div className="absolute end-4 top-4 flex items-center gap-[5px] lg:end-5 lg:top-5">
-            <span className="text-end leading-none text-[#fafafa]">
+            <span className="text-end leading-none text-text">
               <span className="block font-serif text-[12px] font-medium tracking-wide lg:text-[16px]">BONUS</span>
               <span className="block text-[12px] font-light lg:text-[16px]">Instructors</span>
             </span>
@@ -45,7 +45,7 @@ export function InstructorHero({
         </div>
 
         <div className="relative z-10 -mt-[46px] flex items-end gap-3 px-[15px] lg:-mt-[70px] lg:gap-4 lg:px-5">
-          <span className="grid size-[93px] shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#050505] bg-[#2a2a2a] text-[28px] font-semibold text-[#c8c8c8] lg:size-[160px] lg:text-[44px]">
+          <span className="grid size-[93px] shrink-0 place-items-center overflow-hidden rounded-full border-2 border-[#050505] bg-surface-2 text-[28px] font-semibold text-muted lg:size-[160px] lg:text-[44px]">
             {photo ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={photo} alt="" className="size-full object-cover" />
@@ -54,7 +54,7 @@ export function InstructorHero({
             )}
           </span>
           <div className="min-w-0 flex-1 pb-1 lg:pb-3">
-            <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-[#fafafa] lg:text-[18px]">
+            <p className="flex min-w-0 items-center gap-1.5 text-[14px] font-semibold text-text lg:text-[18px]">
               <span className="truncate">{name}</span>
               {verified ? (
                 <span className="size-3.5 shrink-0 lg:size-4">
@@ -62,7 +62,7 @@ export function InstructorHero({
                 </span>
               ) : null}
             </p>
-            {bio ? <p className="mt-0.5 truncate text-[10px] text-[#999] lg:text-[12px]">{bio}</p> : null}
+            {bio ? <p className="mt-0.5 truncate text-[10px] text-muted lg:text-[12px]">{bio}</p> : null}
           </div>
           <div className="hidden lg:block">
             <InstructorStats
@@ -109,18 +109,18 @@ function InstructorStats({
   ];
 
   return (
-    <div className="w-full overflow-hidden rounded-[12px] bg-[#141414] px-[19px] py-[14px] lg:w-[361px] lg:shrink-0">
+    <div className="w-full overflow-hidden rounded-[12px] bg-surface px-[19px] py-[14px] lg:w-[361px] lg:shrink-0">
       <div className="flex items-center justify-between">
         {cols.map((col, i) => (
           <div key={col.label} className="flex items-center">
-            {i > 0 ? <span className="mx-3 h-[22px] w-px bg-white/10" /> : null}
+            {i > 0 ? <span className="mx-3 h-[22px] w-px bg-line" /> : null}
             <div className="flex w-[77px] flex-col items-center gap-[5px]">
-              <p className="w-full text-center text-[10px] text-[#999]">{col.label}</p>
+              <p className="w-full text-center text-[10px] text-muted">{col.label}</p>
               <div className="flex items-center justify-center gap-[3px]">
                 <span className="size-4 shrink-0">
                   <HomeIcon src={col.icon} />
                 </span>
-                <p className="whitespace-nowrap text-[12px] font-medium text-[#fafafa]">{col.value}</p>
+                <p className="whitespace-nowrap text-[12px] font-medium text-text">{col.value}</p>
               </div>
             </div>
           </div>
@@ -148,7 +148,7 @@ export function InstructorTabs({
     { id: "ebooks" as const, label: labels.ebooks, count: ebooks },
   ];
   return (
-    <div className="mt-5 flex gap-5 overflow-x-auto border-b border-white/10 hide-scrollbar lg:mt-8">
+    <div className="mt-5 flex gap-5 overflow-x-auto border-b border-line hide-scrollbar lg:mt-8">
       {items.map((item) => {
         const active = tab === item.id;
         return (
@@ -158,11 +158,11 @@ export function InstructorTabs({
             onClick={() => onTab(item.id)}
             className={cn(
               "flex shrink-0 items-center gap-1.5 pb-2.5 text-[13px]",
-              active ? "border-b-2 border-white font-medium text-[#fafafa]" : "text-[#999]",
+              active ? "border-b-2 border-white font-medium text-text" : "text-muted",
             )}
           >
             {item.label}
-            <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#fafafa]">{item.count}</span>
+            <span className="rounded-[8px] bg-surface px-1.5 py-0.5 text-[10px] text-text">{item.count}</span>
           </button>
         );
       })}

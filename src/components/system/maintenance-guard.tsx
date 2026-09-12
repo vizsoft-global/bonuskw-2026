@@ -68,19 +68,19 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
   const remain = until && until > now ? formatRemain(until, now) : null;
 
   return (
-    <main className="fixed inset-0 z-[90] grid min-h-dvh place-items-center overflow-y-auto bg-[#050505] px-5">
+    <main className="fixed inset-0 z-[90] grid min-h-dvh place-items-center overflow-y-auto bg-app-top px-5">
       <div className="flex w-full max-w-[400px] flex-col items-center py-10">
         <BrandLogo size="card" />
-        <h1 className="mt-8 text-center text-[22px] font-semibold text-[#fafafa]">{t("maintenanceTitle")}</h1>
-        <p className="mt-2 text-center text-[14px] leading-relaxed text-[#999]">{t("maintenanceBody")}</p>
-        <p className="mt-6 font-mono text-[40px] font-semibold tabular-nums text-[#fafafa]">{remain ?? t("maintenanceSoon")}</p>
+        <h1 className="mt-8 text-center text-[22px] font-semibold text-text">{t("maintenanceTitle")}</h1>
+        <p className="mt-2 text-center text-[14px] leading-relaxed text-muted">{t("maintenanceBody")}</p>
+        <p className="mt-6 font-mono text-[40px] font-semibold tabular-nums text-text">{remain ?? t("maintenanceSoon")}</p>
         {until && until > now ? (
-          <p className="mt-1 text-center text-[12px] text-[#666]">
+          <p className="mt-1 text-center text-[12px] text-faint">
             {t("maintenanceUntil", { time: new Date(until).toLocaleString(locale === "ar" ? "ar" : "en") })}
           </p>
         ) : null}
         <label className="mt-8 w-full">
-          <span className="text-[12px] text-[#999]">{t("maintenancePassword")}</span>
+          <span className="text-[12px] text-muted">{t("maintenancePassword")}</span>
           <input
             type="password"
             autoComplete="off"
@@ -89,7 +89,7 @@ export function MaintenanceGuard({ children }: { children: React.ReactNode }) {
             onKeyDown={(e) => {
               if (e.key === "Enter") void unlock();
             }}
-            className="mt-1.5 h-11 w-full rounded-[12px] border border-white/15 bg-white/[0.06] px-3 text-[14px] text-[#fafafa] outline-none"
+            className="mt-1.5 h-11 w-full rounded-[12px] border border-line bg-white/[0.06] px-3 text-[14px] text-text outline-none"
           />
         </label>
         {error ? <p className="mt-2 w-full text-[12px] text-[#f24822]">{error}</p> : null}

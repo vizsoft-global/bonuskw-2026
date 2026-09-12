@@ -79,7 +79,7 @@ export default function PasswordPage() {
               trailing={<Eye on={show.confirm} onToggle={() => setShow((s) => ({ ...s, confirm: !s.confirm }))} />}
             />
           </div>
-          <p className="mt-[15px] text-[12px] text-white/60">{t("passwordHint")}</p>
+          <p className="mt-[15px] text-[12px] text-muted">{t("passwordHint")}</p>
           {error ? <p className="mt-2 text-[12px] text-[#f24822]">{error}</p> : null}
           <div className="mt-8 pb-4">
             <CtaButton loading={busy} disabled={busy || !next} onClick={() => void save()}>
@@ -88,7 +88,7 @@ export default function PasswordPage() {
           </div>
         </div>
       ) : (
-        <p className="text-[14px] text-[#999]">{t("phoneAccountPassword")}</p>
+        <p className="text-[14px] text-muted">{t("phoneAccountPassword")}</p>
       )}
     </ProfilePane>
   );

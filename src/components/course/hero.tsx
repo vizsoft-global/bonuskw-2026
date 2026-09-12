@@ -41,7 +41,7 @@ export function CourseCover({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[12px] bg-[#141414]",
+        "relative overflow-hidden rounded-[12px] bg-surface",
         aspect === "3/4" ? "aspect-[3/4]" : aspect === "16/9" ? "aspect-video" : "aspect-[5/3]",
       )}
     >
@@ -91,7 +91,7 @@ export function CourseCover({
             <span
               className={cn(
                 "absolute bottom-3 end-3 inline-flex items-center gap-1.5 rounded-full border-[0.5px] px-2.5 py-1 text-[11px] font-medium",
-                batchTone ? BATCH_TONE_CLASS[batchTone] : "border-transparent bg-black/70 text-[#fafafa]",
+                batchTone ? BATCH_TONE_CLASS[batchTone] : "border-transparent bg-black/70 text-text",
               )}
             >
               {batchTone ? <span aria-hidden className="size-1.5 rounded-full bg-white/90" /> : null}
@@ -109,7 +109,7 @@ export function CourseCover({
 
 function Face({ letters }: { letters: string }) {
   return (
-    <span className="grid size-6 place-items-center overflow-hidden rounded-full border border-[#666] bg-[#2a2a2a] text-[8px] font-semibold leading-none tracking-tight text-[#c8c8c8] ring-2 ring-[#050505]">
+    <span className="grid size-6 place-items-center overflow-hidden rounded-full border border-[#666] bg-surface-2 text-[8px] font-semibold leading-none tracking-tight text-muted ring-2 ring-[#050505]">
       {letters}
     </span>
   );
@@ -141,9 +141,9 @@ export function CourseInfo({
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        {sku ? <span className="text-[12px] text-[#999]">{sku}</span> : null}
+        {sku ? <span className="text-[12px] text-muted">{sku}</span> : null}
         {language ? (
-          <span className="flex items-center gap-1 rounded-full bg-[#141414] px-2 py-1 text-[11px] text-[#999]">
+          <span className="flex items-center gap-1 rounded-full bg-surface px-2 py-1 text-[11px] text-muted">
             <span className="size-3">
               <HomeIcon src="/course/translate.svg" />
             </span>
@@ -152,9 +152,9 @@ export function CourseInfo({
         ) : null}
       </div>
 
-      <p className="text-[18px] font-semibold leading-6 text-[#fafafa] lg:text-[22px] lg:leading-7">{title}</p>
+      <p className="text-[18px] font-semibold leading-6 text-text lg:text-[22px] lg:leading-7">{title}</p>
 
-      <div className="flex flex-wrap items-center gap-3 text-[12px] text-[#999]">
+      <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted">
         <span className="flex items-center gap-2">
           <span className="flex -space-x-2 rtl:space-x-reverse">
             {["B", "A", "S"].map((letters) => (
@@ -167,7 +167,7 @@ export function CourseInfo({
 
       {text ? (
         <div>
-          <p className={cn("text-[13px] leading-5 text-[#999]", !open && long && "line-clamp-2 lg:line-clamp-3")}>{text}</p>
+          <p className={cn("text-[13px] leading-5 text-muted", !open && long && "line-clamp-2 lg:line-clamp-3")}>{text}</p>
           {long ? (
             <button
               type="button"

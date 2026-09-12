@@ -112,7 +112,7 @@ export default function MySpacePage() {
   return (
     <AppShell loading={stats.isPending || courses.isPending || books.isPending} skeleton={<StoreSkeleton />}>
       <div className="flex flex-col">
-        <h1 className="hidden text-[20px] font-semibold text-[#fafafa] lg:block lg:pt-[30px]">{t("mySpace")}</h1>
+        <h1 className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">{t("mySpace")}</h1>
 
         <div className="pt-5 lg:pt-4">
           <StatsCard
@@ -146,7 +146,7 @@ export default function MySpacePage() {
             <>
               {resume.length ? (
                 <section className="flex flex-col gap-5 py-5">
-                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("resumeWatching")}</h2>
+                  <h2 className="text-[14px] font-semibold text-text">{t("resumeWatching")}</h2>
                   <div className={exploreRailClass}>
                     {resume.map((item) => (
                       <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
@@ -156,7 +156,7 @@ export default function MySpacePage() {
               ) : null}
               {items.length ? (
                 <section className="flex flex-col gap-5 py-5">
-                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("myCourses")}</h2>
+                  <h2 className="text-[14px] font-semibold text-text">{t("myCourses")}</h2>
                   <div className={exploreRailClass}>
                     {items.map((item) => (
                       <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
@@ -166,7 +166,7 @@ export default function MySpacePage() {
               ) : null}
               {ebookItems.length ? (
                 <section className="flex flex-col gap-5 py-5">
-                  <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("myEbooks")}</h2>
+                  <h2 className="text-[14px] font-semibold text-text">{t("myEbooks")}</h2>
                   <div className={exploreRailClass}>
                     {ebookItems.map((item) => (
                       <div key={item.id} className="w-[180px] shrink-0 lg:w-[227px]">

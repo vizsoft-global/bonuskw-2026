@@ -5,7 +5,7 @@ import { HomeIcon } from "@/components/home/icon";
 import { cn } from "@/lib/utils";
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
-  return <p className="text-[12px] text-[#999]">{children}</p>;
+  return <p className="text-[12px] text-muted">{children}</p>;
 }
 
 export function MenuRow({
@@ -30,7 +30,7 @@ export function MenuRow({
       <span className="size-4 shrink-0">
         <HomeIcon src={icon} />
       </span>
-      <span className={cn("min-w-0 flex-1 text-start text-[14px] font-medium", active ? "text-[#0c5eff]" : "text-[#fafafa]")}>
+      <span className={cn("min-w-0 flex-1 text-start text-[14px] font-medium", active ? "text-[#0c5eff]" : "text-text")}>
         {label}
       </span>
       {trailing}
@@ -38,7 +38,7 @@ export function MenuRow({
   );
   const className = cn(
     "flex min-h-11 w-full items-center gap-2.5 py-2.5",
-    last ? "" : "border-b-[0.8px] border-[#fafafa]/10",
+    last ? "" : "border-b-[0.8px] border-line",
   );
   if (href) {
     return (
@@ -59,7 +59,7 @@ export function PushToggle({ on, disabled }: { on: boolean; disabled?: boolean }
     <span
       className={cn(
         "relative h-5 w-[37px] shrink-0 rounded-full transition-colors",
-        on ? "bg-[#0c5eff]" : "bg-[#3a3a3a]",
+        on ? "bg-[#0c5eff]" : "bg-surface-2",
         disabled && "opacity-70",
       )}
     >
@@ -91,9 +91,9 @@ export function ProfileField({
   trailing?: React.ReactNode;
 }) {
   return (
-    <label className="flex h-[61px] w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/20 px-[15px] py-2.5">
+    <label className="flex h-[61px] w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-line-strong px-[15px] py-2.5">
       <span className="flex min-w-0 flex-1 flex-col gap-2.5">
-        <span className="text-[12px] text-white/60">{label}</span>
+        <span className="text-[12px] text-muted">{label}</span>
         <span className="flex items-center justify-between gap-2">
           <input
             value={value}
@@ -101,7 +101,7 @@ export function ProfileField({
             placeholder={placeholder}
             readOnly={readOnly}
             type={type}
-            className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-[#fafafa] outline-none placeholder:text-white/30"
+            className="min-w-0 flex-1 bg-transparent text-[14px] font-medium text-text outline-none placeholder:text-faint"
           />
           {trailing}
         </span>
@@ -120,7 +120,7 @@ export function ProfileTabs({
   onChange: (id: string) => void;
 }) {
   return (
-    <div className="flex items-end gap-4 border-b border-white/10">
+    <div className="flex items-end gap-4 border-b border-line">
       {tabs.map((tab) => {
         const active = tab.id === value;
         return (
@@ -130,12 +130,12 @@ export function ProfileTabs({
             onClick={() => onChange(tab.id)}
             className={cn(
               "flex items-center gap-1.5 border-b-2 pb-2 text-[14px]",
-              active ? "border-white text-[#fafafa]" : "border-transparent text-[#999]",
+              active ? "border-white text-text" : "border-transparent text-muted",
             )}
           >
             {tab.label}
             {tab.count != null ? (
-              <span className="rounded-[8px] bg-[#292929] px-2 py-px text-[12px] text-[#fafafa]">{tab.count}</span>
+              <span className="rounded-[8px] bg-surface-2 px-2 py-px text-[12px] text-text">{tab.count}</span>
             ) : null}
           </button>
         );

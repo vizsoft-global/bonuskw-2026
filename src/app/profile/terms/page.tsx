@@ -40,8 +40,8 @@ export default function TermsPage() {
         <div className="flex flex-col gap-7">
           {blocks.map((block, i) => (
             <div key={i} className="flex flex-col gap-2.5">
-              {block.title ? <p className="text-[12px] text-[#999]">{block.title}</p> : null}
-              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-[#fafafa]">{block.body}</p>
+              {block.title ? <p className="text-[12px] text-muted">{block.title}</p> : null}
+              <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-text">{block.body}</p>
             </div>
           ))}
         </div>

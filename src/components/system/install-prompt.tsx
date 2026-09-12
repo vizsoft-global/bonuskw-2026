@@ -24,7 +24,7 @@ export function InstallButton({ className }: { className?: string }) {
       aria-label={t("installRowTitle")}
       title={t("installRowTitle")}
       onClick={install.show}
-      className={cn("grid size-10 place-items-center text-[#fafafa]", className)}
+      className={cn("grid size-10 place-items-center text-text", className)}
     >
       <Download className="size-5" strokeWidth={1.75} />
     </button>

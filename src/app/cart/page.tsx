@@ -289,7 +289,7 @@ export default function CartPage() {
     <div
       className={cn(
         "flex items-center justify-between gap-3 text-[12px]",
-        tone === "accent" ? "text-[#1f9d4d]" : tone === "strong" ? "text-[#fafafa]" : "text-[#999]",
+        tone === "accent" ? "text-[#1f9d4d]" : tone === "strong" ? "text-text" : "text-muted",
       )}
     >
       <span className={tone === "strong" ? "font-medium" : undefined}>{label}</span>
@@ -298,8 +298,8 @@ export default function CartPage() {
   );
 
   const checkoutBlock = (
-    <div className="flex flex-col gap-[25px] rounded-[12px] border border-white/20 bg-white/[0.06] p-[15px]">
-      <div className="flex flex-col gap-2 border-b border-white/10 pb-4">
+    <div className="flex flex-col gap-[25px] rounded-[12px] border border-line-strong bg-white/[0.06] p-[15px]">
+      <div className="flex flex-col gap-2 border-b border-line pb-4">
         {summaryRow(t("subtotal"), formatKwdLocale(listTotal, locale))}
         {promoTotal > 0
           ? summaryRow(t("discountLabel"), `− ${formatKwdLocale(promoTotal, locale)}`, "accent")
@@ -330,7 +330,7 @@ export default function CartPage() {
           <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#1f9d4d] text-[11px] font-bold text-white">
             ✓
           </span>
-          <p className="text-[12px] leading-relaxed text-[#cfe9d6]">{t("freeCheckoutHint")}</p>
+          <p className="text-[12px] leading-relaxed text-[#1f7a45]">{t("freeCheckoutHint")}</p>
         </div>
       ) : (
         <PaymentMethods
@@ -340,18 +340,18 @@ export default function CartPage() {
           copyLabel={t("copyCardNumber")}
         />
       )}
-      <label className="flex items-center gap-2 text-[12px] text-[#999]">
+      <label className="flex items-center gap-2 text-[12px] text-muted">
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
       </label>
       {staffViewer ? (
-        <p className="rounded-[10px] bg-white/[0.06] p-3 text-[12px] leading-relaxed text-[#999]">
-          <span className="block font-semibold text-[#fafafa]">{t("staffViewOnlyTitle")}</span>
+        <p className="rounded-[10px] bg-white/[0.06] p-3 text-[12px] leading-relaxed text-muted">
+          <span className="block font-semibold text-text">{t("staffViewOnlyTitle")}</span>
           {t("staffViewOnlyBody")}
         </p>
       ) : null}
       {paused ? (
-        <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-[#999]">
+        <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-muted">
           <span className="block font-semibold text-[#f5d08a]">{paused}</span>
           {t("purchasesPausedBody")}
         </p>
@@ -359,7 +359,7 @@ export default function CartPage() {
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
       <div className="flex flex-col items-center gap-2.5">
         {busy || redirecting ? (
-          <div className="grid h-[49px] w-full place-items-center gap-1 text-[12px] text-[#999]">
+          <div className="grid h-[49px] w-full place-items-center gap-1 text-[12px] text-muted">
             <Loader size="inline" />
             {redirecting ? <span>{t("redirectingToPayment")}</span> : null}
           </div>
@@ -371,7 +371,7 @@ export default function CartPage() {
             onPay={() => void pay()}
           />
         )}
-        {freeCheckout ? null : <p className="text-center text-[10px] text-[#999]">{t("secure")}</p>}
+        {freeCheckout ? null : <p className="text-center text-[10px] text-muted">{t("secure")}</p>}
       </div>
     </div>
   );
@@ -427,7 +427,7 @@ export default function CartPage() {
                     ),
                   })
                 }
-                className="h-[44px] rounded-[12px] border border-white/20 px-4 text-[12px] font-medium text-[#fafafa]"
+                className="h-[44px] rounded-[12px] border border-line-strong px-4 text-[12px] font-medium text-text"
               >
                 {allEmi ? t("payAllFull") : t("payAllEmi")}
               </button>
@@ -449,14 +449,14 @@ export default function CartPage() {
                   spellCheck={false}
                   aria-invalid={Boolean(couponError)}
                   className={cn(
-                    "h-[50px] flex-1 rounded-[12px] bg-[#141414] px-3 text-[12px] text-[#fafafa] outline-none placeholder:text-[#999]",
+                    "h-[50px] flex-1 rounded-[12px] bg-surface px-3 text-[12px] text-text outline-none placeholder:text-muted",
                     couponError ? "ring-1 ring-[#f24822]" : undefined,
                   )}
                 />
                 <button
                   type="submit"
                   disabled={quoting || !coupon.trim()}
-                  className="h-[50px] rounded-[12px] bg-[#141414] px-4 text-[12px] font-medium text-[#fafafa] disabled:opacity-50"
+                  className="h-[50px] rounded-[12px] bg-surface px-4 text-[12px] font-medium text-text disabled:opacity-50"
                 >
                   {t("apply")}
                 </button>
@@ -467,7 +467,7 @@ export default function CartPage() {
                 </p>
               ) : null}
               {quote?.couponCode && couponLine ? (
-                <div className="flex items-start justify-between gap-3 rounded-[10px] bg-[#1f9d4d]/10 p-3 text-[12px] text-[#cfe9d6]">
+                <div className="flex items-start justify-between gap-3 rounded-[10px] bg-[#1f9d4d]/10 p-3 text-[12px] text-[#1f7a45]">
                   <p className="leading-relaxed">
                     {t("couponApplied", {
                       code: quote.couponCode,
@@ -484,7 +484,7 @@ export default function CartPage() {
                       setCoupon("");
                       void persist({ ...cart, couponCode: "" });
                     }}
-                    className="shrink-0 text-[11px] text-[#999] underline-offset-2 hover:underline"
+                    className="shrink-0 text-[11px] text-muted underline-offset-2 hover:underline"
                   >
                     {t("couponRemove")}
                   </button>
@@ -503,7 +503,7 @@ export default function CartPage() {
 
       {cart.savedForLater.length ? (
         <div className="mt-8">
-          <h2 className="mb-3 text-[14px] font-medium text-[#999]">{t("saveLater")}</h2>
+          <h2 className="mb-3 text-[14px] font-medium text-muted">{t("saveLater")}</h2>
           <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
             {cart.savedForLater.map((line) => (
               <SavedCard

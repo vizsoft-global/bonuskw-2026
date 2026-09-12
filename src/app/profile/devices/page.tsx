@@ -134,24 +134,24 @@ function DeviceCard({
   when?: string;
 }) {
   return (
-    <div className="mt-2.5 flex items-center gap-2.5 rounded-[12px] bg-[#141414] p-[5px]">
+    <div className="mt-2.5 flex items-center gap-2.5 rounded-[12px] bg-surface p-[5px]">
       <span className="size-6 shrink-0">
         <HomeIcon src={deviceIcon(device, os)} />
       </span>
       <div className="flex min-w-0 flex-1 items-center justify-between">
         <div className="min-w-0">
-          <p className="truncate text-[12px] font-medium text-[#fafafa]">{device}</p>
-          {location ? <p className="text-[10px] text-[#999]">{location}</p> : null}
+          <p className="truncate text-[12px] font-medium text-text">{device}</p>
+          {location ? <p className="text-[10px] text-muted">{location}</p> : null}
         </div>
         {active ? (
-          <span className="flex items-center gap-[5px] text-[10px] font-medium text-[#999]">
+          <span className="flex items-center gap-[5px] text-[10px] font-medium text-muted">
             <span className="size-3.5">
               <HomeIcon src="/profile/check.svg" />
             </span>
             {activeLabel}
           </span>
         ) : (
-          <p className="max-w-[50%] text-end text-[10px] font-medium text-[#999]">{when}</p>
+          <p className="max-w-[50%] text-end text-[10px] font-medium text-muted">{when}</p>
         )}
       </div>
     </div>

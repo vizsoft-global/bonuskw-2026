@@ -81,7 +81,7 @@ export function ScrollToTop({ raised, className }: { raised?: boolean; className
         scroller.scrollTo({ top: 0, behavior: "smooth" });
       }}
       className={cn(
-        "fixed end-4 z-40 grid size-11 place-items-center rounded-full border border-white/15 bg-[#1c1c1c]/92 text-white shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-[#2a2a2a] lg:end-8 lg:bottom-8",
+        "fixed end-4 z-40 grid size-11 place-items-center rounded-full border border-line bg-surface/92 text-text shadow-[0_8px_24px_rgba(0,0,0,0.35)] backdrop-blur-md transition-colors hover:bg-surface-2 lg:end-8 lg:bottom-8",
         raised ? "bottom-28" : "bottom-6",
         className,
       )}

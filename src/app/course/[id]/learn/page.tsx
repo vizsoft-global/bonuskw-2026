@@ -285,7 +285,7 @@ function LearnBody() {
   const instructorAction = instructor.data ? (
     <Link
       href={`/instructor/${instructor.data.id}`}
-      className="flex min-w-0 items-center gap-0.5 text-[11px] text-[#999] lg:text-[12px]"
+      className="flex min-w-0 items-center gap-0.5 text-[11px] text-muted lg:text-[12px]"
     >
       <span className="truncate">
         {t("byInstructor").replace("{name}", String(instructor.data.display_name || t("instructor")))}
@@ -313,10 +313,10 @@ function LearnBody() {
           <div className="flex min-h-0 flex-col gap-2 lg:flex-row lg:items-stretch">
             <div className="learn-player min-w-0">
               {activeQuiz ? (
-                <div className="overflow-auto rounded-[12px] border-[0.5px] border-white/10 bg-[#141414] p-4 lg:h-full">
-                  <p className="mb-3 text-[16px] font-semibold text-[#fafafa]">{String(activeQuiz.name || t("test"))}</p>
+                <div className="overflow-auto rounded-[12px] border-[0.5px] border-line bg-surface p-4 lg:h-full">
+                  <p className="mb-3 text-[16px] font-semibold text-text">{String(activeQuiz.name || t("test"))}</p>
                   {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
-                    <p className="text-[13px] text-[#999]">{t("testLocked")}</p>
+                    <p className="text-[13px] text-muted">{t("testLocked")}</p>
                   ) : (
                     <QuizPlayer key={activeQuiz.id} quiz={activeQuiz} onExit={() => lesson && openLesson(lesson.id)} />
                   )}
@@ -324,14 +324,14 @@ function LearnBody() {
               ) : (
                 <div
                   ref={setStageEl}
-                  className="relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-white/10"
+                  className="relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-line"
                   style={{ background: "#0a0a0a" }}
                 >
                   {docked ? (
                     <button
                       type="button"
                       onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-                      className="text-[12px] text-[#999]"
+                      className="text-[12px] text-muted"
                     >
                       {t("pipPlayingBelow")}
                     </button>
@@ -449,10 +449,10 @@ function LearnBody() {
 
             {/* Desktop: the playing lesson's files beside the video. */}
             <aside className="learn-resources hidden min-w-0 lg:flex">
-              <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-[12px] border-[0.5px] border-white/10 bg-[#141414]">
+              <div className="flex min-h-0 w-full flex-col overflow-hidden rounded-[12px] border-[0.5px] border-line bg-surface">
                 <div className="flex items-center justify-between px-3 pt-3 pb-1.5">
-                  <p className="text-[13px] font-medium text-[#fafafa]">{t("resources")}</p>
-                  <p className="text-[11px] text-[#999]">{t("assetsCount").replace("{n}", String(currentFiles.length))}</p>
+                  <p className="text-[13px] font-medium text-text">{t("resources")}</p>
+                  <p className="text-[11px] text-muted">{t("assetsCount").replace("{n}", String(currentFiles.length))}</p>
                 </div>
                 <div className="hide-scrollbar min-h-0 flex-1 overflow-y-auto px-3 pb-2">{resourcesPanel}</div>
               </div>
@@ -461,7 +461,7 @@ function LearnBody() {
 
           {/* Mobile: tabs between what to watch next and the files. */}
           <div className="lg:hidden">
-            <div className="flex items-center gap-[15px] border-b border-white/20">
+            <div className="flex items-center gap-[15px] border-b border-line-strong">
               {(["lessons", "resources"] as const).map((key) => {
                 const active = mobileTab === key;
                 return (
@@ -470,13 +470,13 @@ function LearnBody() {
                     type="button"
                     onClick={() => setMobileTab(key)}
                     className={cn(
-                      "flex items-center gap-[5px] border-b px-[5px] py-2.5 text-[12px] text-[#fafafa]",
+                      "flex items-center gap-[5px] border-b px-[5px] py-2.5 text-[12px] text-text",
                       active ? "border-[#fafafa] font-medium" : "border-transparent opacity-60",
                     )}
                   >
                     {key === "lessons" ? t("nextLessons") : t("resources")}
                     {key === "resources" ? (
-                      <span className="rounded-[6px] bg-[#141414] px-2 text-[10px] font-medium leading-4 text-[#fafafa]">
+                      <span className="rounded-[6px] bg-surface px-2 text-[10px] font-medium leading-4 text-text">
                         {currentFiles.length}
                       </span>
                     ) : null}
@@ -503,7 +503,7 @@ function LearnBody() {
 
           {/* Desktop: what to watch next, chapter by chapter. */}
           <section className="hidden min-h-0 lg:block">
-            <h2 className="text-[13px] font-semibold text-[#fafafa]">{t("nextLessons")}</h2>
+            <h2 className="text-[13px] font-semibold text-text">{t("nextLessons")}</h2>
             <ChapterSections
               items={outline}
               locale={locale}
@@ -517,7 +517,7 @@ function LearnBody() {
             />
           </section>
 
-          <div className="flex items-center gap-3 rounded-[12px] bg-[#141414] px-3 py-2.5 text-[12px] text-[#fafafa]">
+          <div className="flex items-center gap-3 rounded-[12px] bg-surface px-3 py-2.5 text-[12px] text-text">
             <label className="flex items-center gap-2">
               {t("rating")}
               <input
@@ -526,7 +526,7 @@ function LearnBody() {
                 max={5}
                 value={review}
                 onChange={(e) => setReview(Number(e.target.value))}
-                className="w-14 rounded-md bg-white/10 px-2 py-1 text-center"
+                className="w-14 rounded-md bg-surface px-2 py-1 text-center"
               />
             </label>
             <button

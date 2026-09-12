@@ -10,7 +10,7 @@ function Stats({ stats }: { stats: Stat[] }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
       {stats.map((stat) => (
-        <div key={stat.text} className="flex min-w-0 items-center gap-1.5 text-[12px] text-[#999]">
+        <div key={stat.text} className="flex min-w-0 items-center gap-1.5 text-[12px] text-muted">
           <span className="size-3.5 shrink-0">
             <HomeIcon src={stat.icon} />
           </span>
@@ -51,7 +51,7 @@ export function EnrolledCta({
 
   return (
     <div className="mt-5 flex flex-col gap-2.5">
-      <div className="flex flex-col gap-3 rounded-[24px] bg-[#141414] p-4">
+      <div className="flex flex-col gap-3 rounded-[24px] border border-line bg-surface p-4">
         <Stats stats={stats} />
         <button
           type="button"
@@ -59,7 +59,7 @@ export function EnrolledCta({
             haptic("medium");
             onContinue();
           }}
-          className="relative flex h-12 w-full items-center justify-between rounded-full bg-[#1f9d4d] px-4"
+          className="relative flex h-12 w-full items-center justify-between rounded-full bg-[#1f9d4d] px-4 text-white"
         >
           <span className="flex items-center gap-2 text-[14px] font-semibold text-white">
             <span className="grid size-5 place-items-center rounded-full bg-white/20 text-[12px]">✓</span>
@@ -88,12 +88,12 @@ export function StaffViewOnlyNotice({
   price?: string;
 }) {
   return (
-    <div className="mt-5 flex flex-col gap-2 rounded-[24px] border border-white/10 bg-[#141414] p-4">
+    <div className="mt-5 flex flex-col gap-2 rounded-[24px] border border-line bg-surface p-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[14px] font-semibold text-[#fafafa]">{title}</p>
-        {price ? <span className="text-[14px] font-semibold text-[#999]">{price}</span> : null}
+        <p className="text-[14px] font-semibold text-text">{title}</p>
+        {price ? <span className="text-[14px] font-semibold text-muted">{price}</span> : null}
       </div>
-      <p className="text-[12px] leading-relaxed text-[#999]">{body}</p>
+      <p className="text-[12px] leading-relaxed text-muted">{body}</p>
     </div>
   );
 }

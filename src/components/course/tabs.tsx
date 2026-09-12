@@ -22,7 +22,7 @@ export function CourseTabs({
   ];
 
   return (
-    <div className="mt-6 flex gap-5 overflow-x-auto border-b border-white/10 hide-scrollbar">
+    <div className="mt-6 flex gap-5 overflow-x-auto border-b border-line hide-scrollbar">
       {items.map((item) => {
         const active = tab === item.id;
         return (
@@ -32,11 +32,11 @@ export function CourseTabs({
             onClick={() => onTab(item.id)}
             className={cn(
               "flex shrink-0 items-center gap-1.5 pb-2.5 text-[13px]",
-              active ? "border-b-2 border-white font-medium text-[#fafafa]" : "text-[#999]",
+              active ? "border-b-2 border-white font-medium text-text" : "text-muted",
             )}
           >
             {item.label}
-            <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#fafafa]">{item.count}</span>
+            <span className="rounded-[8px] bg-surface px-1.5 py-0.5 text-[10px] text-text">{item.count}</span>
           </button>
         );
       })}

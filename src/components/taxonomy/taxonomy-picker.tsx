@@ -30,7 +30,7 @@ function Pill({
     <label
       className={cn(
         "relative flex h-9 shrink-0 items-center gap-1.5 rounded-[27px] px-3 text-[13px] transition-colors",
-        active ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
+        active ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-surface text-text",
         disabled && "opacity-40",
       )}
     >
@@ -43,11 +43,11 @@ function Pill({
         onChange={(e) => onChange(e.target.value)}
         className="absolute inset-0 w-full cursor-pointer opacity-0"
       >
-        <option value="" className="bg-[#141414] text-white">
+        <option value="" className="bg-surface text-text">
           {label}
         </option>
         {options.map((o) => (
-          <option key={o.id} value={o.id} className="bg-[#141414] text-white">
+          <option key={o.id} value={o.id} className="bg-surface text-text">
             {o.name}
           </option>
         ))}
@@ -82,7 +82,7 @@ export function TaxonomyPicker({
         onClick={() => onChange(EMPTY_SELECTION)}
         className={cn(
           "flex h-9 shrink-0 items-center gap-1.5 rounded-[27px] px-3 text-[13px]",
-          !any ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-[#141414] text-[#fafafa]",
+          !any ? "bg-[#f2f2f2] font-medium text-[#141414]" : "bg-surface text-text",
         )}
       >
         {any ? <X className="size-3.5" /> : null}

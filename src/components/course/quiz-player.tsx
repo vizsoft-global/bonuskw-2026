@@ -194,7 +194,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
 
   if (!questions.length) {
     return (
-      <div className="rounded-[16px] border border-white/15 p-5 text-[13px] text-[#999]">
+      <div className="rounded-[16px] border border-line p-5 text-[13px] text-muted">
         {t("empty")}
       </div>
     );
@@ -209,11 +209,11 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
             {t("timeUp")}
           </p>
         ) : null}
-        <div className="rounded-[16px] border border-white/15 bg-white/[0.04] p-5">
-          <p className="text-[12px] text-[#999]">{t("yourScore")}</p>
-          <p className="mt-1 text-[32px] font-semibold text-[#fafafa]">
+        <div className="rounded-[16px] border border-line bg-surface-2 p-5">
+          <p className="text-[12px] text-muted">{t("yourScore")}</p>
+          <p className="mt-1 text-[32px] font-semibold text-text">
             {result.correctCount}/{result.questionCount}
-            <span className="ms-2 text-[16px] font-medium text-[#999]">{Math.round(result.percent)}%</span>
+            <span className="ms-2 text-[16px] font-medium text-muted">{Math.round(result.percent)}%</span>
           </p>
           <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px]">
             <span
@@ -224,21 +224,21 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
             >
               {result.passed ? t("passedTest") : t("failedTest")}
             </span>
-            <span className="text-[#999]">
+            <span className="text-muted">
               {t("attempts")}: {result.attempts}
             </span>
           </div>
         </div>
 
-        <h3 className="text-[14px] font-medium text-[#fafafa]">{t("reviewAnswers")}</h3>
+        <h3 className="text-[14px] font-medium text-text">{t("reviewAnswers")}</h3>
         <ol className="flex flex-col gap-3">
           {questions.map((q, i) => {
             const review = reviewById.get(q.id);
             const chosen = answers[q.id];
             const correctIndex = review?.correctIndex ?? -1;
             return (
-              <li key={q.id} className="rounded-[14px] border border-white/10 p-4">
-                <p className="text-[13px] font-medium text-[#fafafa]">
+              <li key={q.id} className="rounded-[14px] border border-line p-4">
+                <p className="text-[13px] font-medium text-text">
                   {i + 1}. {q.text}
                 </p>
                 <ul className="mt-2 flex flex-col gap-1.5">
@@ -251,10 +251,10 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
                         className={cn(
                           "flex items-center gap-2 rounded-[10px] border px-3 py-2 text-[13px]",
                           isCorrect
-                            ? "border-[#10b981] bg-[#10b981]/10 text-[#fafafa]"
+                            ? "border-[#10b981] bg-[#10b981]/10 text-text"
                             : isChosen
-                              ? "border-[#f24822] bg-[#f24822]/10 text-[#fafafa]"
-                              : "border-white/10 text-[#999]",
+                              ? "border-[#f24822] bg-[#f24822]/10 text-text"
+                              : "border-line text-muted",
                         )}
                       >
                         <span className="w-5 shrink-0 text-[11px] font-bold">{LETTERS[oi] ?? oi + 1}</span>
@@ -276,7 +276,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
           <button
             type="button"
             onClick={retake}
-            className="min-h-11 rounded-2xl border border-white/20 px-4 text-[13px] font-medium text-[#fafafa]"
+            className="min-h-11 rounded-2xl border border-line-strong px-4 text-[13px] font-medium text-text"
           >
             {t("retakeTest")}
           </button>
@@ -294,20 +294,20 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
 
   if (timed && !running) {
     return (
-      <div className="flex flex-col gap-4 rounded-[16px] border border-white/15 bg-white/[0.04] p-5">
+      <div className="flex flex-col gap-4 rounded-[16px] border border-line bg-surface-2 p-5">
         <div className="flex items-center gap-3">
           <span className="grid size-11 shrink-0 place-items-center rounded-full bg-[#0c5eff]/15 text-[#0c5eff]">
             <ClockIcon />
           </span>
           <div>
-            <p className="text-[12px] text-[#999]">{t("timeLimit")}</p>
-            <p className="text-[20px] font-semibold text-[#fafafa]">
+            <p className="text-[12px] text-muted">{t("timeLimit")}</p>
+            <p className="text-[20px] font-semibold text-text">
               {quiz.timeLimitMin} {t("minutes")}
             </p>
           </div>
         </div>
         <p className="text-[13px] leading-relaxed text-[#bbb]">{t("timedTestIntro")}</p>
-        <p className="text-[12px] text-[#999]">
+        <p className="text-[12px] text-muted">
           {questions.length} {t("questions")}
         </p>
         <div className="flex flex-wrap gap-2">
@@ -321,7 +321,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
           <button
             type="button"
             onClick={onExit}
-            className="min-h-11 rounded-2xl border border-white/20 px-4 text-[13px] font-medium text-[#fafafa]"
+            className="min-h-11 rounded-2xl border border-line-strong px-4 text-[13px] font-medium text-text"
           >
             {t("backToLessons")}
           </button>
@@ -338,19 +338,19 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
         <div
           className={cn(
             "flex items-center justify-between rounded-[12px] border px-4 py-2.5",
-            urgent ? "border-[#f24822]/50 bg-[#f24822]/10" : "border-white/15 bg-white/[0.04]",
+            urgent ? "border-[#f24822]/50 bg-[#f24822]/10" : "border-line bg-surface-2",
           )}
           role="timer"
           aria-live={urgent ? "assertive" : "off"}
         >
-          <span className="flex items-center gap-2 text-[12px] text-[#999]">
+          <span className="flex items-center gap-2 text-[12px] text-muted">
             <ClockIcon />
             {t("timeLeft")}
           </span>
           <span
             className={cn(
               "font-mono text-[18px] font-semibold tabular-nums",
-              urgent ? "text-[#f24822]" : "text-[#fafafa]",
+              urgent ? "text-[#f24822]" : "text-text",
             )}
           >
             {formatClock(remaining)}
@@ -370,7 +370,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
           </button>
         </div>
       ) : null}
-      <div className="flex items-center justify-between text-[12px] text-[#999]">
+      <div className="flex items-center justify-between text-[12px] text-muted">
         <span>
           {t("question")} {index + 1} {t("of")} {questions.length}
         </span>
@@ -378,12 +378,12 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
           {answered}/{questions.length}
         </span>
       </div>
-      <div className="h-1 overflow-hidden rounded-full bg-white/10">
+      <div className="h-1 overflow-hidden rounded-full bg-surface">
         <div className="h-full rounded-full bg-[#0c5eff]" style={{ width: `${((index + 1) / questions.length) * 100}%` }} />
       </div>
       {current ? (
-        <div className="rounded-[16px] border border-white/15 bg-white/[0.04] p-5">
-          <p className="text-[15px] font-medium text-[#fafafa]">{current.text}</p>
+        <div className="rounded-[16px] border border-line bg-surface-2 p-5">
+          <p className="text-[15px] font-medium text-text">{current.text}</p>
           <ul className="mt-4 flex flex-col gap-2">
             {(current.options ?? []).map((opt, oi) => {
               const selected = answers[current.id] === oi;
@@ -395,8 +395,8 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
                     className={cn(
                       "flex min-h-11 w-full items-center gap-3 rounded-[12px] border px-3 py-2 text-start text-[13px]",
                       selected
-                        ? "border-[#0c5eff] bg-[#0c5eff]/15 text-[#fafafa]"
-                        : "border-white/15 text-[#fafafa] hover:border-white/30",
+                        ? "border-[#0c5eff] bg-[#0c5eff]/15 text-text"
+                        : "border-line text-text hover:border-white/30",
                     )}
                   >
                     <span
@@ -417,7 +417,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
       ) : null}
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
       {confirmPartial ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-white/15 bg-white/[0.04] px-4 py-3 text-[13px] text-[#fafafa]">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[12px] border border-line bg-surface-2 px-4 py-3 text-[13px] text-text">
           <span>
             {questions.length - answered} {t("unansweredLeft")}
           </span>
@@ -425,7 +425,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
             <button
               type="button"
               onClick={() => setConfirmPartial(false)}
-              className="min-h-9 rounded-xl border border-white/20 px-3 text-[12px]"
+              className="min-h-9 rounded-xl border border-line-strong px-3 text-[12px]"
             >
               {t("previousQuestion")}
             </button>
@@ -445,7 +445,7 @@ export function QuizPlayer({ quiz, onExit }: { quiz: QuizDoc & { id: string }; o
           type="button"
           disabled={index === 0}
           onClick={() => setIndex((i) => Math.max(0, i - 1))}
-          className="min-h-11 rounded-2xl border border-white/20 px-4 text-[13px] font-medium text-[#fafafa] disabled:opacity-40"
+          className="min-h-11 rounded-2xl border border-line-strong px-4 text-[13px] font-medium text-text disabled:opacity-40"
         >
           {t("previousQuestion")}
         </button>

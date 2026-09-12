@@ -110,7 +110,7 @@ function GlassIcon({
       href={href}
       prefetch
       aria-label={label}
-      className="relative flex items-center rounded-[47px] border-[0.5px] border-white/15 bg-white/5 p-[5px] backdrop-blur-[15px] transition-transform duration-150 active:scale-95"
+      className="relative flex items-center rounded-[47px] border-[0.5px] border-line bg-surface-2 p-[5px] backdrop-blur-[15px] transition-transform duration-150 active:scale-95"
     >
       <span className="relative size-10 overflow-visible rounded-[28px]">
         <span className="absolute start-2.5 top-[10px] size-5">
@@ -175,7 +175,7 @@ function PageToolbar({
     <div className={cn("flex w-full flex-nowrap items-center gap-2.5", className)}>
       <BackButton fallback={path.startsWith("/profile/") ? "/profile" : "/"} />
       {title ? (
-        <TitleTag className="m-0 min-w-0 flex-1 truncate text-[16px] font-semibold leading-6 text-[#fafafa]">
+        <TitleTag className="m-0 min-w-0 flex-1 truncate text-[16px] font-semibold leading-6 text-text">
           {title}
         </TitleTag>
       ) : (
@@ -218,7 +218,7 @@ function TabItem({
           name={profile.name}
           className={cn(
             "size-[30px] text-[10px] transition-[box-shadow,opacity] duration-200",
-            active ? "shadow-[0_0_0_1.5px_#fff]" : "opacity-80",
+            active ? "shadow-[0_0_0_1.5px_var(--text)]" : "opacity-80",
           )}
         />
       ) : (
@@ -244,7 +244,7 @@ function TabItem({
       <span
         className={cn(
           "max-w-[50px] whitespace-nowrap text-center text-[12px] font-medium leading-[14px] transition-colors duration-200",
-          active ? "text-white" : "text-[#999]",
+          active ? "text-text" : "text-muted",
         )}
       >
         {label}
@@ -329,7 +329,7 @@ function AppChrome({ children }: { children: ReactNode }) {
 
   return (
     <ShellContext.Provider value={ctx}>
-      <div className="relative min-h-dvh overflow-x-hidden bg-app-top text-[#fafafa]">
+      <div className="relative min-h-dvh overflow-x-hidden bg-app-top text-text">
         <CatalogWarmup />
         <CustomPopupHost />
         <InstallPrompt />
@@ -361,7 +361,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                       }}
                       className={cn(
                         "rounded-full px-5 py-2 text-[14px] font-medium transition-[background-color,color] duration-200",
-                        active ? "bg-[#2a2a2a] text-[#fafafa]" : "text-[#999] hover:text-[#fafafa]",
+                        active ? "bg-surface-2 text-text" : "text-muted hover:text-text",
                       )}
                     >
                       {t(tab.key)}
@@ -376,29 +376,29 @@ function AppChrome({ children }: { children: ReactNode }) {
                   type="button"
                   onClick={() => router.push("/search")}
                   className={cn(
-                    "flex w-[304px] items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-black/25 px-[15px] backdrop-blur-[15px] transition-transform duration-150 active:scale-[0.99]",
+                    "flex w-[304px] items-center gap-2.5 rounded-[47px] border-[0.5px] border-line bg-black/25 px-[15px] backdrop-blur-[15px] transition-transform duration-150 active:scale-[0.99]",
                     path.includes("/learn") ? "h-9" : "h-[51px]",
                   )}
                 >
                   <span className="size-5 shrink-0">
                     <HomeIcon src="/home/search.svg" />
                   </span>
-                  <span className="truncate text-[12px] text-[#999]">{t("search")}</span>
+                  <span className="truncate text-[12px] text-muted">{t("search")}</span>
                 </button>
               )}
               <NotificationsMenu />
               <GlassIcon href="/cart" label={t("cart")} icon="/home/cart.svg" badge={cartCount} />
               <ProfileMenu
                 className={cn(
-                  "flex items-center gap-2.5 rounded-[47px] border-[0.5px] border-white/15 bg-white/5 ps-[5px] pe-2.5 backdrop-blur-[15px]",
+                  "flex items-center gap-2.5 rounded-[47px] border-[0.5px] border-line bg-surface-2 ps-[5px] pe-2.5 backdrop-blur-[15px]",
                   path.includes("/learn") ? "py-0.5" : "py-[5px]",
                 )}
                 trigger={(open) => (
                   <>
                     <Avatar src={avatarSrc(profile, user?.uid)} name={displayName} />
                     <span className="min-w-0 text-start">
-                      <span className="block truncate text-[14px] font-bold text-[#fafafa]">{displayName}</span>
-                      <span className="block truncate text-[12px] text-[#999]">{uniName}</span>
+                      <span className="block truncate text-[14px] font-bold text-text">{displayName}</span>
+                      <span className="block truncate text-[12px] text-muted">{uniName}</span>
                     </span>
                     <span className={cn("size-[18px] shrink-0 rotate-90 transition-transform", open && "rotate-[270deg]")}>
                       <HomeIcon src="/home/chevron.svg" />
@@ -445,8 +445,8 @@ function AppChrome({ children }: { children: ReactNode }) {
                     <>
                       <Avatar src={avatarSrc(profile, user?.uid)} name={displayName} />
                       <span className="min-w-0 text-start">
-                        <span className="block truncate text-[14px] font-bold text-[#fafafa]">{displayName}</span>
-                        <span className="block truncate text-[12px] text-[#999]">{uniName}</span>
+                        <span className="block truncate text-[14px] font-bold text-text">{displayName}</span>
+                        <span className="block truncate text-[12px] text-muted">{uniName}</span>
                       </span>
                     </>
                   )}
@@ -505,7 +505,7 @@ function AppChrome({ children }: { children: ReactNode }) {
 
         <nav
           className={cn(
-            "fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t border-white/10 bg-[rgba(22,22,22,0.7)] px-10 pb-safe-nav pt-2.5 backdrop-blur-[20px] transition-[transform,opacity] duration-200 ease-out lg:hidden",
+            "fixed inset-x-0 bottom-0 z-30 flex items-center justify-between border-t border-line bg-surface/90 px-10 pb-safe-nav pt-2.5 backdrop-blur-[20px] transition-[transform,opacity] duration-200 ease-out lg:hidden",
             showTabBar ? "translate-y-0 opacity-100" : "pointer-events-none translate-y-full opacity-0",
           )}
           aria-hidden={!showTabBar}

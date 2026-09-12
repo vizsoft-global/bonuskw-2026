@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils";
 
 export function Skeleton({ className }: { className?: string }) {
-  return <div className={cn("animate-pulse rounded-lg bg-[#1a1a1a]", className)} />;
+  return <div className={cn("animate-pulse rounded-lg bg-surface", className)} />;
 }
 
 export function ListPageSkeleton({ rows = 5 }: { rows?: number }) {
@@ -17,7 +17,7 @@ export function ListPageSkeleton({ rows = 5 }: { rows?: number }) {
 export function SearchSkeleton() {
   return (
     <div className="grid gap-6 lg:grid-cols-[240px_1fr]" role="status" aria-label="Loading">
-      <div className="hidden space-y-4 rounded-[16px] border border-white/10 bg-[#1a1a1a] p-4 lg:block">
+      <div className="hidden space-y-4 rounded-[16px] border border-line bg-surface p-4 lg:block">
         <Skeleton className="h-6 w-24" />
         <Skeleton className="h-8 w-full" />
         <Skeleton className="h-10 w-full" />

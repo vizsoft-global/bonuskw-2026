@@ -28,7 +28,7 @@ export function CourseThumb({
   return (
     <div
       className={cn(
-        "relative overflow-hidden rounded-[8px] border-[0.5px] border-white/10 bg-[#1d1d1d]",
+        "relative overflow-hidden rounded-[8px] border-[0.5px] border-line bg-surface",
         aspect === "3/4" ? "aspect-[3/4]" : "aspect-[5/3]",
         className,
       )}

@@ -68,10 +68,10 @@ function VerifyForm() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2.5">
           <AuthHeading>{t("verifyPhone")}</AuthHeading>
-          <p className="text-[14px] text-white/60">
+          <p className="text-[14px] text-muted">
             {t("codeSentTo")}
             <br />
-            <span className="font-medium text-white" dir="ltr">
+            <span className="font-medium text-text" dir="ltr">
               {phone ? maskPhone(phone) : ""}
             </span>
           </p>
@@ -79,18 +79,18 @@ function VerifyForm() {
         <div className="flex flex-col gap-3">
           <OtpInput value={code} onChange={setCode} />
           {error ? <p className="text-sm text-accent">{error}</p> : null}
-          {notice && !error ? <p className="text-sm text-white/70">{notice}</p> : null}
+          {notice && !error ? <p className="text-sm text-muted">{notice}</p> : null}
           <CtaButton loading={busy} disabled={busy || !ready} onClick={() => void verify()}>
             {t("verifyContinue")}
           </CtaButton>
         </div>
-        <div className="flex flex-col gap-3 rounded-[16px] border border-white/10 bg-white/[0.03] p-4">
-          <p className="text-[13px] text-white/60">{t("didntGetCode")}</p>
+        <div className="flex flex-col gap-3 rounded-[16px] border border-line bg-white/[0.03] p-4">
+          <p className="text-[13px] text-muted">{t("didntGetCode")}</p>
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
               disabled={busy}
-              className="rounded-full border border-white/20 px-3.5 py-2 text-[13px] font-medium text-white hover:border-white/40 disabled:opacity-60"
+              className="rounded-full border border-line-strong px-3.5 py-2 text-[13px] font-medium text-text hover:border-white/40 disabled:opacity-60"
               onClick={() => void resend()}
             >
               {t("resendFirebase")}

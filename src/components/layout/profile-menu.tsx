@@ -55,7 +55,7 @@ export function ProfileMenu({
         <div
           role="menu"
           className={cn(
-            "absolute top-[calc(100%+8px)] z-50 w-[210px] overflow-hidden rounded-[14px] border-[0.7px] border-white/20 bg-white/10 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.5)] backdrop-blur-[35px]",
+            "absolute top-[calc(100%+8px)] z-50 w-[210px] overflow-hidden rounded-[14px] border-[0.7px] border-line-strong bg-surface py-1 shadow-[0_16px_40px_rgba(0,0,0,0.5)] backdrop-blur-[35px]",
             align === "end" ? "end-0" : "start-0",
           )}
         >
@@ -68,7 +68,7 @@ export function ProfileMenu({
           <MenuLink href="/profile/transactions" icon={Receipt} onClick={() => setOpen(false)}>
             {t("transactions")}
           </MenuLink>
-          <div className="my-1.5 h-px bg-white/10" />
+          <div className="my-1.5 h-px bg-line" />
           <MenuButton
             icon={isDark ? Sun : Moon}
             onClick={() => {
@@ -87,7 +87,7 @@ export function ProfileMenu({
           >
             {locale === "en" ? "العربية" : "English"}
           </MenuButton>
-          <div className="my-1.5 h-px bg-white/10" />
+          <div className="my-1.5 h-px bg-line" />
           <MenuButton
             icon={LogOut}
             destructive
@@ -120,7 +120,7 @@ function MenuLink({
       href={href}
       role="menuitem"
       onClick={onClick}
-      className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[14px] text-[#fafafa] hover:bg-white/5"
+      className="flex cursor-pointer items-center gap-3 px-4 py-2.5 text-[14px] text-text hover:bg-surface-2"
     >
       <Icon className="size-[18px] stroke-[1.6]" />
       {children}
@@ -145,8 +145,8 @@ function MenuButton({
       role="menuitem"
       onClick={onClick}
       className={cn(
-        "flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-start text-[14px] hover:bg-white/5",
-        destructive ? "text-[#ff6b6b]" : "text-[#fafafa]",
+        "flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-start text-[14px] hover:bg-surface-2",
+        destructive ? "text-[#ff6b6b]" : "text-text",
       )}
     >
       <Icon className={cn("size-[18px] stroke-[1.6]", destructive && "text-[#ff6b6b]")} />

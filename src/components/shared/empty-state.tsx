@@ -29,7 +29,7 @@ export function EmptyState({
     >
       <span
         className={cn(
-          "grid shrink-0 place-items-center rounded-full bg-[#141414]",
+          "grid shrink-0 place-items-center rounded-full bg-surface",
           compact ? "size-10" : "size-14",
         )}
       >
@@ -38,8 +38,8 @@ export function EmptyState({
         </span>
       </span>
       <div className="flex max-w-[280px] flex-col gap-1">
-        <p className={cn("font-semibold text-[#fafafa]", compact ? "text-[13px]" : "text-[14px]")}>{title}</p>
-        <p className={cn("text-[#999]", compact ? "text-[11px]" : "text-[12px]")}>{body}</p>
+        <p className={cn("font-semibold text-text", compact ? "text-[13px]" : "text-[14px]")}>{title}</p>
+        <p className={cn("text-muted", compact ? "text-[11px]" : "text-[12px]")}>{body}</p>
       </div>
       {cta ? (
         "href" in cta ? (

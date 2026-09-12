@@ -166,7 +166,7 @@ export default function StorePage() {
   return (
     <AppShell headerExtra={<StoriesRow stories={storyItems} />} loading={courses.isPending} skeleton={<StoreSkeleton />}>
       <div className="flex flex-col">
-        <p className="hidden text-[20px] font-semibold text-[#fafafa] lg:block lg:pt-[30px]">
+        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
 
@@ -184,7 +184,7 @@ export default function StorePage() {
 
         {featuredItems.length ? (
           <section className="flex flex-col gap-5 px-0 py-5">
-            <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("featuredEbooks")}</h2>
+            <h2 className="text-[14px] font-semibold text-text">{t("featuredEbooks")}</h2>
             <div className={exploreRailClass}>
               {featuredItems.map((item) => {
                 const book = featured.find((b) => b.id === item.id);
@@ -206,7 +206,7 @@ export default function StorePage() {
 
         <section className="flex flex-col gap-[25px] py-5">
           <div className="flex items-center justify-between">
-            <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("exploreEbooks")}</h2>
+            <h2 className="text-[14px] font-semibold text-text">{t("exploreEbooks")}</h2>
             <div className="flex items-center gap-5">
               <button
                 type="button"

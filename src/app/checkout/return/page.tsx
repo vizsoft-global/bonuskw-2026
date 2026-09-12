@@ -43,7 +43,7 @@ function PaidScreen({ courses }: { courses: PurchasedCourse[] }) {
             i < arr.length - 1 ? (
               <span key={i}>
                 {part}
-                <span className="font-bold text-white">{single.name || t("myCourses")}</span>
+                <span className="font-bold text-text">{single.name || t("myCourses")}</span>
               </span>
             ) : (
               <span key={i}>{part}</span>
@@ -58,7 +58,7 @@ function PaidScreen({ courses }: { courses: PurchasedCourse[] }) {
     "flex h-[49px] items-center justify-center rounded-[24px] px-6 text-[14px] font-semibold transition active:scale-[0.98]";
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-[#050505]">
+    <div className="relative min-h-dvh overflow-hidden bg-app-top">
       {/* ambient glows */}
       <div
         aria-hidden
@@ -70,7 +70,7 @@ function PaidScreen({ courses }: { courses: PurchasedCourse[] }) {
       />
       <Link
         href="/cart"
-        className="absolute top-5 left-5 z-10 flex items-center gap-2 text-[16px] font-semibold text-white lg:top-8 lg:left-10"
+        className="absolute top-5 left-5 z-10 flex items-center gap-2 text-[16px] font-semibold text-text lg:top-8 lg:left-10"
       >
         <ArrowLeft className="size-6 rtl:rotate-180" />
         <span className="hidden lg:inline">{t("checkout")}</span>
@@ -81,12 +81,12 @@ function PaidScreen({ courses }: { courses: PurchasedCourse[] }) {
           className="flex size-[66px] items-center justify-center rounded-full lg:size-[87px]"
           style={{ backgroundImage: "linear-gradient(205deg, #2e7bff 0%, #22c55e 130%)" }}
         >
-          <Check className="size-9 text-white lg:size-12" strokeWidth={3} />
+          <Check className="size-9 text-text lg:size-12" strokeWidth={3} />
         </div>
         <h1 className="mt-6 bg-gradient-to-b from-white to-[#999] bg-clip-text text-[24px] font-bold text-transparent lg:mt-8 lg:text-[40px]">
           {t("purchaseSuccessful")}
         </h1>
-        <p className="mt-3 max-w-[480px] text-[14px] leading-relaxed text-[#999] lg:mt-4 lg:text-[20px]">
+        <p className="mt-3 max-w-[480px] text-[14px] leading-relaxed text-muted lg:mt-4 lg:text-[20px]">
           {body}
         </p>
         <div className="mt-8 flex w-full max-w-[267px] flex-col gap-3 lg:mt-10 lg:max-w-none lg:flex-row lg:items-center lg:justify-center">
@@ -97,7 +97,7 @@ function PaidScreen({ courses }: { courses: PurchasedCourse[] }) {
               </Link>
               <Link
                 href="/my-space"
-                className={`${btn} w-full border border-[#0c5eff] text-[#fafafa] lg:w-[198px]`}
+                className={`${btn} w-full border border-[#0c5eff] text-text lg:w-[198px]`}
               >
                 {t("goToMyCourses")}
               </Link>

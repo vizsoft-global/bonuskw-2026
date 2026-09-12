@@ -62,7 +62,7 @@ export function PaymentMethods({
 
   return (
     <div className="flex w-full flex-col gap-2.5">
-      <p className="text-[14px] font-medium text-[#999]">{title}</p>
+      <p className="text-[14px] font-medium text-muted">{title}</p>
       <div className="flex items-center gap-2">
         {LOGOS.map((item) => (
           <span
@@ -70,7 +70,7 @@ export function PaymentMethods({
             title={item.alt}
             className={
               "relative h-[35px] w-[56px] shrink-0 overflow-hidden rounded-[8px] " +
-              ("fill" in item && item.fill ? "bg-[#0018ff]" : "bg-[#141414] p-1.5")
+              ("fill" in item && item.fill ? "bg-[#0018ff]" : "bg-surface p-1.5")
             }
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -85,7 +85,7 @@ export function PaymentMethods({
           </span>
         ))}
       </div>
-      <p className="text-[12px] text-[#999]">{hint}</p>
+      <p className="text-[12px] text-muted">{hint}</p>
       {testCards.length ? (
         <div className="rounded-[10px] border border-[#f5d08a] bg-[#3a2f12] p-3">
           <p className="mb-2 text-[12px] font-medium text-[#f5d08a]">{testTitle}</p>
@@ -97,14 +97,14 @@ export function PaymentMethods({
                 onClick={() => void navigator.clipboard.writeText(card.number).catch(() => undefined)}
                 className="rounded-[8px] bg-black/25 px-2.5 py-2 text-left"
               >
-                <p className="text-[12px] font-medium text-[#fafafa]">
+                <p className="text-[12px] font-medium text-text">
                   {card.brand} · {card.result}
                 </p>
                 <p className="font-mono text-[11px] text-[#f5d08a]">
                   {card.number} · {card.expiry} · {card.cvv}
                 </p>
                 {card.note ? <p className="mt-1 text-[10px] text-[#c8b48a]">{card.note}</p> : null}
-                <p className="mt-1 text-[10px] text-[#999]">{copyLabel}</p>
+                <p className="mt-1 text-[10px] text-muted">{copyLabel}</p>
               </button>
             ))}
           </div>

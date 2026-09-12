@@ -58,7 +58,7 @@ export function FileTileArt({ file, className }: { file: Pick<OutlineFile, "name
   return (
     <span
       className={cn(
-        "grid shrink-0 place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-white/25 bg-[#252525]",
+        "grid shrink-0 place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-white/25 bg-surface",
         className,
       )}
     >

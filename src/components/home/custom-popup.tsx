@@ -158,7 +158,7 @@ function PopupDialog({ popup, onClose }: { popup: CustomPopup; onClose: () => vo
         role="dialog"
         aria-modal="true"
         aria-label={popup.title || t("learnMore")}
-        className="relative z-10 flex max-h-[min(720px,92dvh)] w-full max-w-[420px] flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[#141414] text-[#fafafa] shadow-2xl"
+        className="relative z-10 flex max-h-[min(720px,92dvh)] w-full max-w-[420px] flex-col overflow-hidden rounded-[22px] border border-line bg-surface text-text shadow-2xl"
       >
         <button
           type="button"
@@ -248,7 +248,7 @@ function SlideView({ slide }: { slide: Slide }) {
         style={slide.poster ? { backgroundImage: `url(${slide.poster})` } : undefined}
       >
         <span className="rounded-full bg-black/50 p-4">
-          <FileThumb kind="audio" className="size-8 text-white" />
+          <FileThumb kind="audio" className="size-8 text-text" />
         </span>
         <audio src={slide.url} controls className="w-full" />
       </div>
@@ -261,7 +261,7 @@ function SlideView({ slide }: { slide: Slide }) {
         style={slide.poster ? { backgroundImage: `url(${slide.poster})` } : undefined}
       >
         <span className="rounded-2xl bg-black/50 p-4">
-          <FileThumb kind={resourceKind({ name: slide.name, url: slide.url })} className="size-8 text-white" />
+          <FileThumb kind={resourceKind({ name: slide.name, url: slide.url })} className="size-8 text-text" />
         </span>
         <p className="max-w-full truncate text-sm">{slide.name || t("download")}</p>
         <a href={slide.url} download target="_blank" rel="noreferrer" className="text-sm font-medium underline">

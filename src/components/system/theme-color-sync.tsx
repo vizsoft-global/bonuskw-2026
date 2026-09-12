@@ -18,8 +18,15 @@ export function ThemeColorSync() {
   const pathname = usePathname();
 
   useEffect(() => {
-    const color = resolvedTheme === "light" ? APP_TOP_LIGHT : APP_TOP_DARK;
-    document.documentElement.style.setProperty("--app-top", color);
+    if (!resolvedTheme) return;
+    const light = resolvedTheme === "light";
+    const root = document.documentElement;
+    // RootLayout used to hardcode `class="dark"`, which React re-applied on
+    // navigation and left light mode with a pale header over dark cards.
+    root.classList.toggle("dark", !light);
+    root.classList.toggle("light", light);
+    const color = light ? APP_TOP_LIGHT : APP_TOP_DARK;
+    root.style.removeProperty("--app-top");
 
     // Keep exactly one unscoped tag: Android reads the first matching
     // `theme-color`, so stray media-scoped copies can win over the live one.

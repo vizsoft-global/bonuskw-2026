@@ -23,14 +23,14 @@ export function BrandLogo({
       </span>
       <span
         className={cn(
-          "uppercase leading-none text-white",
+          "uppercase leading-none text-text",
           splash ? "text-center" : "text-start",
         )}
       >
         <span className={cn("block font-serif font-medium tracking-wide", s.word)}>
           BONUS
         </span>
-        <span className={cn("block font-normal text-white/50", s.sub)}>
+        <span className={cn("block font-normal text-muted", s.sub)}>
           Academy
         </span>
       </span>

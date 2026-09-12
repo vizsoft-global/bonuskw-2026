@@ -24,9 +24,9 @@ export function Field({
   onSubmit?: () => void;
 }) {
   return (
-    <label className="flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/20 px-[15px] py-3.5 focus-within:border-white/50">
+    <label className="flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-line-strong px-[15px] py-3.5 focus-within:border-white/50">
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-        <span className={cn("text-[13px] text-white/60", phone && "text-center")}>{label}</span>
+        <span className={cn("text-[13px] text-muted", phone && "text-center")}>{label}</span>
         {/* Prefix and digits share one line box so they sit on the same centre line.
             Phone: the whole "+965 …" group is centred in the field. */}
         <span
@@ -34,7 +34,7 @@ export function Field({
           dir={phone || type === "email" ? "ltr" : undefined}
         >
           {phone ? (
-            <span className="text-[24px] font-medium leading-none text-white">+965</span>
+            <span className="text-[24px] font-medium leading-none text-text">+965</span>
           ) : null}
           <input
             value={value}
@@ -50,7 +50,7 @@ export function Field({
             maxLength={phone ? 8 : undefined}
             autoComplete={autoComplete}
             className={cn(
-              "h-8 min-w-0 bg-transparent p-0 font-medium leading-none text-white outline-none placeholder:text-white/30",
+              "h-8 min-w-0 bg-transparent p-0 font-medium leading-none text-text outline-none placeholder:text-faint",
               // Fixed width for 8 digits so the group stays centred while typing.
               phone ? "w-[9.5ch] text-[24px] tracking-wide" : "flex-1 text-[16px]",
             )}
@@ -86,9 +86,9 @@ export function SelectField({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={icon} alt="" className="size-full" />
         </span>
-        <span className="text-[14px] font-medium text-white/60">{label}</span>
+        <span className="text-[14px] font-medium text-muted">{label}</span>
         {optional ? (
-          <span className="text-[14px] font-light text-white/60">({optional})</span>
+          <span className="text-[14px] font-light text-muted">({optional})</span>
         ) : null}
       </div>
       <label className="relative flex w-full items-center overflow-clip rounded-[16px] border-[1.5px] border-white/50 p-[15px]">
@@ -97,14 +97,14 @@ export function SelectField({
           onChange={(e) => onChange(e.target.value)}
           className={cn(
             "w-full appearance-none bg-transparent pe-8 text-[14px] font-medium outline-none",
-            value ? "text-white" : "text-white/70",
+            value ? "text-text" : "text-muted",
           )}
         >
-          <option value="" className="bg-[#141414] text-white">
+          <option value="" className="bg-surface text-text">
             {placeholder}
           </option>
           {options.map((o) => (
-            <option key={o.id} value={o.id} className="bg-[#141414] text-white">
+            <option key={o.id} value={o.id} className="bg-surface text-text">
               {o.name}
             </option>
           ))}

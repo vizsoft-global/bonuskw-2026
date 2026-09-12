@@ -74,7 +74,7 @@ export function LineCard({
       <div className="flex gap-3 overflow-hidden rounded-[12px] p-1">
         <div
           className={cn(
-            "relative h-[68px] w-[120px] shrink-0 overflow-hidden rounded-[8px] border-[0.5px] border-white/15 bg-[#1d1d1d] lg:h-[90px] lg:w-[160px]",
+            "relative h-[68px] w-[120px] shrink-0 overflow-hidden rounded-[8px] border-[0.5px] border-line bg-surface lg:h-[90px] lg:w-[160px]",
             closed ? "opacity-60 grayscale" : undefined,
           )}
         >
@@ -86,7 +86,7 @@ export function LineCard({
           )}
         </div>
         <div className="flex min-w-0 flex-1 flex-col justify-between py-0.5">
-          <p className="line-clamp-2 px-1 text-[14px] font-medium leading-normal text-[#fafafa]">
+          <p className="line-clamp-2 px-1 text-[14px] font-medium leading-normal text-text">
             {line.title || line.courseId}
           </p>
           <div className="flex items-end justify-between gap-2 px-1 pb-0.5">
@@ -108,14 +108,14 @@ export function LineCard({
             )}
             <div className="flex max-w-[58%] shrink-0 flex-col items-end gap-0.5 text-end">
               {discounted ? (
-                <span className="text-[11px] leading-tight text-[#999] line-through">
+                <span className="text-[11px] leading-tight text-muted line-through">
                   {formatKwdLocale(quoted?.originalPrice ?? listAmount, locale)}
                 </span>
               ) : null}
               <p
                 className={cn(
                   "text-[13px] font-semibold leading-tight",
-                  discounted ? "text-[#1f9d4d]" : "text-[#fafafa]",
+                  discounted ? "text-[#1f9d4d]" : "text-text",
                 )}
               >
                 {linePriceLabel(
@@ -144,7 +144,7 @@ export function LineCard({
               onClick={() => onPayType("Full payment")}
               className={cn(
                 "min-h-11 px-1",
-                line.paymentType === "Full payment" ? "font-medium text-[#fafafa]" : "text-[#999]",
+                line.paymentType === "Full payment" ? "font-medium text-text" : "text-muted",
               )}
             >
               {labels.fullPay}
@@ -154,7 +154,7 @@ export function LineCard({
               onClick={() => onPayType("EMI")}
               className={cn(
                 "min-h-11 px-1",
-                line.paymentType === "EMI" ? "font-medium text-[#fafafa]" : "text-[#999]",
+                line.paymentType === "EMI" ? "font-medium text-text" : "text-muted",
               )}
             >
               {labels.emi}
@@ -164,7 +164,7 @@ export function LineCard({
           <span />
         )}
         <div className="flex gap-3 text-[11px]">
-          <button type="button" onClick={onSaveLater} className="min-h-11 text-[#999]">
+          <button type="button" onClick={onSaveLater} className="min-h-11 text-muted">
             {labels.saveLater}
           </button>
           <button type="button" onClick={onRemove} className="min-h-11 text-[#f24822]">
@@ -195,7 +195,7 @@ export function PayCta({
         haptic("medium");
         onPay();
       }}
-      className="relative flex h-[49px] w-full items-center justify-between rounded-[24px] border-[0.5px] border-white/40 bg-[#0c5eff] px-5 disabled:opacity-50"
+      className="relative flex h-[49px] w-full items-center justify-between rounded-[24px] border-[0.5px] border-white/40 bg-[#0c5eff] px-5 text-white disabled:opacity-50"
     >
       <span className="text-[14px] text-white">{amount}</span>
       <span className="flex items-center gap-2.5 text-[16px] font-semibold text-white">
@@ -220,8 +220,8 @@ export function SavedCard({
   moveLabel: string;
 }) {
   return (
-    <div className="flex flex-col gap-2 rounded-[12px] bg-[#141414] p-2">
-      <div className="relative aspect-[16/9] overflow-hidden rounded-[8px] bg-[#1d1d1d]">
+    <div className="flex flex-col gap-2 rounded-[12px] bg-surface p-2">
+      <div className="relative aspect-[16/9] overflow-hidden rounded-[8px] bg-surface">
         {hasThumb(line.image) ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={line.image} alt="" className="h-full w-full object-cover" />
@@ -229,10 +229,10 @@ export function SavedCard({
           <ThumbPlaceholder seed={line.courseId} />
         )}
       </div>
-      <p className="line-clamp-2 min-h-[36px] text-[14px] font-medium leading-5 text-[#fafafa]">
+      <p className="line-clamp-2 min-h-[36px] text-[14px] font-medium leading-5 text-text">
         {line.title || line.courseId}
       </p>
-      <p className="text-[13px] font-semibold text-[#fafafa]">{formatKwdLocale(line.price, locale)}</p>
+      <p className="text-[13px] font-semibold text-text">{formatKwdLocale(line.price, locale)}</p>
       <button
         type="button"
         onClick={onMove}

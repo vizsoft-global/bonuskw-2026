@@ -20,10 +20,10 @@ type Mode = "phone" | "email";
 
 function Divider({ label }: { label: string }) {
   return (
-    <div className="flex items-center gap-3 text-[12px] uppercase tracking-wide text-white/40">
-      <span className="h-px flex-1 bg-white/15" />
+    <div className="flex items-center gap-3 text-[12px] uppercase tracking-wide text-faint">
+      <span className="h-px flex-1 bg-surface" />
       <span>{label}</span>
-      <span className="h-px flex-1 bg-white/15" />
+      <span className="h-px flex-1 bg-surface" />
     </div>
   );
 }
@@ -126,7 +126,7 @@ function LoginForm() {
       <div className="flex flex-col gap-8">
         <div className="flex flex-col gap-2.5">
           <AuthHeading>{mode === "phone" ? t("signInOrCreate") : t("emailSignInTitle")}</AuthHeading>
-          <p className="text-[14px] leading-relaxed text-white/60">
+          <p className="text-[14px] leading-relaxed text-muted">
             {mode === "phone" ? t("signInSubtitle") : t("emailSignInSubtitle")}
           </p>
         </div>
@@ -148,7 +148,7 @@ function LoginForm() {
             </CtaButton>
             {error ? (
               <div className="flex flex-col gap-2 pt-1">
-                <p className="text-[13px] text-white/60">{t("noSmsHint")}</p>
+                <p className="text-[13px] text-muted">{t("noSmsHint")}</p>
                 <SupportLink phone={phoneReady ? `+965 ${phone}` : undefined} className="self-start" />
               </div>
             ) : null}
@@ -175,7 +175,7 @@ function LoginForm() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="shrink-0 text-[13px] font-medium text-white/60 hover:text-white"
+                  className="shrink-0 text-[13px] font-medium text-muted hover:text-text"
                 >
                   {showPassword ? t("hidePassword") : t("showPassword")}
                 </button>
@@ -186,13 +186,13 @@ function LoginForm() {
                 type="button"
                 disabled={busy}
                 onClick={() => void forgot()}
-                className="text-[13px] font-medium text-white/70 underline-offset-2 hover:text-white hover:underline disabled:opacity-60"
+                className="text-[13px] font-medium text-muted underline-offset-2 hover:text-text hover:underline disabled:opacity-60"
               >
                 {t("forgotPassword")}
               </button>
             </div>
             {error ? <p className="text-sm text-accent">{error}</p> : null}
-            {notice && !error ? <p className="text-sm text-white/70">{notice}</p> : null}
+            {notice && !error ? <p className="text-sm text-muted">{notice}</p> : null}
             <CtaButton loading={busy} disabled={busy || !emailReady} onClick={() => void submitEmail()}>
               {t("continue")}
             </CtaButton>
@@ -203,7 +203,7 @@ function LoginForm() {
                 setError("");
                 setNotice("");
               }}
-              className="py-1 text-[14px] font-medium text-white/70 hover:text-white"
+              className="py-1 text-[14px] font-medium text-muted hover:text-text"
             >
               {t("useMobileInstead")}
             </button>
@@ -222,7 +222,7 @@ function LoginForm() {
           </div>
           {mode === "phone" ? (
             <SocialButton
-              iconNode={<Mail className="size-5 text-white" strokeWidth={1.8} />}
+              iconNode={<Mail className="size-5 text-text" strokeWidth={1.8} />}
               disabled={busy}
               onClick={() => {
                 setMode("email");
@@ -239,7 +239,7 @@ function LoginForm() {
         <Link
           href="/logout"
           title={t("signOutEverywhereHint")}
-          className="-mt-4 self-start text-[12px] font-medium text-[#808080] underline underline-offset-2 hover:text-white"
+          className="-mt-4 self-start text-[12px] font-medium text-muted underline underline-offset-2 hover:text-text"
         >
           {t("signOutEverywhere")}
         </Link>

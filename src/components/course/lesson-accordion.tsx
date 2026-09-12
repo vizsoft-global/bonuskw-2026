@@ -27,9 +27,9 @@ export function LessonAccordion({
   return (
     <div>
       {chapters.map((chapter) => (
-        <section key={chapter.id} className="border-b border-white/10">
+        <section key={chapter.id} className="border-b border-line">
           <div className="flex w-full items-center justify-between gap-3 py-[15px] text-start">
-            <span className="min-w-0 truncate text-[14px] font-medium text-[#999]">
+            <span className="min-w-0 truncate text-[14px] font-medium text-muted">
               {String(chapter.name || "Chapter")}
             </span>
           </div>

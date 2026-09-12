@@ -25,12 +25,12 @@ export function ResourceList({
 }) {
   const { t } = useI18n();
   if (!files.length) {
-    return <p className="py-6 text-center text-[12px] text-[#999]">{emptyLabel ?? t("noLessonFiles")}</p>;
+    return <p className="py-6 text-center text-[12px] text-muted">{emptyLabel ?? t("noLessonFiles")}</p>;
   }
   return (
     <ul className="flex flex-col">
       {files.map((file) => (
-        <li key={file.id} className="border-b border-white/10 last:border-b-0">
+        <li key={file.id} className="border-b border-line last:border-b-0">
           <button
             type="button"
             disabled={file.locked}
@@ -42,8 +42,8 @@ export function ResourceList({
           >
             <FileTileArt file={file} className={dense ? "size-10 rounded-[8px]" : "size-[55px]"} />
             <span className="min-w-0 flex-1 pt-0.5">
-              <span className="line-clamp-2 text-[12px] font-medium leading-[15px] text-[#fafafa]">{file.name}</span>
-              <span className={cn("mt-1.5 flex items-center gap-2.5 font-medium text-[#999]", dense ? "text-[10px]" : "text-[12px]")}>
+              <span className="line-clamp-2 text-[12px] font-medium leading-[15px] text-text">{file.name}</span>
+              <span className={cn("mt-1.5 flex items-center gap-2.5 font-medium text-muted", dense ? "text-[10px]" : "text-[12px]")}>
                 <span className="flex items-center gap-1">
                   <span className={dense ? "size-2.5" : "size-3"}>
                     <HomeIcon src="/course/paperclip.svg" />
@@ -63,7 +63,7 @@ export function ResourceList({
                 <HomeIcon src="/course/lock.svg" />
               </span>
             ) : (
-              <DownloadCircle className="size-5 shrink-0 text-[#fafafa]" />
+              <DownloadCircle className="size-5 shrink-0 text-text" />
             )}
           </button>
         </li>

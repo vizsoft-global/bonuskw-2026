@@ -6,7 +6,7 @@ import { BrandLogo } from "./brand-logo";
 
 export function AuthHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h1 className="bg-gradient-to-b from-[#fafafa] from-[20%] to-[#b2b2b2] bg-clip-text text-[24px] font-medium text-transparent">
+    <h1 className="auth-heading text-[24px] font-medium">
       {children}
     </h1>
   );
@@ -24,7 +24,7 @@ export function AuthShell({
   const router = useRouter();
 
   return (
-    <div className="relative min-h-dvh overflow-hidden bg-app-top text-white">
+    <div className="relative min-h-dvh overflow-hidden bg-app-top text-text">
       <div className="pointer-events-none absolute -end-16 -top-40 size-[613px] lg:end-[-8%] lg:top-[12%] lg:size-[900px]">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/onboarding/glow.svg" alt="" className="size-full max-w-none" />
@@ -61,7 +61,7 @@ export function AuthShell({
       <div className="absolute end-8 top-11 z-10 hidden lg:block">{headerLink}</div>
 
       <div className="relative z-10 overflow-y-auto px-[15px] pb-10 lg:flex lg:min-h-dvh lg:items-center lg:overflow-visible lg:px-[171px]">
-        <div className="flex w-full flex-col gap-2.5 lg:w-[458px] lg:rounded-[24px] lg:border lg:border-white/15 lg:bg-white/[0.03] lg:p-[25px] lg:backdrop-blur-[50px]">
+        <div className="flex w-full flex-col gap-2.5 lg:w-[458px] lg:rounded-[24px] lg:border lg:border-line lg:bg-surface/80 lg:p-[25px] lg:backdrop-blur-[50px]">
           <div className="hidden lg:block">
             <BrandLogo size="card" />
           </div>
@@ -82,9 +82,9 @@ export function AuthHeaderLink({
   href: string;
 }) {
   return (
-    <p className="text-center text-[12px] text-white lg:text-[14px]">
-      <span className="text-white/60">{prefix} </span>
-      <Link href={href} className="font-semibold text-white underline">
+    <p className="text-center text-[12px] text-text lg:text-[14px]">
+      <span className="text-muted">{prefix} </span>
+      <Link href={href} className="font-semibold text-text underline">
         {action}
       </Link>
     </p>

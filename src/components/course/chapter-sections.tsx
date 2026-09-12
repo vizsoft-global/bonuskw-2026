@@ -98,7 +98,7 @@ function CardThumb({
   return (
     <span
       className={cn(
-        "relative block aspect-video w-full overflow-hidden rounded-[10px] bg-[#141414] ring-1 ring-white/10",
+        "relative block aspect-video w-full overflow-hidden rounded-[10px] bg-surface ring-1 ring-white/10",
         className,
       )}
     >
@@ -166,9 +166,9 @@ function LessonCard({
             </span>
           ) : null}
         </CardThumb>
-        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-[#fafafa]">{lesson.name}</span>
+        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-text">{lesson.name}</span>
       </button>
-      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#999]">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-muted">
         <span className="flex items-center gap-1">
           <span className="size-3 shrink-0">
             <HomeIcon src="/course/clock.svg" />
@@ -180,7 +180,7 @@ function LessonCard({
             type="button"
             onClick={onResources}
             disabled={!onResources}
-            className="flex items-center gap-1 rounded-full hover:text-[#fafafa] disabled:hover:text-[#999]"
+            className="flex items-center gap-1 rounded-full hover:text-text disabled:hover:text-muted"
           >
             <FileDownloadIcon className="size-3 shrink-0" />
             {t("resourcesCount").replace("{n}", String(lesson.files.length))}
@@ -255,11 +255,11 @@ function TestCard({
             </span>
           ) : null}
         </span>
-        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-[#fafafa]">
+        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-text">
           {t("test")} {number}: {quiz.name}
         </span>
       </button>
-      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-[#999]">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-muted">
         <span className="flex items-center gap-1">
           <span className="grid size-3 shrink-0 place-items-center rounded-full border border-current text-[7px] leading-none">?</span>
           {quiz.questionCount} {t("questions")}
@@ -278,7 +278,7 @@ function TestCard({
           type="button"
           onClick={onOpen}
           className={cn(
-            "mt-0.5 flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#373737] text-[#fafafa]",
+            "mt-0.5 flex w-full items-center justify-center gap-2 rounded-[12px] bg-surface-2 text-text",
             dense ? "h-8 px-3 text-[12px]" : "h-10 px-5 text-[13px]",
           )}
         >
@@ -324,9 +324,9 @@ function FileCard({
           {file.locked ? <span className="absolute inset-0 bg-black/35" /> : null}
           {file.locked ? <TinyLock /> : null}
         </span>
-        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-[#fafafa]">{file.name}</span>
+        <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-text">{file.name}</span>
       </button>
-      <span className="flex items-center gap-2.5 text-[11px] font-medium text-[#999]">
+      <span className="flex items-center gap-2.5 text-[11px] font-medium text-muted">
         <span className="flex items-center gap-1">
           <span className="size-3 shrink-0">
             <HomeIcon src="/course/paperclip.svg" />
@@ -441,18 +441,18 @@ function ResourcesDialog({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[420px] rounded-[20px] border border-white/10 bg-[#141414] p-4 shadow-2xl"
+        className="w-full max-w-[420px] rounded-[20px] border border-line bg-surface p-4 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="mb-2 flex items-start justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-[15px] font-semibold text-[#fafafa]">{lesson.name}</p>
-            <p className="text-[12px] text-[#999]">{t("resourcesCount").replace("{n}", String(lesson.files.length))}</p>
+            <p className="truncate text-[15px] font-semibold text-text">{lesson.name}</p>
+            <p className="text-[12px] text-muted">{t("resourcesCount").replace("{n}", String(lesson.files.length))}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/10 text-[#fafafa]"
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-text"
             aria-label={t("close")}
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
@@ -460,7 +460,7 @@ function ResourcesDialog({
             </svg>
           </button>
         </div>
-        <ul className="flex flex-col divide-y divide-white/10">
+        <ul className="flex flex-col divide-y divide-line">
           {lesson.files.map((file) => (
             <li key={file.id}>
               <button
@@ -474,8 +474,8 @@ function ResourcesDialog({
               >
                 <FileTileArt file={file} className="size-10 rounded-[8px]" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-medium text-[#fafafa]">{file.name}</span>
-                  <span className="text-[11px] text-[#999]">
+                  <span className="block truncate text-[13px] font-medium text-text">{file.name}</span>
+                  <span className="text-[11px] text-muted">
                     {fileTypeLabel(file)}
                     {file.bytes ? ` · ${formatBytes(file.bytes)}` : ""}
                   </span>
@@ -549,7 +549,7 @@ export function ChapterSections({
         const open = toggled[chapter.id] ?? section === activeSection;
         const count = chapter.lessons.length + chapter.files.length + section.quizzes.length;
         return (
-          <section key={chapter.id} className={cn("border-b border-white/10 last:border-b-0", dense ? "py-1.5" : "py-3")}>
+          <section key={chapter.id} className={cn("border-b border-line last:border-b-0", dense ? "py-1.5" : "py-3")}>
             <div className="flex items-center gap-2">
               <button
                 type="button"
@@ -560,12 +560,12 @@ export function ChapterSections({
                 <span
                   className={cn(
                     "min-w-0 truncate text-[14px] font-medium",
-                    headerTone === "muted" ? "text-[#999]" : "text-[#fafafa]",
+                    headerTone === "muted" ? "text-muted" : "text-text",
                   )}
                 >
                   {t("chapterN").replace("{n}", String(index + 1))}: {chapter.name}
                 </span>
-                <span className="shrink-0 text-[11px] text-[#666]">{count}</span>
+                <span className="shrink-0 text-[11px] text-faint">{count}</span>
               </button>
               {chapter.sellable && chapter.locked && onBuyChapter ? (
                 <button
@@ -580,7 +580,7 @@ export function ChapterSections({
                 type="button"
                 onClick={() => setToggled((prev) => ({ ...prev, [chapter.id]: !open }))}
                 aria-label={open ? t("seeLess") : t("seeMore")}
-                className="grid size-8 shrink-0 place-items-center text-[#999]"
+                className="grid size-8 shrink-0 place-items-center text-muted"
               >
                 <span className={cn("size-3.5 transition-transform", open ? "-rotate-90" : "rotate-90")}>
                   <HomeIcon src="/course/chevron.svg" />
@@ -619,7 +619,7 @@ export function ChapterSections({
                   </Rail>
                 </div>
               ) : (
-                <p className="pb-1 pt-1 text-[12px] text-[#666]">{t("emptyLessonsTitle")}</p>
+                <p className="pb-1 pt-1 text-[12px] text-faint">{t("emptyLessonsTitle")}</p>
               )
             ) : null}
           </section>

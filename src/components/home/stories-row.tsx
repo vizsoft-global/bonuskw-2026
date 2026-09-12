@@ -60,14 +60,14 @@ export function StoriesRow({
                   viewed ? "border-[#4c4c4c]" : "border-[#f24822]",
                 )}
               >
-                <span className="size-full overflow-hidden rounded-full border-[0.5px] border-white/20 bg-[#141414]">
+                <span className="size-full overflow-hidden rounded-full border-[0.5px] border-line-strong bg-surface">
                   {thumb ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={thumb} alt="" className="h-full w-full object-cover" />
                   ) : null}
                 </span>
               </span>
-              <span className="w-full truncate text-center text-[12px] text-[#fafafa]">
+              <span className="w-full truncate text-center text-[12px] text-text">
                 {story.title || t("story")}
               </span>
             </button>

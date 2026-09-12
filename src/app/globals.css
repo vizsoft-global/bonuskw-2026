@@ -181,12 +181,15 @@
 /* Design V2 uses hardcoded dark hexes. Remap them when the theme class is light. */
 html:not(.dark) .bg-app-top,
 html:not(.dark) .bg-\[\#050505\],
+html:not(.dark) .bg-\[\#0a0a0a\],
 html:not(.dark) .bg-\[\#0b0b0c\],
 html:not(.dark) .lg\:bg-\[\#050505\] {
   background-color: #f6f6f8;
 }
 html:not(.dark) .bg-\[\#141414\],
 html:not(.dark) .bg-\[\#1a1a1a\],
+html:not(.dark) .bg-\[\#1c1c1c\],
+html:not(.dark) .bg-\[\#1c1c1c\]\/92,
 html:not(.dark) .bg-\[\#1d1d1d\],
 html:not(.dark) .bg-\[\#1f1f1f\],
 html:not(.dark) .bg-\[\#252525\] {
@@ -227,31 +230,38 @@ html:not(.dark) .text-\[\#808080\],
 html:not(.dark) .placeholder\:text-\[\#999\]::placeholder {
   color: #6b6b73;
 }
-html:not(.dark) .text-white,
+/* Body copy that still uses text-white. Leave white on saturated / media chips. */
+html:not(.dark) .text-white:not(.bg-\[\#0c5eff\]):not(.bg-primary):not(.bg-\[\#f24822\]):not(.bg-\[\#545454\]):not(.bg-\[\#ff7a00\]):not(.bg-\[\#1f9d4d\]):not(.bg-black\/50):not(.bg-black\/60):not(.bg-black\/70),
 html:not(.dark) .text-white\/40,
 html:not(.dark) .text-white\/50,
 html:not(.dark) .text-white\/60,
+html:not(.dark) .text-white\/70,
+html:not(.dark) .text-white\/90,
 html:not(.dark) .placeholder\:text-white\/30::placeholder,
 html:not(.dark) .placeholder\:text-white\/35::placeholder,
 html:not(.dark) .placeholder\:text-white\/40::placeholder {
-  color: #121214;
+  color: var(--text);
 }
+html:not(.dark) .text-white\/40,
 html:not(.dark) .text-white\/50,
-html:not(.dark) .text-white\/60 {
-  color: #6b6b73;
+html:not(.dark) .text-white\/60,
+html:not(.dark) .text-white\/70 {
+  color: var(--muted);
 }
 html:not(.dark) .bg-\[\#0c5eff\].text-white,
 html:not(.dark) .bg-primary.text-white,
 html:not(.dark) .bg-\[\#f24822\].text-white,
 html:not(.dark) .bg-\[\#545454\].text-white,
 html:not(.dark) .bg-\[\#ff7a00\].text-white,
+html:not(.dark) .bg-\[\#1f9d4d\].text-white,
 html:not(.dark) .bg-\[\#0c5eff\] .text-white,
 html:not(.dark) .bg-primary .text-white,
 html:not(.dark) .bg-\[\#f24822\] .text-white,
 html:not(.dark) .bg-\[\#ff7a00\] .text-white,
 html:not(.dark) .bg-black\/50 .text-white,
 html:not(.dark) .bg-black\/50.text-white,
-html:not(.dark) .bg-black\/60 .text-white {
+html:not(.dark) .bg-black\/60 .text-white,
+html:not(.dark) .on-media .text-white {
   color: #fff;
 }
 html:not(.dark) .border-white,
@@ -278,6 +288,15 @@ html:not(.dark) .border-\[\#050505\] {
 }
 html:not(.dark) img[src$=".svg"]:not([src*="glow"]):not([src*="knet"]):not([src*="visa"]) {
   filter: brightness(0);
+}
+/* Profile menu card: follows the theme tokens so it cannot stay black on light. */
+.profile-menu-card {
+  background-color: var(--surface-solid);
+  border: 0.5px solid var(--line);
+}
+.dark .profile-menu-card {
+  background-image: linear-gradient(162deg, #1c1c1c 3%, #141414 90%);
+  border-color: transparent;
 }
 /* Chips drawn over thumbnails/video keep their dark look on the light theme. */
 html:not(.dark) .on-media img {
@@ -338,6 +357,12 @@ html:not(.dark) .bg-primary img {
   }
   .brand-gradient {
     background: linear-gradient(135deg, #0b0b0c 0%, #2a0d07 45%, #7a1d0a 100%);
+  }
+  .auth-heading {
+    background-image: linear-gradient(to bottom, var(--text) 20%, var(--muted));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   .course-fallback {
     background:

@@ -31,17 +31,17 @@ export default function OfflinePage() {
   }
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center bg-app-top px-6 text-center text-[#fafafa] pt-safe-header pb-safe">
+    <main className="flex min-h-dvh flex-col items-center justify-center bg-app-top px-6 text-center text-text pt-safe-header pb-safe">
       <Image src="/icons/icon-192.png" alt="" width={72} height={72} className="size-[72px] rounded-2xl" priority />
-      <span className="mt-6 grid size-12 place-items-center rounded-full bg-white/10 text-[#ff4a1c]">
+      <span className="mt-6 grid size-12 place-items-center rounded-full bg-surface text-[#ff4a1c]">
         <WifiOff className="size-6" />
       </span>
       <h1 className="mt-4 text-xl font-semibold">{t("offlineTitle")}</h1>
-      <p className="mt-2 max-w-xs text-sm text-[#999]">{t("offlineBody")}</p>
+      <p className="mt-2 max-w-xs text-sm text-muted">{t("offlineBody")}</p>
       <Button variant="accent" size="lg" className="mt-6 min-w-40" onClick={retry}>
         {t("retry")}
       </Button>
-      {online ? null : <p className="mt-3 text-xs text-[#666]">Offline</p>}
+      {online ? null : <p className="mt-3 text-xs text-faint">Offline</p>}
     </main>
   );
 }

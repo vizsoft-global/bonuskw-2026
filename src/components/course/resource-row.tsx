@@ -37,14 +37,14 @@ export function ResourceRow({
 }) {
   return (
     <div className="flex items-center gap-3 py-2.5">
-      <span className="grid size-10 shrink-0 place-items-center rounded-[8px] bg-[#141414]">
+      <span className="grid size-10 shrink-0 place-items-center rounded-[8px] bg-surface">
         <span className="size-4">
           <HomeIcon src="/course/paperclip.svg" />
         </span>
       </span>
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-medium text-[#fafafa]">{name}</span>
-        <span className="text-[11px] text-[#999]">
+        <span className="block truncate text-[13px] font-medium text-text">{name}</span>
+        <span className="text-[11px] text-muted">
           {type}
           {size ? ` · ${size}` : ""}
         </span>

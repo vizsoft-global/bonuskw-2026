@@ -92,7 +92,7 @@ export default function DuesPage() {
             >
               {due.get("courseName")} · {formatKwdLocale(Number(due.get("amount")) || 0, locale)} · {due.get("status")}
               {due.get("index") ? (
-                <span className="ms-1 text-[11px] text-[#999]">
+                <span className="ms-1 text-[11px] text-muted">
                   ({due.get("index")}
                   {due.get("count") ? `/${due.get("count")}` : ""})
                 </span>

@@ -369,9 +369,9 @@ export default function CoursePage() {
         />
       ) : null}
 
-      <div className="mt-5 flex items-center gap-2 border-b border-white/10 pb-2">
-        <span className="text-[15px] font-semibold text-[#fafafa]">{t("lessonsAndChapters")}</span>
-        <span className="rounded-[8px] bg-[#141414] px-1.5 py-0.5 text-[10px] text-[#999]">
+      <div className="mt-5 flex items-center gap-2 border-b border-line pb-2">
+        <span className="text-[15px] font-semibold text-text">{t("lessonsAndChapters")}</span>
+        <span className="rounded-[8px] bg-surface px-1.5 py-0.5 text-[10px] text-muted">
           {counts.lessons} {t("lessons")}
           {counts.files ? ` · ${counts.files} ${t("attachments").toLowerCase()}` : ""}
           {counts.tests ? ` · ${counts.tests} ${t("tests").toLowerCase()}` : ""}

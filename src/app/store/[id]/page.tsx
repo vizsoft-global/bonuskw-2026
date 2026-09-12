@@ -254,7 +254,7 @@ export default function EbookPage() {
 
       {relatedItems.length ? (
         <section className="mt-8 flex flex-col gap-4">
-          <h2 className="text-[14px] font-semibold text-[#fafafa]">{t("relatedEbooks")}</h2>
+          <h2 className="text-[14px] font-semibold text-text">{t("relatedEbooks")}</h2>
           <div className={cn(exploreRailClass, "lg:grid lg:grid-cols-[repeat(auto-fill,minmax(180px,1fr))] lg:overflow-visible")}>
             {relatedItems.map((item) => {
               const row = related.find((b) => b.id === item.id);
@@ -275,8 +275,8 @@ export default function EbookPage() {
 
       {(data.ebookFiles ?? []).length ? (
         <section className="mt-8">
-          <h2 className="mb-1 text-[14px] font-semibold text-[#fafafa]">{t("download")}</h2>
-          <div className="divide-y divide-white/10">
+          <h2 className="mb-1 text-[14px] font-semibold text-text">{t("download")}</h2>
+          <div className="divide-y divide-line">
             {(data.ebookFiles ?? []).map((file) => (
               <ResourceRow
                 key={file.id}

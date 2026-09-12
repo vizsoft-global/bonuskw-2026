@@ -26,12 +26,12 @@ export function FileThumb({ kind, className }: { kind: ResourceKind; className?:
   return (
     <span
       className={cn(
-        "relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] border-[0.5px] border-white/25 bg-[#1d1d1d]",
+        "relative grid shrink-0 place-items-center overflow-hidden rounded-[10px] border-[0.5px] border-white/25 bg-surface",
         className,
       )}
     >
       <span className="absolute inset-x-[22%] top-[14%] bottom-[18%] rounded-[3px] border border-white/30 bg-white/[0.08]" />
-      <span className={cn("relative rounded-[4px] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-white", tone)}>
+      <span className={cn("relative rounded-[4px] px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-text", tone)}>
         {KIND_LABEL[kind]}
       </span>
     </span>

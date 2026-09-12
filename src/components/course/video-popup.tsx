@@ -42,7 +42,7 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
     >
       <div className="w-full max-w-[960px]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center justify-between gap-3 px-1">
-          <p className="min-w-0 truncate text-[14px] font-medium text-[#fafafa]">
+          <p className="min-w-0 truncate text-[14px] font-medium text-text">
             <span className="me-2 rounded-full bg-[#0c5eff] px-2 py-0.5 text-[10px] font-semibold text-white">
               {t("freePreview")}
             </span>
@@ -52,7 +52,7 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
             type="button"
             onClick={onClose}
             aria-label={t("close")}
-            className="grid size-8 shrink-0 place-items-center rounded-full bg-white/10 text-[#fafafa]"
+            className="grid size-8 shrink-0 place-items-center rounded-full bg-surface text-text"
           >
             <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
               <path d="M6 6l12 12M18 6L6 18" />
@@ -69,7 +69,7 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
               allow="fullscreen; autoplay; encrypted-media"
             />
           ) : ticket?.error ? (
-            <div className="grid h-full w-full place-items-center px-6 text-center text-[13px] text-[#999]">
+            <div className="grid h-full w-full place-items-center px-6 text-center text-[13px] text-muted">
               {ticket.error}
             </div>
           ) : (

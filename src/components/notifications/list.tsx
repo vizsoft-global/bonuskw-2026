@@ -10,7 +10,7 @@ function SparkleMark({ read }: { read: boolean }) {
     <span
       className={cn(
         "relative size-[35px] shrink-0 overflow-hidden rounded-full",
-        read ? "bg-[#3a3a3a]" : "bg-[linear-gradient(180deg,#3b82f6_0%,#000_100%)]",
+        read ? "bg-surface-2" : "bg-[linear-gradient(180deg,#3b82f6_0%,#000_100%)]",
       )}
     >
       <span className="absolute start-[9px] top-[9px] size-[17px]">
@@ -41,21 +41,21 @@ export function NotificationRows({
             onClick={() => onOpen?.(note.id)}
             className={cn(
               "flex w-full items-center justify-between gap-2.5 py-[10px] text-start",
-              !last && "border-b border-white/10",
+              !last && "border-b border-line",
             )}
           >
             <span className="flex min-w-0 flex-1 items-center gap-2.5">
               <SparkleMark read={read} />
               <span className="min-w-0 flex-1">
                 {note.title && note.title !== note.text ? (
-                  <span className={cn("block truncate text-[12px] font-semibold", read ? "text-[#666]" : "text-white")}>
+                  <span className={cn("block truncate text-[12px] font-semibold", read ? "text-faint" : "text-text")}>
                     {note.title}
                   </span>
                 ) : null}
                 <span
                   className={cn(
                     "block text-[12px] font-medium leading-normal",
-                    read ? "text-[#666]" : note.title && note.title !== note.text ? "text-[#c8c8c8]" : "text-white",
+                    read ? "text-faint" : note.title && note.title !== note.text ? "text-muted" : "text-text",
                   )}
                 >
                   {note.text}
@@ -63,7 +63,7 @@ export function NotificationRows({
               </span>
             </span>
             {note.createdAt ? (
-              <span className={cn("shrink-0 text-[10px] font-medium", read ? "text-[#666]" : "text-white")}>
+              <span className={cn("shrink-0 text-[10px] font-medium", read ? "text-faint" : "text-text")}>
                 {formatDistanceToNow(note.createdAt, { addSuffix: true })}
               </span>
             ) : null}

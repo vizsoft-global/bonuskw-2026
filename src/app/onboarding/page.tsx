@@ -53,7 +53,7 @@ function AcademicStep() {
     <div className="flex flex-col gap-[43px]">
       <div className="flex flex-col gap-2.5">
         <AuthHeading>{t("tellUsStudies")}</AuthHeading>
-        <p className="text-[14px] text-white/60">{t("studiesSubtitle")}</p>
+        <p className="text-[14px] text-muted">{t("studiesSubtitle")}</p>
       </div>
       <div className="flex flex-col gap-[25px]">
         <AcademicFields value={value} onChange={setValue} />
@@ -79,15 +79,15 @@ function SignedInAs() {
     providerId === "google.com" ? "Google" : providerId === "apple.com" ? "Apple" : providerId === "password" ? "Email" : "";
   const who = user.email || user.phoneNumber || user.displayName || provider;
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-white/10 pt-4 text-[13px] text-white/60">
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-line pt-4 text-[13px] text-muted">
       <span className="min-w-0 truncate">
-        {t("signedInAs")} <span className="text-white/90">{who}</span>
+        {t("signedInAs")} <span className="text-text">{who}</span>
         {provider && who !== provider ? ` · ${provider}` : ""}
       </span>
       <button
         type="button"
         onClick={() => void logout().then(() => router.replace("/login"))}
-        className="shrink-0 font-medium text-white underline underline-offset-2"
+        className="shrink-0 font-medium text-text underline underline-offset-2"
       >
         {t("notYou")}
       </button>

@@ -146,9 +146,9 @@ export default function TransactionsPage() {
                 key={row.key}
                 type="button"
                 onClick={() => void invoice(row.orderId)}
-                className="flex w-full items-center gap-3 rounded-[12px] bg-[#141414] p-1 text-start"
+                className="flex w-full items-center gap-3 rounded-[12px] bg-surface p-1 text-start"
               >
-                <span className="relative h-[79px] w-[59px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
+                <span className="relative h-[79px] w-[59px] shrink-0 overflow-hidden rounded-[8px] bg-surface">
                   {row.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={row.image} alt="" className="h-full w-full object-cover" />
@@ -158,12 +158,12 @@ export default function TransactionsPage() {
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col justify-between py-1">
                   <span>
-                    <span className="line-clamp-1 text-[14px] font-medium text-[#fafafa]">{row.title}</span>
-                    {row.author ? <span className="block text-[12px] text-[#999]">{row.author}</span> : null}
+                    <span className="line-clamp-1 text-[14px] font-medium text-text">{row.title}</span>
+                    {row.author ? <span className="block text-[12px] text-muted">{row.author}</span> : null}
                   </span>
                   <span className="mt-2 flex items-end justify-between">
-                    <span className="text-[16px] font-semibold text-[#fafafa]">{formatKwdLocale(row.amount, locale)}</span>
-                    <span className="text-[12px] text-[#999]">{row.date ? formatDate(row.date) : ""}</span>
+                    <span className="text-[16px] font-semibold text-text">{formatKwdLocale(row.amount, locale)}</span>
+                    <span className="text-[12px] text-muted">{row.date ? formatDate(row.date) : ""}</span>
                   </span>
                 </span>
               </button>
@@ -172,9 +172,9 @@ export default function TransactionsPage() {
                 key={row.key}
                 type="button"
                 onClick={() => void invoice(row.orderId)}
-                className="flex w-full gap-3 rounded-[12px] bg-[#141414] p-1 text-start"
+                className="flex w-full gap-3 rounded-[12px] bg-surface p-1 text-start"
               >
-                <span className="relative h-[86px] w-[154px] shrink-0 overflow-hidden rounded-[8px] bg-[#1a1a1a]">
+                <span className="relative h-[86px] w-[154px] shrink-0 overflow-hidden rounded-[8px] bg-surface">
                   {row.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={row.image} alt="" className="h-full w-full object-cover" />
@@ -184,8 +184,8 @@ export default function TransactionsPage() {
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col justify-between py-1">
                   <span>
-                    <span className="line-clamp-2 text-[14px] font-medium text-[#fafafa]">{row.title}</span>
-                    <span className="mt-1 block text-[12px] text-[#999]">{row.date ? formatDate(row.date) : ""}</span>
+                    <span className="line-clamp-2 text-[14px] font-medium text-text">{row.title}</span>
+                    <span className="mt-1 block text-[12px] text-muted">{row.date ? formatDate(row.date) : ""}</span>
                   </span>
                   <span className="flex items-end justify-between gap-2">
                     {row.batch ? (
@@ -193,7 +193,7 @@ export default function TransactionsPage() {
                     ) : (
                       <span />
                     )}
-                    <span className="text-[16px] font-semibold text-[#fafafa]">{formatKwdLocale(row.amount, locale)}</span>
+                    <span className="text-[16px] font-semibold text-text">{formatKwdLocale(row.amount, locale)}</span>
                   </span>
                 </span>
               </button>

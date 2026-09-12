@@ -215,7 +215,7 @@ export function StoryViewer({
       return null;
     }
     return (
-      <main className="grid min-h-dvh place-items-center bg-app-top text-[#999]">
+      <main className="grid min-h-dvh place-items-center bg-app-top text-muted">
         {t("empty")}
       </main>
     );
@@ -225,8 +225,8 @@ export function StoryViewer({
     <div
       className={
         embedded
-          ? "fixed inset-0 z-[100] flex overflow-y-auto bg-black/90 text-[#fafafa] backdrop-blur-sm"
-          : "relative flex h-dvh overflow-y-auto bg-black/90 text-[#fafafa]"
+          ? "fixed inset-0 z-[100] flex overflow-y-auto bg-black/90 text-text backdrop-blur-sm"
+          : "relative flex h-dvh overflow-y-auto bg-black/90 text-text"
       }
       onClick={(e) => e.target === e.currentTarget && close()}
       role="dialog"
@@ -249,7 +249,7 @@ export function StoryViewer({
       <div className="m-auto flex h-[80%] max-h-[80%] w-[80%] max-w-[420px] flex-col items-center p-4 lg:w-auto lg:max-w-[80%]">
         <div className="flex max-h-full w-full flex-col items-center lg:w-auto">
           <div
-            className="relative aspect-[9/16] max-h-full w-full max-w-full touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-white/20 bg-[#1d1d1d] lg:h-full lg:w-auto"
+            className="relative aspect-[9/16] max-h-full w-full max-w-full touch-none select-none overflow-hidden rounded-[12px] border-[0.5px] border-line-strong bg-surface lg:h-full lg:w-auto"
             onPointerDown={onPointerDown}
             onPointerUp={onPointerUp}
             onPointerCancel={() => {
@@ -272,13 +272,13 @@ export function StoryViewer({
 
             <header className="absolute inset-x-0 top-0 z-20 flex items-center justify-between gap-2 bg-gradient-to-b from-black/70 via-black/30 to-transparent px-3 pb-5 pt-7">
               <div className="flex min-w-0 flex-1 items-center gap-2">
-                <span className="size-9 shrink-0 overflow-hidden rounded-full border-[0.5px] border-white/20 bg-[#141414]">
+                <span className="size-9 shrink-0 overflow-hidden rounded-full border-[0.5px] border-line-strong bg-surface">
                   {storyThumb(story) ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={storyThumb(story)} alt="" className="h-full w-full object-cover" />
                   ) : null}
                 </span>
-                <p className="min-w-0 truncate text-[14px] font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                <p className="min-w-0 truncate text-[14px] font-semibold text-text drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
                   {story.title || t("story")}
                 </p>
               </div>
@@ -351,7 +351,7 @@ export function StoryViewer({
                 )}
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 px-6">
                   <FileThumb kind={fileKind(segment)} className="h-24 w-32" />
-                  <p className="line-clamp-2 text-center text-[14px] font-medium text-white">
+                  <p className="line-clamp-2 text-center text-[14px] font-medium text-text">
                     {segment.name || t("story")}
                   </p>
                   <a
@@ -374,7 +374,7 @@ export function StoryViewer({
             {story.description?.trim() || courseId ? (
               <div className="absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent px-4 pb-4 pt-12">
                 {story.description?.trim() ? (
-                  <p className="line-clamp-3 whitespace-pre-line text-[14px] leading-5 text-white drop-shadow">
+                  <p className="line-clamp-3 whitespace-pre-line text-[14px] leading-5 text-text drop-shadow">
                     {story.description.trim()}
                   </p>
                 ) : null}
