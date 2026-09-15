@@ -106,6 +106,12 @@ export function buildOutline(input: {
   subscription?: Sub;
   /** Enrolment through a chapter purchase, by chapter id. */
   purchasedChapterIds?: Set<string>;
+  /**
+   * The instructor or co-instructor of this course, or a university manager for
+   * a course in their own university: they reach it without an enrolment. Locks
+   * still apply — useOwnerAccess decides who.
+   */
+  ownerAccess?: boolean;
   /** Video posters by lesson id, used when a lesson has no thumbnail. */
   posters?: Record<string, string>;
   /** Real runtimes by lesson id, used when a lesson's own duration is 0. */
@@ -117,6 +123,8 @@ export function buildOutline(input: {
   const paid = paidInstallments(input.subscription ?? null);
   const enrolled = Boolean(input.subscription && input.subscription.status === "Ongoing");
   const purchased = input.purchasedChapterIds ?? new Set<string>();
+  /** Instructors and university managers reach the whole course unpaid. */
+  const owner = input.ownerAccess === true;
 
   const lessonsByChapter = new Map<string, Row[]>();
   for (const lesson of input.lessons) {
@@ -171,13 +179,13 @@ export function buildOutline(input: {
     const c = chapter as unknown as ChapterDoc;
     if (hiddenChapterIds.has(chapter.id)) continue;
     const gate = chapterEmiIndex({ emiIndex: c.emiIndex, emiType: c.emiType });
-    const chapterOpen = !isChapterLocked(c) && ((enrolled && paid >= gate) || purchased.has(chapter.id));
+    const chapterOpen = !isChapterLocked(c) && (owner || (enrolled && paid >= gate) || purchased.has(chapter.id));
     const chapterFiles = (filesByChapter.get(chapter.id) ?? [])
       .sort((a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0))
       .map((resource) => {
         const r = resource as unknown as CourseResourceDoc;
         const fileGate = Math.max(1, Number(r.emiIndex ?? 1));
-        const open = r.status !== false && ((enrolled && paid >= fileGate) || purchased.has(chapter.id));
+        const open = r.status !== false && (owner || (enrolled && paid >= fileGate) || purchased.has(chapter.id));
         return {
           id: resource.id,
           name: String(r.name || fileNameFromUrl(r.url!)),
@@ -249,7 +257,7 @@ export function buildOutline(input: {
         questionCount: Number(q.questionCount ?? q.questions?.length ?? 0),
         passPercent: q.passPercent,
         timeLimitMin: q.timeLimitMin ?? null,
-        locked: q.status === false || !enrolled,
+        locked: q.status === false || !(enrolled || owner),
       },
     });
   }

@@ -54,9 +54,12 @@ export function lessonAccess(input: {
   chapter?: Partial<ChapterGate> | null;
   subscription?: Sub;
   chapterPurchased?: boolean;
+  /** Instructor/co-instructor of the course, or the manager of its university. */
+  ownerAccess?: boolean;
 }): AccessState {
-  const { lesson, chapter, subscription, chapterPurchased } = input;
+  const { lesson, chapter, subscription, chapterPurchased, ownerAccess } = input;
   if (isFreePreview(lesson) && isLessonReachable(lesson, chapter)) return "preview";
+  if (ownerAccess && isLessonReachable(lesson, chapter)) return "open";
   if (chapterPurchased && isLessonReachable(lesson, chapter)) return "open";
   if (subscription?.status === "Ongoing") {
     if (installmentPaid(subscription, gateIndex(chapter)) && isLessonReachable(lesson, chapter)) {
@@ -75,8 +78,11 @@ export function quizAccess(input: {
   chapter?: Partial<Pick<ChapterDoc, "status" | "emiType" | "emiIndex">> | null;
   subscription?: Sub;
   chapterPurchased?: boolean;
+  /** Instructor/co-instructor of the course, or the manager of its university. */
+  ownerAccess?: boolean;
 }) {
   if (isQuizLocked(input.quiz) || isChapterLocked(input.chapter)) return "locked" as const;
+  if (input.ownerAccess) return "open" as const;
   if (input.chapterPurchased) return "open" as const;
   if (input.subscription?.status === "Ongoing") {
     if (installmentPaid(input.subscription, gateIndex(input.chapter))) return "open" as const;

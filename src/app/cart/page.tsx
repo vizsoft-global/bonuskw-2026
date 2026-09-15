@@ -11,7 +11,6 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { canPurchase } from "@/lib/auth/purchase-access";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { type Quote, quoteErrorKey, quoteLineFor, suggestionText } from "@/lib/cart/quote";
 import { loadCart, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
@@ -47,8 +46,7 @@ const DEAD_COUPON: ReadonlySet<string> = new Set([
 ]);
 
 export default function CartPage() {
-  const { user, profile } = useAuth();
-  const staffViewer = Boolean(user) && !canPurchase(profile);
+  const { user } = useAuth();
   const gate = usePurchaseGate();
   const { t, locale } = useI18n();
   const router = useRouter();
@@ -320,7 +318,6 @@ export default function CartPage() {
     !quoteError &&
     closedLines.length === 0 &&
     cart.lines.length > 0 &&
-    !staffViewer &&
     !paused;
   const lineLabels = {
     fullPay: t("fullPay"),
@@ -393,12 +390,6 @@ export default function CartPage() {
         <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
         {t("terms")}
       </label>
-      {staffViewer ? (
-        <p className="rounded-[10px] bg-white/[0.06] p-3 text-[12px] leading-relaxed text-muted">
-          <span className="block font-semibold text-text">{t("staffViewOnlyTitle")}</span>
-          {t("staffViewOnlyBody")}
-        </p>
-      ) : null}
       {paused ? (
         <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-muted">
           <span className="block font-semibold text-[#f5d08a]">{paused}</span>

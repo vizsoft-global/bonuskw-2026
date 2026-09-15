@@ -4,7 +4,6 @@ import { collections } from "@/lib/firebase/collections";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { verifyIdToken } from "@/lib/server/auth";
 import type { BatchDoc, CourseDoc, PurchaseControls, UserDoc } from "@/lib/types/firestore";
-import { canPurchase } from "@/lib/auth/purchase-access";
 import { batchIsLive } from "@/lib/course/access-window";
 import { isPublished } from "@/lib/course/status";
 
@@ -17,14 +16,7 @@ export async function POST(req: NextRequest) {
   if (!body.courseId) return NextResponse.json({ error: "courseId required" }, { status: 400 });
 
   const db = getAdminDb();
-  // Staff accounts browse only; see purchase-access.ts.
   const profile = (await db.collection(collections.users).doc(user.uid).get()).data() as UserDoc | undefined;
-  if (!canPurchase(profile)) {
-    return NextResponse.json(
-      { error: "Instructor and admin accounts cannot enrol", code: "staff-account" },
-      { status: 403 },
-    );
-  }
   // Fail-safe switches (Settings > Purchases & dev mode). Dev-mode testers may
   // enrol, but their subscription is stamped as a test record.
   const controls = ((await db.collection(collections.adminConfig).doc("studentApp").get()).data()?.purchases ??

@@ -97,7 +97,10 @@ export type CourseDoc = {
    */
   itemType?: string;
   ebookFiles?: EbookFileDoc[];
+  /** Primary university (taxonomy parent). */
   universityRef?: DocumentReference;
+  /** Every university this course is offered at, including the primary. */
+  universityRefs?: DocumentReference[];
   branchRef?: DocumentReference;
   authorRef?: DocumentReference;
   price?: number;

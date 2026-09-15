@@ -16,8 +16,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { canPurchase } from "@/lib/auth/purchase-access";
-import { EnrolledCta, StaffViewOnlyNotice } from "@/components/course/enrolled-cta";
+import { EnrolledCta } from "@/components/course/enrolled-cta";
 import { addCourseLine, EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
@@ -29,6 +28,7 @@ import { invalidateEnrolment } from "@/lib/course/invalidate";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
+import { useOwnerAccess } from "@/lib/course/use-owner-access";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { formatKwdLocale, localizedField } from "@/lib/i18n/content";
@@ -64,6 +64,9 @@ export default function CoursePage() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const videoMeta = useLessonVideoMeta(lessons.data);
   const subscription = useCourseSubscription(id, user?.uid);
+  // The instructor (or a co-instructor) of this course, and the manager of its
+  // university, see it without buying it.
+  const ownerAccess = useOwnerAccess(id);
   const quizResults = useQuizResults(id, user?.uid);
   const instructor = useQuery({
     queryKey: ["instructor", course.data?.authorRef?.id],
@@ -257,6 +260,7 @@ export default function CoursePage() {
     quizzes: quizzes.data ?? [],
     resources: resources.data ?? [],
     subscription: subscription.data ?? null,
+    ownerAccess,
     posters,
     durations,
     locale,
@@ -269,11 +273,11 @@ export default function CoursePage() {
     .reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0);
   const hours = Math.round(seconds / 3600);
   const enrolled = subscription.data?.status === "Ongoing";
-  const staffViewer = Boolean(user) && !canPurchase(profile);
+  const hasAccess = enrolled || ownerAccess;
   const hasIntro = Boolean(c.videoRef || c.video);
 
   function openLesson(lesson: OutlineLesson) {
-    if (enrolled && !lesson.locked) {
+    if (hasAccess && !lesson.locked) {
       router.push(`/course/${id}/learn?lesson=${lesson.id}`);
       return;
     }
@@ -318,7 +322,7 @@ export default function CoursePage() {
             seeMore={t("seeMore")}
             seeLess={t("seeLess")}
           />
-          {enrolled ? (
+          {hasAccess ? (
             <EnrolledCta
               chapters={chapters.data?.length || 0}
               lessons={lessons.data?.length || 0}
@@ -329,12 +333,6 @@ export default function CoursePage() {
               title={t("youAreEnrolled")}
               label={t("continueLearning")}
               onContinue={() => router.push(`/course/${id}/learn`)}
-            />
-          ) : staffViewer ? (
-            <StaffViewOnlyNotice
-              title={t("staffViewOnlyTitle")}
-              body={t("staffViewOnlyBody")}
-              price={formatKwdLocale(c.price, locale)}
             />
           ) : (
             <EnrollCta
@@ -387,9 +385,9 @@ export default function CoursePage() {
           quizResults={quizResults.data}
           onLesson={openLesson}
           onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
-          onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
+          onQuiz={hasAccess ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
           onBuyChapter={
-            c.coursePaymentType === "Free" || staffViewer || enrolled || gate.blockFor("chapter")
+            c.coursePaymentType === "Free" || hasAccess || gate.blockFor("chapter")
               ? undefined
               : (chapterId) => void addChapterToCart(chapterId)
           }

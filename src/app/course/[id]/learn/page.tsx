@@ -21,6 +21,7 @@ import { buildOutline, type OutlineFile } from "@/lib/course/outline";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
+import { useOwnerAccess } from "@/lib/course/use-owner-access";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,9 @@ function LearnBody() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const subscription = useCourseSubscription(id, user?.uid);
+  // Instructors, co-instructors and the university manager reach the course
+  // without an enrolment row.
+  const ownerAccess = useOwnerAccess(id);
   const quizResults = useQuizResults(id, user?.uid);
   const videoMeta = useLessonVideoMeta(lessons.data);
   // Real runtimes from the video records: lesson docs often carry
@@ -88,11 +92,12 @@ function LearnBody() {
         quizzes: quizzes.data ?? [],
         resources: resources.data ?? [],
         subscription: subscription.data ?? null,
+        ownerAccess,
         posters,
         durations,
         locale,
       }),
-    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, posters, durations, locale],
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, ownerAccess, posters, durations, locale],
   );
 
   // Lessons the outline hides — a locked lesson, or any lesson of a locked
@@ -314,7 +319,8 @@ function LearnBody() {
               {activeQuiz ? (
                 <div className="overflow-auto rounded-[12px] border-[0.5px] border-line bg-surface p-4 lg:h-full">
                   <p className="mb-3 text-[16px] font-semibold text-text">{String(activeQuiz.name || t("test"))}</p>
-                  {activeQuiz.status === false || subscription.data?.status !== "Ongoing" ? (
+                  {activeQuiz.status === false ||
+                  (subscription.data?.status !== "Ongoing" && !ownerAccess) ? (
                     <p className="text-[13px] text-muted">{t("testLocked")}</p>
                   ) : (
                     <QuizPlayer key={activeQuiz.id} quiz={activeQuiz} onExit={() => lesson && openLesson(lesson.id)} />

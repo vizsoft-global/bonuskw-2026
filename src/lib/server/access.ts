@@ -3,6 +3,7 @@ import type { Firestore } from "firebase-admin/firestore";
 import { collections } from "@/lib/firebase/collections";
 import { accessIsLive, courseIsLive } from "@/lib/course/access-window";
 import { lessonAccess, quizAccess } from "@/lib/course/entitlement";
+import { hasOwnerAccess } from "@/lib/course/owner-access";
 import type {
   BatchDoc,
   ChapterDoc,
@@ -11,6 +12,7 @@ import type {
   LessonDoc,
   QuizDoc,
   SubscriptionDoc,
+  UserDoc,
 } from "@/lib/types/firestore";
 
 const CAPTURED = "CAPTURED";
@@ -50,7 +52,7 @@ export async function loadAccess(db: Firestore, uid: string, courseId: string) {
   const course = courseSnap.exists ? (courseSnap.data() as CourseDoc) : null;
   // A trashed course is off the air for everyone.
   if (!courseIsLive(course)) {
-    return { subscription: null, purchased: new Set<string>() };
+    return { subscription: null, purchased: new Set<string>(), ownsCourse: false };
   }
 
   const ongoingSubs = subs.docs.map((d) => d.data() as SubscriptionDoc).filter((s) => s.status === "Ongoing");
@@ -76,7 +78,24 @@ export async function loadAccess(db: Firestore, uid: string, courseId: string) {
       .map((c) => c.chapterRef?.id)
       .filter((id): id is string => Boolean(id)),
   );
-  return { subscription, purchased };
+
+  // The instructor (or a co-instructor) of the course, and the manager of its
+  // university, watch it without an enrolment — no order and no revenue row is
+  // created for them. Same term rule as a buyer, so the course's own batch is
+  // what decides.
+  const ownerBatchRef = course?.batchesRef;
+  const [ownerSnap, ownerBatchSnap] = await Promise.all([
+    db.collection(collections.users).doc(uid).get(),
+    ownerBatchRef ? db.collection(collections.batches).doc(ownerBatchRef.id).get() : Promise.resolve(null),
+  ]);
+  const ownsCourse = hasOwnerAccess({
+    course,
+    profile: (ownerSnap.data() as UserDoc | undefined) ?? null,
+    uid,
+    batch: ownerBatchSnap?.exists ? (ownerBatchSnap.data() as BatchDoc) : null,
+  });
+
+  return { subscription, purchased, ownsCourse };
 }
 
 export async function canPlayLesson(
@@ -100,6 +119,7 @@ export async function canPlayLesson(
     chapter,
     subscription: access.subscription,
     chapterPurchased: chapterId ? access.purchased.has(chapterId) : false,
+    ownerAccess: access.ownsCourse,
   });
   if (state !== "open" && state !== "preview") {
     return { ok: false as const, error: "Locked" };
@@ -119,6 +139,7 @@ export async function canTakeQuiz(db: Firestore, uid: string, quizId: string) {
       quiz,
       subscription: access.subscription,
       chapterPurchased: false,
+      ownerAccess: access.ownsCourse,
     }) === "open"
   );
 }
