@@ -485,8 +485,10 @@ function ResourcesDialog({
                   <span className="size-4 shrink-0">
                     <HomeIcon src="/course/lock.svg" />
                   </span>
-                ) : (
+                ) : file.downloadable ? (
                   <span className="shrink-0 text-[12px] font-medium text-[#0c5eff]">{t("download")}</span>
+                ) : (
+                  <span className="shrink-0 text-[11px] text-muted">{t("viewOnly")}</span>
                 )}
               </button>
             </li>

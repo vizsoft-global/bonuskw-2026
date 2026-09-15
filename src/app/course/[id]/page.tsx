@@ -384,7 +384,10 @@ export default function CoursePage() {
           locale={locale}
           quizResults={quizResults.data}
           onLesson={openLesson}
-          onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
+          onFile={(file) => {
+            if (isPreviewable(file)) setPreviewFile(file);
+            else if (file.downloadable) downloadFile(file);
+          }}
           onQuiz={hasAccess ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
           onBuyChapter={
             c.coursePaymentType === "Free" || hasAccess || gate.blockFor("chapter")

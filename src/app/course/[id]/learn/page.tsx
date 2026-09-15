@@ -282,7 +282,7 @@ function LearnBody() {
 
   function openFile(file: OutlineFile) {
     if (isPreviewable(file)) setPreviewFile(file);
-    else downloadFile(file);
+    else if (file.downloadable) downloadFile(file);
   }
 
   const courseName = String(course.data?.name || "");

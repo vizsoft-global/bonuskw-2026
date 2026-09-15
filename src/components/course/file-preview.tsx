@@ -48,14 +48,16 @@ export function FilePreview({ file, onClose }: { file: OutlineFile; onClose: () 
               {file.bytes ? ` · ${formatBytes(file.bytes)}` : ""}
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => downloadFile(file)}
-            className="flex h-9 items-center gap-1.5 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
-          >
-            <DownloadCircle className="size-4" />
-            {t("download")}
-          </button>
+          {file.downloadable ? (
+            <button
+              type="button"
+              onClick={() => downloadFile(file)}
+              className="flex h-9 items-center gap-1.5 rounded-full bg-[#0c5eff] px-3 text-[12px] font-semibold text-white"
+            >
+              <DownloadCircle className="size-4" />
+              {t("download")}
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={onClose}

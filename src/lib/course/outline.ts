@@ -39,7 +39,14 @@ export type OutlineFile = {
   url: string;
   kind: ResourceKind;
   bytes?: number;
+  /** Out of reach: the lesson or chapter it belongs to is not open to this student. */
   locked: boolean;
+  /**
+   * The instructor allows saving the file. Off means it can still be opened —
+   * a PDF or image previews in place — but there is nothing to download, which
+   * is not the same as being locked.
+   */
+  downloadable: boolean;
 };
 
 export type OutlineLesson = {
@@ -185,7 +192,7 @@ export function buildOutline(input: {
       .map((resource) => {
         const r = resource as unknown as CourseResourceDoc;
         const fileGate = Math.max(1, Number(r.emiIndex ?? 1));
-        const open = r.status !== false && (owner || (enrolled && paid >= fileGate) || purchased.has(chapter.id));
+        const open = owner || (enrolled && paid >= fileGate) || purchased.has(chapter.id);
         return {
           id: resource.id,
           name: String(r.name || fileNameFromUrl(r.url!)),
@@ -195,6 +202,9 @@ export function buildOutline(input: {
             resourceKind({ contentType: r.contentType, name: r.name, url: r.url }),
           bytes: r.bytes,
           locked: !open,
+          // "Downloadable" is the instructor's choice about saving the file, not
+          // about reaching it: a file switched off stays readable.
+          downloadable: r.status !== false,
         } satisfies OutlineFile;
       });
     const chapterLessons = (lessonsByChapter.get(chapter.id) ?? []).filter(
@@ -212,7 +222,8 @@ export function buildOutline(input: {
             name: fileNameFromUrl(url),
             url,
             kind: resourceKind({ url }),
-            locked: !lessonOpen || f.lesson_download_status === false,
+            locked: !lessonOpen,
+            downloadable: f.lesson_download_status !== false,
           } satisfies OutlineFile;
         });
       return {
