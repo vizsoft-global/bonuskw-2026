@@ -40,8 +40,20 @@ export function useStudentConfig() {
 /**
  * Whether chapter titles carry their "Chapter N:" prefix. Absent means yes, so
  * the historical behaviour stands until a super admin switches it off.
+ *
+ * Comes from `/api/student-config` rather than the document itself: the rules
+ * only let signed-in users read `adminConfig`, so a guest used to fall back to
+ * the default and see numbers after they had been switched off.
  */
 export function useChapterNumbers() {
-  const { data } = useStudentConfig();
+  const { data } = useQuery({
+    queryKey: ["student-config", "chapterPrefix"],
+    queryFn: async () => {
+      const res = await fetch("/api/student-config", { cache: "no-store" });
+      if (!res.ok) throw new Error("Could not load student config");
+      return (await res.json()) as { chapterPrefix?: boolean };
+    },
+    staleTime: 10 * 60 * 1000,
+  });
   return data?.chapterPrefix !== false;
 }

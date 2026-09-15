@@ -551,7 +551,11 @@ function LearnBody() {
 
         </div>
       ) : (
-        <EmptyState icon="/course/play.svg" title={t("emptyLessonsTitle")} body={t("emptyLessonsBody")} />
+        <EmptyState
+          icon="/course/play.svg"
+          title={outline.length ? t("emptyLessonsTitle") : t("unlockingSoon")}
+          body={t("emptyLessonsBody")}
+        />
       )}
       {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>

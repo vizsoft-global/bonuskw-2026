@@ -380,19 +380,27 @@ export default function CoursePage() {
           {counts.tests ? ` · ${counts.tests} ${t("tests").toLowerCase()}` : ""}
         </span>
       </div>
-      <ChapterSections
-        items={outline}
-        locale={locale}
-        quizResults={quizResults.data}
-        onLesson={openLesson}
-        onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
-        onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
-        onBuyChapter={
-          c.coursePaymentType === "Free" || staffViewer || enrolled || gate.blockFor("chapter")
-            ? undefined
-            : (chapterId) => void addChapterToCart(chapterId)
-        }
-      />
+      {outline.length ? (
+        <ChapterSections
+          items={outline}
+          locale={locale}
+          quizResults={quizResults.data}
+          onLesson={openLesson}
+          onFile={(file) => (isPreviewable(file) ? setPreviewFile(file) : downloadFile(file))}
+          onQuiz={enrolled ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
+          onBuyChapter={
+            c.coursePaymentType === "Free" || staffViewer || enrolled || gate.blockFor("chapter")
+              ? undefined
+              : (chapterId) => void addChapterToCart(chapterId)
+          }
+        />
+      ) : (
+        // Every chapter the instructor has not unlocked yet is hidden, so a
+        // course can legitimately have nothing to show.
+        <p className="rounded-[14px] border border-line bg-surface p-4 text-center text-[13px] text-muted">
+          {t("unlockingSoon")}
+        </p>
+      )}
       {preview ? <VideoPopup lessonId={preview.id} title={preview.name} onClose={() => setPreview(null)} /> : null}
       {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>
