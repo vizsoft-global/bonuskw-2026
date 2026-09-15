@@ -1,6 +1,6 @@
 "use client";
 
-import { getDeviceId, deviceLabel } from "@/lib/device";
+import { getDeviceId, deviceLabel, setDeviceId } from "@/lib/device";
 
 const SESSION_KEY = "ba_session_id";
 
@@ -63,6 +63,7 @@ export async function startSession(idToken: string, opts: { force?: boolean } = 
   });
   const json = (await res.json().catch(() => ({}))) as {
     sessionId?: string;
+    deviceId?: string;
     conflict?: OtherSession[];
     error?: string;
   };
@@ -70,6 +71,7 @@ export async function startSession(idToken: string, opts: { force?: boolean } = 
     return { status: "conflict", sessions: json.conflict };
   }
   if (!res.ok || !json.sessionId) throw new Error(json.error || "Session failed");
+  if (json.deviceId) setDeviceId(json.deviceId);
   setStoredSessionId(json.sessionId);
   return { status: "started", sessionId: json.sessionId };
 }

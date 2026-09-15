@@ -2,13 +2,26 @@
 
 const KEY = "ba_device_id";
 
+/**
+ * Local guess at this device's id. The server owns the durable copy in the
+ * HttpOnly `ba_device` cookie and echoes the resolved id back from
+ * `/api/session/start`; `setDeviceId` keeps this copy in step with it.
+ */
 export function getDeviceId() {
   const existing = window.localStorage.getItem(KEY);
   if (existing) return existing;
   const id = crypto.randomUUID();
   window.localStorage.setItem(KEY, id);
-  document.cookie = `ba_device=${id};path=/;max-age=31536000;samesite=lax`;
   return id;
+}
+
+export function setDeviceId(id: string) {
+  if (!id) return;
+  try {
+    window.localStorage.setItem(KEY, id);
+  } catch {
+    /* private mode */
+  }
 }
 
 export function deviceLabel() {

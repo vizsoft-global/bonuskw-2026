@@ -1,5 +1,10 @@
 import "server-only";
-import { FieldValue, type DocumentReference, type Timestamp } from "firebase-admin/firestore";
+import {
+  FieldValue,
+  type DocumentReference,
+  type QueryDocumentSnapshot,
+  type Timestamp,
+} from "firebase-admin/firestore";
 import { getAdminDb } from "@/lib/firebase/admin";
 import { collections } from "@/lib/firebase/collections";
 
@@ -140,18 +145,34 @@ export type ConflictingSession = {
 };
 
 /** Heartbeats arrive every 5 minutes; treat anything newer than this as in use. */
-const LIVE_WINDOW_MS = 15 * 60 * 1000;
+export const LIVE_WINDOW_MS = 15 * 60 * 1000;
+
+function lastActivity(doc: QueryDocumentSnapshot) {
+  return toDate(doc.get("lastSeenAt") as DateLike) ?? toDate(doc.get("loginDateTime") as DateLike);
+}
+
+/**
+ * A session counts as in use only while it keeps heartbeating. A session left
+ * behind by a closed tab, a wiped browser or an abandoned phone stops being
+ * live after this window, so it can no longer force a take-over prompt on the
+ * device someone is actually using.
+ */
+function isLive(doc: QueryDocumentSnapshot, now: number) {
+  const seen = lastActivity(doc);
+  return Boolean(seen && now - seen.getTime() < LIVE_WINDOW_MS);
+}
 
 export type StartSessionResult =
   | { ok: true; sessionId: string }
   | { ok: false; conflict: ConflictingSession[] };
 
 /**
- * Starts a session for this device. If the account already has an active
- * session on a *different* device the caller must pass `force` to take over;
- * the previous device is then signed out (its `sessions` doc flips to
- * isActive:false, which the client listens for). The same device signing in
- * again never conflicts.
+ * Starts a session for this device. A session on a *different* device blocks the
+ * sign-in only while that device is still heartbeating (see `isLive`); the caller
+ * then passes `force` to take over, and the other device is signed out because
+ * its `sessions` doc flips to isActive:false. The same device signing in again —
+ * reload, new tab, PWA relaunch, or after its storage was cleared — never
+ * conflicts, and sessions nobody is using are closed quietly.
  */
 export async function startSession(
   identity: SessionIdentity,
@@ -169,23 +190,35 @@ export async function startSession(
     .where("isActive", "==", true)
     .get();
 
-  const others = active.docs.filter((doc) => String(doc.get("uniqueId") ?? "") !== input.deviceId);
-  if (others.length && !opts.force) {
-    const now = Date.now();
-    const conflict: ConflictingSession[] = others
-      .map((doc) => {
-        const os = String(doc.get("os") ?? "");
-        const browser = String(doc.get("browser") ?? "");
-        const seen =
-          toDate(doc.get("lastSeenAt") as DateLike) ?? toDate(doc.get("loginDateTime") as DateLike);
+  const now = Date.now();
+  const rows = active.docs.map((doc) => ({
+    doc,
+    deviceId: String(doc.get("uniqueId") ?? ""),
+    live: isLive(doc, now),
+  }));
+
+  // Only a session that is still heartbeating on another device blocks sign-in.
+  // Sessions left behind by a closed tab, a wiped browser or an abandoned phone
+  // are closed out quietly and the login continues — they used to keep forcing
+  // the take-over prompt, and taking over signed the student's real device out.
+  const liveOthers = rows.filter((row) => row.deviceId !== input.deviceId && row.live);
+  if (liveOthers.length && !opts.force) {
+    const conflict: ConflictingSession[] = liveOthers
+      .map((row) => {
+        const os = String(row.doc.get("os") ?? "");
+        const browser = String(row.doc.get("browser") ?? "");
+        const seen = lastActivity(row.doc);
         return {
-          id: doc.id,
-          label: String(doc.get("device") ?? "") || [browser, os].filter(Boolean).join(" on ") || "Device",
+          id: row.doc.id,
+          label:
+            String(row.doc.get("device") ?? "") ||
+            [browser, os].filter(Boolean).join(" on ") ||
+            "Device",
           os,
           browser,
-          location: String(doc.get("location") ?? ""),
+          location: String(row.doc.get("location") ?? ""),
           lastSeenAt: seen?.toISOString() ?? null,
-          live: Boolean(seen && now - seen.getTime() < LIVE_WINDOW_MS),
+          live: true,
         };
       })
       .sort((a, b) => (b.lastSeenAt ?? "").localeCompare(a.lastSeenAt ?? ""));
@@ -196,29 +229,33 @@ export async function startSession(
   // already has instead of replacing it. Replacing flipped the old doc to
   // isActive:false, and a tab still listening to it signed the whole browser
   // out — Firebase auth state is shared across tabs.
-  const mine = active.docs
-    .filter((doc) => String(doc.get("uniqueId") ?? "") === input.deviceId)
+  const mine = rows
+    .filter((row) => row.deviceId === input.deviceId)
     .sort((a, b) => {
-      const at = toDate(a.get("loginDateTime") as DateLike)?.getTime() ?? 0;
-      const bt = toDate(b.get("loginDateTime") as DateLike)?.getTime() ?? 0;
+      const at = toDate(a.doc.get("loginDateTime") as DateLike)?.getTime() ?? 0;
+      const bt = toDate(b.doc.get("loginDateTime") as DateLike)?.getTime() ?? 0;
       return bt - at;
     });
   const keep = mine[0] ?? null;
 
   const batch = db.batch();
-  active.docs.forEach((doc) => {
-    if (keep && doc.id === keep.id) return;
-    batch.update(doc.ref, {
+  rows.forEach((row) => {
+    if (keep && row.doc.id === keep.doc.id) return;
+    const sameDevice = row.deviceId === input.deviceId;
+    batch.update(row.doc.ref, {
       isActive: false,
       endedAt: FieldValue.serverTimestamp(),
-      ...(others.some((o) => o.id === doc.id) ? { endedBy: "takeover", endedFrom: model } : {}),
+      // takeover = the student chose this device over a live one; stale =
+      // nobody had used it for a while; duplicate = another tab beat it here.
+      endedBy: sameDevice ? "duplicate" : row.live ? "takeover" : "stale",
+      ...(row.live && !sameDevice ? { endedFrom: model } : {}),
     });
   });
 
   if (keep) {
-    batch.update(keep.ref, { lastSeenAt: FieldValue.serverTimestamp() });
+    batch.update(keep.doc.ref, { lastSeenAt: FieldValue.serverTimestamp() });
     await batch.commit();
-    return { ok: true, sessionId: keep.id };
+    return { ok: true, sessionId: keep.doc.id };
   }
 
   const sessionRef = db.collection(collections.sessions).doc();

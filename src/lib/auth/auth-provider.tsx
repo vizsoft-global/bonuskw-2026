@@ -168,15 +168,77 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!user) return;
+    // Narrowed once: the hoisted helpers below cannot see the guard above.
+    const account = user;
     let cancelled = false;
     let stopSession: (() => void) | undefined;
     let beat: number | undefined;
+    let onVisible: (() => void) | undefined;
+    let reacquiring = false;
+
+    function beatNow(sessionId: string) {
+      void account.getIdToken().then((t) => heartbeat(t, sessionId));
+    }
+
+    function attach(sessionId: string) {
+      stopSession?.();
+      if (beat) window.clearInterval(beat);
+      if (onVisible) document.removeEventListener("visibilitychange", onVisible);
+      stopSession = onSnapshot(doc(getDb(), collections.sessions, sessionId), (snap) => {
+        const data = snap.data() as { isActive?: boolean } | undefined;
+        if (!data || data.isActive !== false) return;
+        // Another tab in this same browser may have just started a newer
+        // session and be about to overwrite the stored id; give it a moment
+        // before re-checking who holds the account.
+        window.setTimeout(() => {
+          if (cancelled || getStoredSessionId() !== sessionId) return;
+          void reacquire();
+        }, 1500);
+      });
+      beat = window.setInterval(() => beatNow(sessionId), 5 * 60 * 1000);
+      // A phone that was asleep, or a tab restored from the background, is
+      // likely past the live window — beat as soon as it is visible again so
+      // this device does not look abandoned.
+      onVisible = () => {
+        if (document.visibilityState === "visible") beatNow(sessionId);
+      };
+      document.addEventListener("visibilitychange", onVisible);
+    }
+
+    /**
+     * This device lost its session — a take-over from somewhere else, or a tab
+     * that came back after its session was closed. Ask for a session again
+     * instead of signing straight out: when nobody is using the account right
+     * now the student simply carries on, and only a session that is still
+     * heartbeating on another device ends at /session-ended.
+     */
+    async function reacquire() {
+      if (reacquiring) return;
+      reacquiring = true;
+      try {
+        const token = await account.getIdToken();
+        const again = await startSession(token);
+        if (cancelled) return;
+        if (again.status === "conflict") {
+          setKicked(true);
+          setStoredSessionId(null);
+          void signOut(getFirebaseAuth());
+          return;
+        }
+        attach(again.sessionId);
+      } catch {
+        // Offline: stay where we are and try again when the tab is focused.
+      } finally {
+        reacquiring = false;
+      }
+    }
+
     void (async () => {
       const force = forceNext.current;
       forceNext.current = false;
       let outcome: Awaited<ReturnType<typeof startSession>>;
       try {
-        const token = await user.getIdToken();
+        const token = await account.getIdToken();
         outcome = await startSession(token, { force });
       } catch {
         // Network hiccup: keep the student signed in; the next load retries.
@@ -191,28 +253,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setConflict(null);
-      const sessionId = outcome.sessionId;
-      stopSession = onSnapshot(doc(getDb(), collections.sessions, sessionId), (snap) => {
-        const data = snap.data() as { isActive?: boolean } | undefined;
-        if (!data || data.isActive !== false) return;
-        // Another tab in this same browser may have just started a newer
-        // session and be about to overwrite the stored id; give it a moment
-        // before deciding this was a take-over from a different device.
-        window.setTimeout(() => {
-          if (cancelled || getStoredSessionId() !== sessionId) return;
-          setKicked(true);
-          setStoredSessionId(null);
-          void signOut(getFirebaseAuth());
-        }, 1500);
-      });
-      beat = window.setInterval(() => {
-        void user.getIdToken().then((t) => heartbeat(t, sessionId));
-      }, 5 * 60 * 1000);
+      attach(outcome.sessionId);
     })();
+
     return () => {
       cancelled = true;
       stopSession?.();
       if (beat) window.clearInterval(beat);
+      if (onVisible) document.removeEventListener("visibilitychange", onVisible);
     };
   }, [user, sessionAttempt]);
 
