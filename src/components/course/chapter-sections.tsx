@@ -8,6 +8,7 @@ import { formatBytes } from "@/lib/course/resource-kind";
 import type { OutlineFile, OutlineItem, OutlineLesson } from "@/lib/course/outline";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
+import { useChapterNumbers } from "@/lib/settings/use-student-config";
 import { cn } from "@/lib/utils";
 
 export type QuizResultSummary = { percent: number; passed: boolean; attempts: number };
@@ -529,6 +530,7 @@ export function ChapterSections({
   dense?: boolean;
 }) {
   const { t } = useI18n();
+  const showChapterNumbers = useChapterNumbers();
   const openFile = onFile ?? defaultOpenFile;
   const sections = groupSections(items);
   const [toggled, setToggled] = useState<Record<string, boolean>>({});
@@ -563,7 +565,9 @@ export function ChapterSections({
                     headerTone === "muted" ? "text-muted" : "text-text",
                   )}
                 >
-                  {t("chapterN").replace("{n}", String(index + 1))}: {chapter.name}
+                  {showChapterNumbers
+                    ? `${t("chapterN").replace("{n}", String(index + 1))}: ${chapter.name}`
+                    : chapter.name}
                 </span>
                 <span className="shrink-0 text-[11px] text-faint">{count}</span>
               </button>

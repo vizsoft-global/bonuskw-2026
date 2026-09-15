@@ -17,6 +17,11 @@ export type StudentConfig = {
   maintenance?: { enabled?: boolean; until?: number; message?: { en?: string; ar?: string } };
   /** Fail-safe purchase switches (Settings > Purchases & dev mode). */
   purchases?: PurchaseControls;
+  /**
+   * Super-admin only (Settings > General > Curriculum). Chapter titles read
+   * "Chapter 3: Algebra" unless this is explicitly false.
+   */
+  chapterPrefix?: boolean;
 };
 
 export async function fetchStudentConfig(): Promise<StudentConfig> {
@@ -30,4 +35,13 @@ export function useStudentConfig() {
     queryFn: fetchStudentConfig,
     staleTime: 10 * 60 * 1000,
   });
+}
+
+/**
+ * Whether chapter titles carry their "Chapter N:" prefix. Absent means yes, so
+ * the historical behaviour stands until a super admin switches it off.
+ */
+export function useChapterNumbers() {
+  const { data } = useStudentConfig();
+  return data?.chapterPrefix !== false;
 }
