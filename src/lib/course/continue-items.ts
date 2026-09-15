@@ -1,7 +1,9 @@
 import { formatDistanceToNow } from "date-fns";
 import { collection, doc, getDocs, query, where } from "firebase/firestore";
 import type { ContinueItem } from "@/components/home/continue-card";
-import { getCourse, getDocsByIds, listLessons } from "@/lib/catalog/queries";
+import { getCourse, getDocsByIds, listChapters, listLessons } from "@/lib/catalog/queries";
+import { isChapterLocked, isLessonLocked } from "@/lib/course/locks";
+import type { ChapterDoc, LessonDoc } from "@/lib/types/firestore";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { courseThumb } from "@/lib/course/thumb";
@@ -60,11 +62,25 @@ export async function loadContinueItems(
 
   const rows: Array<ContinueItem | null> = await Promise.all(
     ids.map(async (courseId) => {
-      const [course, lessons] = await Promise.all([getCourse(courseId), listLessons(courseId)]);
+      const [course, lessons, chapters] = await Promise.all([
+        getCourse(courseId),
+        listLessons(courseId),
+        listChapters(courseId),
+      ]);
       if (!course) return null;
+      // Instructor-locked content is hidden across the app, so it must not
+      // surface here either — not as "next up", and not in the progress maths.
+      const lockedChapterIds = new Set(
+        chapters.filter((c) => isChapterLocked(c as unknown as ChapterDoc)).map((c) => c.id),
+      );
+      const visible = lessons.filter((lesson) => {
+        if (isLessonLocked(lesson as unknown as LessonDoc)) return false;
+        const chapterId = (lesson.chapterRef as { id?: string } | undefined)?.id;
+        return !chapterId || !lockedChapterIds.has(chapterId);
+      });
       const videoIds = [
         ...new Set(
-          lessons
+          visible
             .map((l) => (l.videoRef as { id?: string } | undefined)?.id)
             .filter((v): v is string => Boolean(v)),
         ),
@@ -91,13 +107,13 @@ export async function loadContinueItems(
         const effDur = p.durationSec > 0 ? p.durationSec : dur;
         return effDur > 0 && p.watchedSec / effDur >= 0.9;
       };
-      const total = lessons.length || 1;
-      const doneFlags = lessons.map((l) => isDone(l.id, lessonDur(l)));
+      const total = visible.length || 1;
+      const doneFlags = visible.map((l) => isDone(l.id, lessonDur(l)));
       const done = doneFlags.filter(Boolean).length;
-      const remaining = lessons.filter((_, i) => !doneFlags[i]);
+      const remaining = visible.filter((_, i) => !doneFlags[i]);
       const hrsLeft = remaining.reduce((sum, l) => sum + lessonDur(l), 0) / 3600;
       const watchedMin = Math.round(
-        lessons.reduce((sum, l) => {
+        visible.reduce((sum, l) => {
           const p = byLesson.get(l.id);
           if (!p) return sum;
           const effDur = p.durationSec > 0 ? p.durationSec : lessonDur(l);

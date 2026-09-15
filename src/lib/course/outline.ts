@@ -1,6 +1,6 @@
 import { chapterEmiIndex } from "@/lib/course/emi";
 import { paidInstallments } from "@/lib/course/entitlement";
-import { isChapterLocked, isLessonLocked } from "@/lib/course/locks";
+import { isChapterLocked, isLessonLocked, isQuizLocked } from "@/lib/course/locks";
 import { fileNameFromUrl } from "@/components/course/resource-row";
 import { resourceKind, type ResourceKind } from "@/lib/course/resource-kind";
 import { localizedField, type Locale } from "@/lib/i18n/content";
@@ -93,6 +93,10 @@ type Sub = Pick<
  * Without a subscription everything paid is locked; free-preview lessons stay
  * playable. Course files always belong to a chapter: by `chapterRef`, or for
  * files saved before that link existed, the chapter they were placed after.
+ *
+ * Instructor-locked chapters, lessons and tests are left out of the list
+ * entirely — the student app never shows them, so nothing downstream (counts,
+ * sidebar, player navigation) can reach them either.
  */
 export function buildOutline(input: {
   chapters: Row[];
@@ -130,6 +134,24 @@ export function buildOutline(input: {
   const orderedChapters = [...input.chapters].sort(
     (a, b) => Number(a.serialNumber || 0) - Number(b.serialNumber || 0),
   );
+
+  /**
+   * The instructor's lock is absolute: a chapter locked from the admin panel is
+   * hidden from the student app entirely — with its lessons, its files and the
+   * tests that follow it — until someone unlocks it. The paywall and EMI gates
+   * further down are a different thing and stay visible, because that is how a
+   * chapter is sold.
+   */
+  const hiddenChapterIds = new Set(
+    orderedChapters.filter((c) => isChapterLocked(c as unknown as ChapterDoc)).map((c) => c.id),
+  );
+
+  /** A test belongs to the chapter it follows, the way a legacy file does. */
+  function owningChapterId(serial: number): string | null {
+    const before = orderedChapters.filter((c) => Number(c.serialNumber || 0) <= serial);
+    return (before[before.length - 1] ?? orderedChapters[0])?.id ?? null;
+  }
+
   const filesByChapter = new Map<string, Row[]>();
   for (const resource of input.resources) {
     const r = resource as unknown as CourseResourceDoc;
@@ -147,6 +169,7 @@ export function buildOutline(input: {
 
   for (const chapter of orderedChapters) {
     const c = chapter as unknown as ChapterDoc;
+    if (hiddenChapterIds.has(chapter.id)) continue;
     const gate = chapterEmiIndex({ emiIndex: c.emiIndex, emiType: c.emiType });
     const chapterOpen = !isChapterLocked(c) && ((enrolled && paid >= gate) || purchased.has(chapter.id));
     const chapterFiles = (filesByChapter.get(chapter.id) ?? [])
@@ -166,7 +189,10 @@ export function buildOutline(input: {
           locked: !open,
         } satisfies OutlineFile;
       });
-    const lessons = (lessonsByChapter.get(chapter.id) ?? []).map((row) => {
+    const chapterLessons = (lessonsByChapter.get(chapter.id) ?? []).filter(
+      (row) => !isLessonLocked(row as unknown as LessonDoc),
+    );
+    const lessons = chapterLessons.map((row) => {
       const lesson = row as unknown as LessonDoc;
       const lessonOpen = chapterOpen && !isLessonLocked(lesson);
       const files = ((lesson.lesson_file_list ?? []) as LessonFile[])
@@ -209,6 +235,11 @@ export function buildOutline(input: {
 
   for (const quiz of input.quizzes) {
     const q = quiz as unknown as QuizDoc;
+    // A locked test is hidden like a locked lesson, and a test that sits inside
+    // a hidden chapter goes with it.
+    if (isQuizLocked(q)) continue;
+    const owner = owningChapterId(Number(quiz.serialNumber || 0));
+    if (owner && hiddenChapterIds.has(owner)) continue;
     items.push({
       serial: Number(quiz.serialNumber || 0),
       item: {

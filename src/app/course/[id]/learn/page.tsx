@@ -95,9 +95,21 @@ function LearnBody() {
     [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, posters, durations, locale],
   );
 
-  // Fall back to the first lesson until one is chosen; no effect needed.
-  const lesson = (lessons.data ?? []).find((item) => item.id === lessonId) || lessons.data?.[0];
-  const activeQuiz = quizId ? ((quizzes.data ?? []).find((q) => q.id === quizId) as (QuizDoc & { id: string }) | undefined) : undefined;
+  // Lessons the outline hides — a locked lesson, or any lesson of a locked
+  // chapter — stay unreachable, so a deep link must not fall back onto one.
+  const visibleLessonIds = new Set(
+    outline.flatMap((item) => (item.kind === "chapter" ? item.lessons.map((l) => l.id) : [])),
+  );
+  const visibleQuizIds = new Set(outline.filter((item) => item.kind === "quiz").map((item) => item.id));
+  // Fall back to the first visible lesson until one is chosen; no effect needed.
+  const lesson =
+    (lessons.data ?? []).find((item) => item.id === lessonId && visibleLessonIds.has(item.id)) ||
+    (lessons.data ?? []).find((item) => visibleLessonIds.has(item.id));
+  const activeQuiz = quizId
+    ? ((quizzes.data ?? []).find((q) => q.id === quizId && visibleQuizIds.has(q.id)) as
+        | (QuizDoc & { id: string })
+        | undefined)
+    : undefined;
   const lessonDuration = Number(lesson?.videoDuration || (lesson ? durations[lesson.id] : 0) || 0);
 
   useEffect(() => {

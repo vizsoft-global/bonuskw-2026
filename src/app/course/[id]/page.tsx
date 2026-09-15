@@ -249,9 +249,6 @@ export default function CoursePage() {
     if (meta.durationSec) durations[lessonId] = meta.durationSec;
     if (meta.poster) posters[lessonId] = meta.poster;
   }
-  const seconds =
-    lessons.data?.reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0) || 0;
-  const hours = Math.round(seconds / 3600);
   // One outline in the instructor's order: every chapter is a section holding
   // its lessons, its files and the tests that follow it.
   const outline = buildOutline({
@@ -265,6 +262,12 @@ export default function CoursePage() {
     locale,
   });
   const counts = outlineCounts(outline);
+  // Runtime covers what students can actually reach: locked chapters and locked
+  // lessons are hidden from the outline, so they must not inflate this figure.
+  const seconds = outline
+    .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
+    .reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0);
+  const hours = Math.round(seconds / 3600);
   const enrolled = subscription.data?.status === "Ongoing";
   const staffViewer = Boolean(user) && !canPurchase(profile);
   const hasIntro = Boolean(c.videoRef || c.video);
