@@ -33,6 +33,19 @@ type CreateResponse = {
   error?: string;
 };
 
+/**
+ * Coupon failures that mean the code itself is finished, as opposed to a code
+ * that simply does not fit this cart right now (range / eligibility). Only the
+ * finished ones are forgotten for good.
+ */
+const DEAD_COUPON: ReadonlySet<string> = new Set([
+  "couponNotFound",
+  "couponExpired",
+  "couponNotActive",
+  "couponUsed",
+  "couponLimit",
+]);
+
 export default function CartPage() {
   const { user, profile } = useAuth();
   const staffViewer = Boolean(user) && !canPurchase(profile);
@@ -142,16 +155,23 @@ export default function CartPage() {
         return;
       }
       if (next.couponCode?.trim()) {
+        const key = quoteErrorKey(withCoupon.body.error);
         const bare = await fetchQuote(next, undefined);
-        if (bare.ok) {
-          setQuote(bare.body);
-          setCouponError(t(quoteErrorKey(withCoupon.body.error)));
-          setQuoteError("");
+        setQuote(bare.ok ? bare.body : null);
+        setQuoteError(bare.ok ? "" : t(quoteErrorKey(bare.body.error)));
+        if (DEAD_COUPON.has(key)) {
+          // The cart is stored per student in Firestore, so a code the server
+          // refuses would otherwise be re-applied on every visit, in every
+          // browser, until it is deleted here. Forget it and stay quiet — the
+          // student did nothing just now.
+          const cleared = { ...next, couponCode: "" };
+          setCart(cleared);
+          setCoupon("");
+          setCouponError("");
+          await saveCart(user.uid, cleared);
           return;
         }
-        setQuote(null);
-        setCouponError("");
-        setQuoteError(t(quoteErrorKey(bare.body.error)));
+        setCouponError(bare.ok ? t(key) : "");
         return;
       }
       setQuote(null);
@@ -159,6 +179,35 @@ export default function CartPage() {
       setQuoteError(t(quoteErrorKey(withCoupon.body.error)));
     } catch {
       setQuote(null);
+      setQuoteError(t("quoteFailed"));
+    } finally {
+      setQuoting(false);
+    }
+  }
+
+  /**
+   * The Apply button. A code is only stored once the server accepts it, so a
+   * mistyped or finished code can never come back on the next visit.
+   */
+  async function applyCoupon(code: string) {
+    if (!user) return;
+    setQuoting(true);
+    try {
+      const res = await fetchQuote(cart, code);
+      if (res.ok) {
+        setCouponError("");
+        await persist({ ...cart, couponCode: code });
+        return;
+      }
+      const bare = await fetchQuote(cart, undefined);
+      setQuote(bare.ok ? bare.body : null);
+      setQuoteError(bare.ok ? "" : t(quoteErrorKey(bare.body.error)));
+      setCouponError(t(quoteErrorKey(res.body.error)));
+      const cleared = { ...cart, couponCode: "" };
+      setCart(cleared);
+      setCoupon(code);
+      await saveCart(user.uid, cleared);
+    } catch {
       setQuoteError(t("quoteFailed"));
     } finally {
       setQuoting(false);
@@ -436,13 +485,18 @@ export default function CartPage() {
               className="flex flex-col gap-2"
               onSubmit={(e) => {
                 e.preventDefault();
-                void persist({ ...cart, couponCode: coupon.trim() });
+                const code = coupon.trim();
+                if (code) void applyCoupon(code);
               }}
             >
               <div className="flex gap-2">
                 <input
                   value={coupon}
-                  onChange={(e) => setCoupon(e.target.value)}
+                  onChange={(e) => {
+                    setCoupon(e.target.value);
+                    // Stop blaming the last attempt the moment they type.
+                    if (couponError) setCouponError("");
+                  }}
                   placeholder={t("coupon")}
                   autoCapitalize="characters"
                   autoCorrect="off"
@@ -465,6 +519,21 @@ export default function CartPage() {
                 <p role="alert" className="text-[12px] text-[#f24822]">
                   {couponError}
                 </p>
+              ) : null}
+              {!quote?.couponCode && cart.couponCode ? (
+                // Stored but not applied (expired, or it does not fit this cart
+                // yet): give the student a way to drop it themselves.
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCoupon("");
+                    setCouponError("");
+                    void persist({ ...cart, couponCode: "" });
+                  }}
+                  className="self-start text-[11px] text-muted underline-offset-2 hover:underline"
+                >
+                  {t("couponRemove")}
+                </button>
               ) : null}
               {quote?.couponCode && couponLine ? (
                 <div className="flex items-start justify-between gap-3 rounded-[10px] bg-[#1f9d4d]/10 p-3 text-[12px] text-[#1f7a45]">
