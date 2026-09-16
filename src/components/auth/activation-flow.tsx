@@ -182,23 +182,51 @@ function PhoneStep({ onDone }: { onDone: () => void }) {
 
 function EmailStep() {
   const { t } = useI18n();
-  const { linkEmail, resendVerificationEmail, refreshProfile } = useAuth();
+  const { linkEmail, resendVerificationEmail, refreshProfile, checkIdentifier, logout } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
+  /** Set when the address already belongs to another account. */
+  const [taken, setTaken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const ready = /\S+@\S+\.\S+/.test(email);
+
+  /** How the other account signs in, in words. */
+  function methodName(methods: string[]) {
+    if (methods.includes("google.com")) return "Google";
+    if (methods.includes("apple.com")) return "Apple";
+    if (methods.includes("phone")) return t("mobileNumber");
+    return t("email");
+  }
 
   async function send() {
     if (!ready) return;
     setBusy(true);
     setError("");
     try {
+      const check = await checkIdentifier("email", email.trim());
+      if (check.state === "taken") {
+        // Never claim an address that belongs to someone else's account: the
+        // student signs in to that account instead.
+        setTaken(methodName(check.methods));
+        return;
+      }
       await linkEmail(email);
       setSent(true);
     } catch (err) {
       setError(authErrorMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function switchAccount() {
+    setBusy(true);
+    try {
+      await logout();
+      router.replace("/login");
     } finally {
       setBusy(false);
     }
@@ -226,6 +254,23 @@ function EmailStep() {
     const timer = window.setInterval(() => void refreshProfile(), 5000);
     return () => window.clearInterval(timer);
   }, [sent, refreshProfile]);
+
+  if (taken) {
+    return (
+      <div className="flex flex-col gap-[25px]">
+        <p className="text-[15px] font-medium text-text">{t("emailTakenTitle")}</p>
+        <p className="text-[13px] leading-relaxed text-muted">
+          {t("emailTakenBody", { method: taken })}
+        </p>
+        <CtaButton loading={busy} disabled={busy} onClick={() => void switchAccount()}>
+          {t("switchAccount")}
+        </CtaButton>
+        <Button type="button" variant="ghost" disabled={busy} onClick={() => setTaken(null)}>
+          {t("changeEmail")}
+        </Button>
+      </div>
+    );
+  }
 
   if (sent) {
     return (

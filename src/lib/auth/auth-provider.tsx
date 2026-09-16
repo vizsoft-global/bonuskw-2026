@@ -83,6 +83,11 @@ type AuthState = {
    */
   linkEmail: (email: string) => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  /** Activation: is this email or phone already on another account? */
+  checkIdentifier: (
+    kind: "email" | "phone",
+    value: string,
+  ) => Promise<{ state: "free" | "mine" | "taken"; methods: string[] }>;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -475,6 +480,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const profile = await loadProfile(current.uid);
         return { needsOnboarding: computeNeedsOnboarding(profile), switched: false };
+      },
+      checkIdentifier: async (kind, value) => {
+        const current = getFirebaseAuth().currentUser;
+        if (!current) return { state: "free", methods: [] };
+        const res = await fetch("/api/activate/check-identifier", {
+          method: "POST",
+          headers: await bearer(current),
+          body: JSON.stringify({ kind, value }),
+        });
+        const json = (await res.json().catch(() => ({}))) as {
+          state?: string;
+          methods?: string[];
+        };
+        const state = json.state === "taken" ? "taken" : json.state === "mine" ? "mine" : "free";
+        return { state, methods: Array.isArray(json.methods) ? json.methods : [] };
       },
       linkEmail: async (email) => {
         const current = getFirebaseAuth().currentUser;
