@@ -8,8 +8,11 @@ import {
   useMemo,
   useState,
 } from "react";
+import { doc, updateDoc } from "firebase/firestore";
 import type { Locale } from "./content";
 import { messages, t, type MessageKey, type MessageVars } from "./messages";
+import { collections } from "@/lib/firebase/collections";
+import { getDb, getFirebaseAuth } from "@/lib/firebase/client";
 
 const STORAGE_KEY = "ba_locale";
 
@@ -49,6 +52,14 @@ export function LocaleProvider({ children }: { children: React.ReactNode }) {
     setLocaleState(next);
     window.localStorage.setItem(STORAGE_KEY, next);
     document.cookie = `ba_locale=${next};path=/;max-age=31536000;samesite=lax`;
+    // Emails are written by the server, which cannot see the browser's copy of
+    // this choice — so it is stored on the student's record as well.
+    const user = getFirebaseAuth().currentUser;
+    if (user) {
+      void updateDoc(doc(getDb(), collections.users, user.uid), { locale: next }).catch(
+        () => undefined,
+      );
+    }
   }, []);
 
   const value = useMemo<LocaleContextValue>(

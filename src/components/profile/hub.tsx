@@ -19,6 +19,8 @@ import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import { SHORT_VERSION } from "@/lib/version";
 
 const PUSH_KEY = "ba_push_enabled";
+/** Kept so switching the toggle off can forget this exact device. */
+const PUSH_TOKEN_KEY = "ba_push_token";
 const LANG_SHEET_KEY = "ba_open_lang";
 
 export function ProfileHub() {
@@ -89,24 +91,50 @@ export function ProfileHub() {
 
   async function togglePush() {
     if (pushBusy) return;
+    if (!user) return;
     if (pushOn) {
+      // Forget the device on the server too, or the next send still tries it.
+      const token = window.localStorage.getItem(PUSH_TOKEN_KEY);
       setPushOn(false);
       window.localStorage.setItem(PUSH_KEY, "0");
+      if (token) {
+        window.localStorage.removeItem(PUSH_TOKEN_KEY);
+        const idToken = await user.getIdToken();
+        await fetch("/api/push/register", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+          body: JSON.stringify({ token }),
+        }).catch(() => undefined);
+      }
       return;
     }
-    if (!user || !(await isSupported())) return;
+    if (!(await isSupported())) return;
     setPushBusy(true);
     try {
+      if ((await Notification.requestPermission()) !== "granted") return;
       const messaging = getMessaging(getFirebaseApp());
-      const token = await getToken(messaging, { vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY });
-      if (!token) return;
-      await fetch("https://bonus-academy.cloudfunctions.net/addFcmToken", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ data: { userDocPath: `users/${user.uid}`, fcmToken: token, deviceType: "web" } }),
+      // Registering the worker ourselves means background pushes arrive, not
+      // just the ones that show up while a tab happens to be open.
+      const serviceWorkerRegistration = await navigator.serviceWorker.register(
+        "/firebase-messaging-sw.js",
+      );
+      const token = await getToken(messaging, {
+        vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
+        serviceWorkerRegistration,
       });
+      if (!token) return;
+      const idToken = await user.getIdToken();
+      const res = await fetch("/api/push/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ token, device: "web" }),
+      });
+      if (!res.ok) throw new Error("push-register-failed");
+      window.localStorage.setItem(PUSH_TOKEN_KEY, token);
       setPushOn(true);
       window.localStorage.setItem(PUSH_KEY, "1");
+    } catch (err) {
+      console.error("[push]", err instanceof Error ? err.message : err);
     } finally {
       setPushBusy(false);
     }
