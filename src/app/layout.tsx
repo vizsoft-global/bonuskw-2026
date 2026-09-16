@@ -5,6 +5,7 @@ import { AppFrame } from "@/components/layout/app-shell";
 import { PwaRegister } from "@/components/system/pwa-register";
 import { ThemeColorSync } from "@/components/system/theme-color-sync";
 import { MaintenanceGuard } from "@/components/system/maintenance-guard";
+import { ActivationGuard } from "@/components/layout/activation-guard";
 import { VersionGuard } from "@/components/system/version-guard";
 import "./globals.css";
 
@@ -60,7 +61,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <PwaRegister />
           <div id="ba-recaptcha" />
           <MaintenanceGuard>
-            <AppFrame>{children}</AppFrame>
+            <ActivationGuard>
+              <AppFrame>{children}</AppFrame>
+            </ActivationGuard>
           </MaintenanceGuard>
         </Providers>
       </body>
