@@ -49,7 +49,10 @@ export function TermsDialog({
       description={t("checkoutTermsHint")}
       className="md:max-w-2xl"
       footer={
-        <div className="flex gap-2.5">
+        /* Two equal columns rather than a flex row: a `block` button is
+           `w-full` and `shrink-0`, so a flex row of two of them demanded 200%
+           of the dialog and spilled past its edge. */
+        <div className="grid grid-cols-2 gap-2.5">
           <Button variant="outline" block onClick={() => onOpenChange(false)}>
             {t("decline")}
           </Button>
