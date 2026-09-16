@@ -106,6 +106,19 @@ export type CourseDoc = {
   price?: number;
   numberLessons?: number;
   totalHours?: number;
+  /**
+   * Distinct students who have ever enrolled, recomputed from `subscription`
+   * rows. `bookedCount` is the legacy counter the Flutter app still increments
+   * and drifted to ~10,000 against a platform of ~3,900 students, so nothing in
+   * either React app reads it any more.
+   */
+  studentCount?: number;
+  /**
+   * Sum of the runtimes of the videos this course's lessons point at, in
+   * seconds. Unlike `totalHours` (a legacy sum of seconds read as hours) this is
+   * recomputed whenever a lesson, chapter or video changes.
+   */
+  totalVideoSeconds?: number;
   subtitle?: string;
   description?: string;
   video?: string;

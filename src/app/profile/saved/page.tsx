@@ -73,7 +73,7 @@ export default function SavedPage() {
       author: course.authorRef?.id ? data.authors[course.authorRef.id]?.name : undefined,
       authorPhoto: course.authorRef?.id ? data.authors[course.authorRef.id]?.photo : undefined,
       lessons: Number(course.numberLessons || 0),
-      hours: Number(course.totalHours || course.totalCourseHour || 0),
+      hours: Math.round(Number(course.totalVideoSeconds || 0) / 3600),
       batch: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.name : undefined,
       batchTone: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.tone : undefined,
       saved: true,

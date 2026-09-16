@@ -46,7 +46,7 @@ export function EnrolledCta({
   const stats = [
     chaptersLabel ? { icon: "/course/book.svg", text: `${chapters ?? 0} ${chaptersLabel}` } : null,
     lessonsLabel ? { icon: "/course/lessons.svg", text: `${lessons ?? 0} ${lessonsLabel}` } : null,
-    hoursLabel ? { icon: "/course/clock.svg", text: `${hours ?? 0} ${hoursLabel}` } : null,
+    hoursLabel && hours ? { icon: "/course/clock.svg", text: `${hours} ${hoursLabel}` } : null,
   ].filter(Boolean) as Stat[];
 
   return (

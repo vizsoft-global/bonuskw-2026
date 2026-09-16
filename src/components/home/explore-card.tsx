@@ -64,22 +64,26 @@ function Meta({
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-      <span className="flex items-center gap-[4px]">
-        <span className="size-[10px] shrink-0 lg:size-3">
-          <HomeIcon src="/home/lesson.svg" />
+      {(item.lessons ?? 0) > 0 ? (
+        <span className="flex items-center gap-[4px]">
+          <span className="size-[10px] shrink-0 lg:size-3">
+            <HomeIcon src="/home/lesson.svg" />
+          </span>
+          <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
+            {item.lessons} {labels.lessons}
+          </span>
         </span>
-        <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
-          {item.lessons ?? 0} {labels.lessons}
+      ) : null}
+      {(item.hours ?? 0) > 0 ? (
+        <span className="flex items-center gap-[4px]">
+          <span className="size-[10px] shrink-0 lg:size-3">
+            <HomeIcon src="/home/duration.svg" />
+          </span>
+          <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
+            {item.hours} {labels.hrs}
+          </span>
         </span>
-      </span>
-      <span className="flex items-center gap-[4px]">
-        <span className="size-[10px] shrink-0 lg:size-3">
-          <HomeIcon src="/home/duration.svg" />
-        </span>
-        <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
-          {item.hours ?? 0} {labels.hrs}
-        </span>
-      </span>
+      ) : null}
     </div>
   );
 }

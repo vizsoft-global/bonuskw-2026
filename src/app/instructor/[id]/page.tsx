@@ -76,7 +76,7 @@ export default function InstructorPage() {
       author: name,
       authorPhoto: instructor.data ? avatarSrc(instructor.data, id) : undefined,
       lessons: ebook ? undefined : Number(row.numberLessons || 0),
-      hours: ebook ? undefined : Number(row.totalHours || row.totalCourseHour || 0),
+      hours: ebook ? undefined : Math.round(Number(row.totalVideoSeconds || 0) / 3600),
       pages: ebook ? pages : undefined,
       batch: !ebook && row.batchesRef?.id ? batches.data?.[row.batchesRef.id] : undefined,
       saved: savedIds.has(row.id),

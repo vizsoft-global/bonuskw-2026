@@ -6,6 +6,7 @@ import { verifyIdToken } from "@/lib/server/auth";
 import type { BatchDoc, CourseDoc, PurchaseControls, UserDoc } from "@/lib/types/firestore";
 import { batchIsLive } from "@/lib/course/access-window";
 import { isPublished } from "@/lib/course/status";
+import { legacyBookedIncrement, recountCourseStudents } from "@/lib/server/course-stats";
 
 export const runtime = "nodejs";
 
@@ -73,6 +74,9 @@ export async function POST(req: NextRequest) {
     status: "Ongoing",
     ...(tester ? { isTest: true, devSession: true } : {}),
   });
-  await courseRef.set({ bookedCount: FieldValue.increment(1) }, { merge: true });
+  await courseRef.set(
+    { ...legacyBookedIncrement(), studentCount: (await recountCourseStudents(body.courseId)) },
+    { merge: true },
+  );
   return NextResponse.json({ ok: true });
 }

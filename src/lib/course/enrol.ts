@@ -17,7 +17,7 @@ export function enrolmentBlock(
     | "status"
     | "batchesRef"
     | "bookingLimit"
-    | "bookedCount"
+    | "studentCount"
     | "itemType"
     | "trashed"
   > | null,
@@ -34,7 +34,7 @@ export function enrolmentBlock(
   if (start && now < start) return "batch-closed";
   if (end && now > end) return "batch-closed";
   const limit = batch.bookingLimit || course.bookingLimit || 0;
-  const booked = course.bookedCount ?? 0;
+  const booked = course.studentCount ?? 0;
   if (limit > 0 && booked >= limit) return "batch-full";
   return null;
 }

@@ -154,16 +154,18 @@ export function CourseInfo({
 
       <p className="text-[18px] font-semibold leading-6 text-text lg:text-[22px] lg:leading-7">{title}</p>
 
-      <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted">
-        <span className="flex items-center gap-2">
-          <span className="flex -space-x-2 rtl:space-x-reverse">
-            {["B", "A", "S"].map((letters) => (
-              <Face key={letters} letters={letters} />
-            ))}
+      {enrolled > 0 ? (
+        <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted">
+          <span className="flex items-center gap-2">
+            <span className="flex -space-x-2 rtl:space-x-reverse">
+              {["B", "A", "S"].map((letters) => (
+                <Face key={letters} letters={letters} />
+              ))}
+            </span>
+            <span>{enrolledLabel.replace("{n}", String(enrolled))}</span>
           </span>
-          <span>{enrolledLabel.replace("{n}", String(enrolled))}</span>
-        </span>
-      </div>
+        </div>
+      ) : null}
 
       {text ? (
         <div>

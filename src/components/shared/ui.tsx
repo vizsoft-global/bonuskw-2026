@@ -179,14 +179,14 @@ export function CourseCard({
             <span className="truncate">{instructor}</span>
           </p>
         ) : null}
-        {lessons != null || hours != null ? (
+        {(lessons ?? 0) > 0 || Number(hours ?? 0) > 0 ? (
           <p className="flex items-center gap-3 text-xs text-muted">
-            {lessons != null ? (
+            {(lessons ?? 0) > 0 ? (
               <span className="inline-flex items-center gap-1">
                 <PlaySquare className="size-3.5" /> {lessons}
               </span>
             ) : null}
-            {hours != null ? (
+            {Number(hours ?? 0) > 0 ? (
               <span className="inline-flex items-center gap-1">
                 <Clock className="size-3.5" /> {hours}
               </span>

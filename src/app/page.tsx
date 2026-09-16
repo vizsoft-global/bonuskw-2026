@@ -168,7 +168,7 @@ function HomeBody({ uid }: { uid: string }) {
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
         authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
-        hours: Number(course.totalHours || course.totalCourseHour || 0),
+        hours: Math.round(Number(course.totalVideoSeconds || 0) / 3600),
         batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.name : undefined,
         batchTone: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.tone : undefined,
         saved: savedIds.has(course.id),
