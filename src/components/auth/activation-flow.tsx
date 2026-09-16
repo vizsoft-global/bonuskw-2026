@@ -1,13 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { doc, updateDoc } from "firebase/firestore";
 import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CtaButton } from "@/components/auth/cta-button";
+import { Field } from "@/components/auth/field";
+import { OtpInput } from "@/components/auth/otp-input";
 import { SignedInAs } from "@/components/auth/signed-in-as";
+import { SupportLink } from "@/components/auth/support-link";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageLoader } from "@/components/shared/loader";
+import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useActivationGate } from "@/lib/auth/activation";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { collections } from "@/lib/firebase/collections";
@@ -88,6 +93,93 @@ function NamesStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+function PhoneStep({ onDone }: { onDone: () => void }) {
+  const { t } = useI18n();
+  const { sendLinkSms, confirmLinkSms } = useAuth();
+  const router = useRouter();
+  const [phone, setPhone] = useState("");
+  const [sent, setSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const phoneReady = phone.length === 8;
+  const codeReady = code.replace(/\D/g, "").length === 6;
+
+  async function send() {
+    if (!phoneReady) return;
+    setBusy(true);
+    setError("");
+    try {
+      await sendLinkSms(phone);
+      setSent(true);
+      setCode("");
+    } catch (err) {
+      setError(authErrorMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function verify() {
+    setBusy(true);
+    setError("");
+    try {
+      const result = await confirmLinkSms(code);
+      if (result.switched) {
+        // The number already belonged to an account: the code proved ownership,
+        // so the session was moved to that account by the provider. Send the
+        // student home — the guard re-reads that account's own state, which may
+        // itself still owe a step.
+        router.replace("/");
+        return;
+      }
+      onDone();
+    } catch (err) {
+      setError(authErrorMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-[25px]">
+      {sent ? (
+        <>
+          <p className="text-[13px] text-muted">
+            {t("verifyPhoneBody", { phone: `+965 ${phone}` })}
+          </p>
+          <OtpInput value={code} onChange={setCode} />
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => setSent(false)}>
+            {t("changeNumber")}
+          </Button>
+        </>
+      ) : (
+        <Field
+          phone
+          label={t("mobileNumber")}
+          value={phone}
+          onChange={setPhone}
+          placeholder="0000 0000"
+          autoComplete="tel-national"
+          onSubmit={() => void send()}
+        />
+      )}
+      {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
+      <CtaButton
+        loading={busy}
+        disabled={busy || (sent ? !codeReady : !phoneReady)}
+        onClick={() => void (sent ? verify() : send())}
+      >
+        {sent ? t("verifyCode") : t("sendCode")}
+      </CtaButton>
+      {sent ? (
+        <SupportLink phone={phoneReady ? `+965 ${phone}` : undefined} className="self-start" />
+      ) : null}
+    </div>
+  );
+}
+
 /**
  * The activation flow itself: whatever steps the account is missing, in order.
  *
@@ -101,31 +193,38 @@ export function ActivationFlow({ onFinished }: { onFinished?: () => void }) {
   const { user, profile, ready, refreshProfile } = useAuth();
   const gate = useActivationGate();
   const router = useRouter();
+  const finishing = useRef(false);
 
-  // Only the steps the flow enforces are asked for; `names` is the first that
-  // exists. The email and phone steps join it in the next phases.
+  // Whatever the account is still missing, in order. A step that is not enforced
+  // yet never appears here.
   const step = gate.steps[0];
+  const complete = Boolean(user && profile) && !gate.loading && gate.steps.length === 0;
 
   /**
-   * Stamps the profile once nothing is missing, so the admin can tell a finished
-   * account from a grandfathered one. Dot paths keep any existing fields in
-   * `verification`.
+   * Runs once the last step is done: stamps `verification.activatedAt` (through a
+   * dot path, so any fields already in `verification` survive) and releases the
+   * student. Driven by the steps being complete rather than by the last step
+   * calling it, so a phase that adds a step cannot stamp early.
    */
-  async function finish() {
-    try {
-      if (user) {
-        await updateDoc(doc(getDb(), collections.users, user.uid), {
-          "verification.activatedAt": new Date(),
-        });
-        await refreshProfile();
+  useEffect(() => {
+    if (!complete || finishing.current) return;
+    finishing.current = true;
+    void (async () => {
+      try {
+        if (user) {
+          await updateDoc(doc(getDb(), collections.users, user.uid), {
+            "verification.activatedAt": new Date(),
+          });
+          await refreshProfile();
+        }
+      } catch {
+        // The gate releases on the steps being complete, so a failed stamp must
+        // not hold the student here.
       }
-    } catch {
-      // The gate releases on the steps being complete, so a failed stamp must not
-      // hold the student here.
-    }
-    onFinished?.();
-    router.replace("/");
-  }
+      onFinished?.();
+      router.replace("/");
+    })();
+  }, [complete, user, refreshProfile, onFinished, router]);
 
   if (!ready || !profile || !user || gate.loading) {
     return (
@@ -143,10 +242,13 @@ export function ActivationFlow({ onFinished }: { onFinished?: () => void }) {
           <p className="text-[14px] text-muted">{t("activateSubtitle")}</p>
         </div>
         {step === "names" ? (
-          <NamesStep onDone={() => void finish()} />
+          // Each step just refreshes the profile; the flow re-reads what is left
+          // and moves on, or finishes.
+          <NamesStep onDone={() => void refreshProfile()} />
+        ) : step === "phone" ? (
+          <PhoneStep onDone={() => void refreshProfile()} />
         ) : (
-          // Unreachable while only `names` is enforced; a later phase adds the
-          // identifier steps here.
+          // The email step arrives in phase 4.
           <PageLoader />
         )}
       </div>

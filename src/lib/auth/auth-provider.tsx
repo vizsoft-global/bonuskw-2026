@@ -469,7 +469,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return { needsOnboarding: computeNeedsOnboarding(profile), switched: false };
       },
       refreshProfile: async () => {
-        if (user) await loadProfile(user.uid);
+        // Reload first: `user.phoneNumber` and `user.emailVerified` only change
+        // once the SDK refreshes the user record, and the activation gate reads
+        // both of them.
+        const current = getFirebaseAuth().currentUser;
+        await current?.reload().catch(() => undefined);
+        if (current) await loadProfile(current.uid);
       },
       logout: async () => {
         const current = getFirebaseAuth().currentUser;
