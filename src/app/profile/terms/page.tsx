@@ -8,15 +8,7 @@ import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
-
-function blocksFrom(text: string) {
-  const chunks = text.split(/\n\s*\n/).map((part) => part.trim()).filter(Boolean);
-  return chunks.map((chunk) => {
-    const nl = chunk.indexOf("\n");
-    if (nl > 0 && nl < 80) return { title: chunk.slice(0, nl).trim(), body: chunk.slice(nl + 1).trim() };
-    return { title: "", body: chunk };
-  });
-}
+import { termsBlocks } from "@/lib/settings/terms-blocks";
 
 export default function TermsPage() {
   const { t, locale } = useI18n();
@@ -32,7 +24,7 @@ export default function TermsPage() {
     },
   });
   const text = terms.data || "";
-  const blocks = text ? blocksFrom(text) : [];
+  const blocks = text ? termsBlocks(text) : [];
 
   return (
     <ProfilePane loading={terms.isPending} title={t("terms")} skeleton={<ListPageSkeleton rows={3} />}>

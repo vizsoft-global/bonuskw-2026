@@ -6,6 +6,7 @@ import type { QuoteLine } from "@/lib/cart/quote";
 import type { CartLine } from "@/lib/cart/store";
 import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { EMI_COUNT, splitEmi } from "@/lib/course/emi";
+import { emiLabel } from "@/lib/course/emi-label";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
@@ -13,7 +14,7 @@ import { haptic } from "@/lib/ui/haptics";
 function linePriceLabel(
   line: CartLine,
   locale: Locale,
-  emiMonths: string,
+  emiLabels: { months: string; schedule: string },
   quoted?: number[],
   amount = Number(line.price) || 0,
   paymentType: string | undefined = line.paymentType,
@@ -27,9 +28,7 @@ function linePriceLabel(
       : line.emiAmounts && line.emiAmounts.length >= 2
         ? line.emiAmounts
         : splitEmi(amount, "even", line.emiCount ?? EMI_COUNT);
-  return emiMonths
-    .replace("{amount}", formatKwdLocale(plan[0], locale))
-    .replace("{n}", String(plan.length));
+  return emiLabel(plan, emiLabels, (value) => formatKwdLocale(value, locale)) ?? formatKwdLocale(amount, locale);
 }
 
 export function LineCard({
@@ -63,7 +62,7 @@ export function LineCard({
   onPayType: (type: "Full payment" | "EMI") => void;
   onSaveLater: () => void;
   onRemove: () => void;
-  labels: { fullPay: string; emi: string; emiMonths: string; saveLater: string; remove: string };
+  labels: { fullPay: string; emi: string; emiMonths: string; emiSchedule: string; saveLater: string; remove: string };
 }) {
   const listAmount = Number(line.price) || 0;
   const discounted = Boolean(quoted) && !quoted?.owned && (quoted?.discount ?? 0) > 0;
@@ -121,7 +120,7 @@ export function LineCard({
                 {linePriceLabel(
                   line,
                   locale,
-                  labels.emiMonths,
+                  { months: labels.emiMonths, schedule: labels.emiSchedule },
                   installments,
                   finalAmount,
                   quoted?.paymentType ?? line.paymentType,

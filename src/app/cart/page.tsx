@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { LineCard, PayCta, SavedCard } from "@/components/cart/line-card";
 import { PaymentMethods } from "@/components/cart/payment-method";
+import { TermsDialog } from "@/components/cart/terms-dialog";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { Loader } from "@/components/shared/loader";
@@ -60,6 +61,7 @@ export default function CartPage() {
   const [quoting, setQuoting] = useState(false);
   const [ready, setReady] = useState(false);
   const [accept, setAccept] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   // True while the browser is being handed to MyFatoorah's hosted page.
@@ -323,6 +325,7 @@ export default function CartPage() {
     fullPay: t("fullPay"),
     emi: t("emi"),
     emiMonths: t("emiMonths"),
+    emiSchedule: t("emiSchedule"),
     saveLater: t("saveLater"),
     remove: t("remove"),
   };
@@ -386,10 +389,22 @@ export default function CartPage() {
           copyLabel={t("copyCardNumber")}
         />
       )}
-      <label className="flex items-center gap-2 text-[12px] text-muted">
-        <input type="checkbox" checked={accept} onChange={(e) => setAccept(e.target.checked)} />
-        {t("terms")}
-      </label>
+      <div className="flex items-start gap-2 text-[12px] text-muted">
+        <input
+          id="accept-terms"
+          type="checkbox"
+          className="mt-0.5"
+          checked={accept}
+          onChange={(e) => setAccept(e.target.checked)}
+        />
+        <button
+          type="button"
+          className="text-start font-medium text-text underline underline-offset-2"
+          onClick={() => setTermsOpen(true)}
+        >
+          {t("terms")}
+        </button>
+      </div>
       {paused ? (
         <p className="rounded-[10px] bg-[#f5d08a]/10 p-3 text-[12px] leading-relaxed text-muted">
           <span className="block font-semibold text-[#f5d08a]">{paused}</span>
@@ -413,6 +428,7 @@ export default function CartPage() {
         )}
         {freeCheckout ? null : <p className="text-center text-[10px] text-muted">{t("secure")}</p>}
       </div>
+      <TermsDialog open={termsOpen} onOpenChange={setTermsOpen} onAgree={() => setAccept(true)} />
     </div>
   );
 

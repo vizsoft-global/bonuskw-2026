@@ -38,6 +38,7 @@ import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/pla
 import { avatarSrc } from "@/lib/avatar";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { courseRuntimeLabel } from "@/lib/course/runtime";
+import { emiLabel } from "@/lib/course/emi-label";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
@@ -343,9 +344,13 @@ export default function CoursePage() {
               lessonsLabel={t("lessons")}
               price={formatKwdLocale(c.price, locale)}
               enrollLabel={t("enrollNow")}
-              emiPrice={t("emiMonths")
-                .replace("{amount}", formatKwdLocale(emiPlan(c)[0], locale))
-                .replace("{n}", String(courseEmiCount(c)))}
+              emiPrice={
+                emiLabel(
+                  emiPlan(c),
+                  { months: t("emiMonths"), schedule: t("emiSchedule") },
+                  (value) => formatKwdLocale(value, locale),
+                ) ?? ""
+              }
               emiLabel={t("payInEmi")}
               secure={t("secure")}
               block={block}

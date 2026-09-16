@@ -87,8 +87,18 @@ export default function SearchPage() {
     (mobile ? mobileInputRef : desktopInputRef).current?.focus();
   }
 
-  useEffect(() => {
+  /**
+   * Recents are loaded when the box is focused, not in a mount effect:
+   * localStorage does not exist while the page prerenders, and setting state
+   * from an effect re-rendered the whole result list on every entry — which is
+   * what made coming back to this page feel stuck.
+   */
+  function onInputFocus() {
     setRecents(loadRecentSearches());
+    setFocused(true);
+  }
+
+  useEffect(() => {
     focusInput();
   }, []);
 
@@ -107,7 +117,16 @@ export default function SearchPage() {
     setRecents(saveRecentSearch(text));
   }
 
-  const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses });
+  /**
+   * The whole catalogue, cached. With no staleTime this refetched 500+ course
+   * documents on every entry to the page — including coming back from a course —
+   * which is what made the box feel stuck until a reload.
+   */
+  const courses = useQuery({
+    queryKey: ["courses"],
+    queryFn: listCourses,
+    staleTime: 5 * 60_000,
+  });
   // Instructor names so "ahmed" also finds every course Dr Ahmed teaches.
   const instructors = useQuery({
     queryKey: ["search-instructors"],
@@ -124,14 +143,9 @@ export default function SearchPage() {
       return out;
     },
   });
-  const remote = useQuery({
-    queryKey: ["algolia", q, sort],
-    enabled: q.length > 1,
-    queryFn: async () => {
-      const res = await fetch(`/api/search?q=${encodeURIComponent(q)}&sort=${sort}`);
-      return (await res.json()) as { hits?: Array<{ objectID: string; name?: string }> };
-    },
-  });
+  // Results are matched locally against the catalogue above; the Algolia call
+  // that used to sit here fired a request per keystroke and only fed a debug
+  // count, so it is gone (the /api/search route stays for whoever wants it).
 
   const results = useMemo(() => {
     // Every published course on the platform, whatever university it belongs
@@ -238,7 +252,7 @@ export default function SearchPage() {
           ref={mobileInputRef}
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          onFocus={() => setFocused(true)}
+          onFocus={onInputFocus}
           onBlur={() => {
             setFocused(false);
             commitQuery();
@@ -299,7 +313,7 @@ export default function SearchPage() {
               ref={desktopInputRef}
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              onFocus={() => setFocused(true)}
+              onFocus={onInputFocus}
               onBlur={() => {
                 setFocused(false);
                 commitQuery();
@@ -379,9 +393,6 @@ export default function SearchPage() {
           ) : (
             <EmptyState icon="/home/search.svg" title={t("emptySearchTitle")} body={t("emptySearchBody")} />
           )}
-          {remote.data?.hits?.length ? (
-            <p className="mt-3 text-xs text-muted">{remote.data.hits.length} indexed</p>
-          ) : null}
         </div>
       </div>
     </AppShell>
