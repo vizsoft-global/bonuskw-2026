@@ -12,6 +12,7 @@ import {
 import {
   linkWithPhoneNumber,
   onAuthStateChanged,
+  sendEmailVerification,
   sendPasswordResetEmail,
   signInWithCredential,
   signInWithEmailAndPassword,
@@ -20,6 +21,7 @@ import {
   signInWithCustomToken,
   signOut,
   unlink,
+  updateEmail,
   PhoneAuthProvider,
   RecaptchaVerifier,
   type ConfirmationResult,
@@ -75,6 +77,12 @@ type AuthState = {
    * so we sign into that account instead (`switched: true`).
    */
   confirmLinkSms: (code: string) => Promise<SignInResult & { switched: boolean }>;
+  /**
+   * Activation: attach an email to the signed-in account and have Firebase send
+   * its verification link. Re-sending uses `resendVerificationEmail`.
+   */
+  linkEmail: (email: string) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
   refreshProfile: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -467,6 +475,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
         const profile = await loadProfile(current.uid);
         return { needsOnboarding: computeNeedsOnboarding(profile), switched: false };
+      },
+      linkEmail: async (email) => {
+        const current = getFirebaseAuth().currentUser;
+        if (!current) throw new Error("Sign in first");
+        const address = email.trim();
+        // Sets the email on the account (unverified), then Firebase mails the
+        // link that flips `emailVerified`. A phone account can carry an email;
+        // this is how it gets one. `updateEmail` needs a recent sign-in, which
+        // activation has by construction.
+        await updateEmail(current, address);
+        await sendEmailVerification(current);
+      },
+      resendVerificationEmail: async () => {
+        const current = getFirebaseAuth().currentUser;
+        if (!current) throw new Error("Sign in first");
+        await sendEmailVerification(current);
       },
       refreshProfile: async () => {
         // Reload first: `user.phoneNumber` and `user.emailVerified` only change

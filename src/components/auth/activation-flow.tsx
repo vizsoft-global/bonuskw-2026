@@ -180,6 +180,94 @@ function PhoneStep({ onDone }: { onDone: () => void }) {
   );
 }
 
+function EmailStep() {
+  const { t } = useI18n();
+  const { linkEmail, resendVerificationEmail, refreshProfile } = useAuth();
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+
+  const ready = /\S+@\S+\.\S+/.test(email);
+
+  async function send() {
+    if (!ready) return;
+    setBusy(true);
+    setError("");
+    try {
+      await linkEmail(email);
+      setSent(true);
+    } catch (err) {
+      setError(authErrorMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function resend() {
+    setBusy(true);
+    setError("");
+    try {
+      await resendVerificationEmail();
+    } catch (err) {
+      setError(authErrorMessage(err, t));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /**
+   * The link is usually opened in a mail app, so nothing in this tab knows it
+   * happened: re-read the user on a timer and let the flow move on by itself.
+   * The button is there for the impatient.
+   */
+  useEffect(() => {
+    if (!sent) return;
+    const timer = window.setInterval(() => void refreshProfile(), 5000);
+    return () => window.clearInterval(timer);
+  }, [sent, refreshProfile]);
+
+  if (sent) {
+    return (
+      <div className="flex flex-col gap-[25px]">
+        <p className="text-[13px] leading-relaxed text-muted">
+          {t("verifyEmailBody", { email })}
+        </p>
+        {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
+        <CtaButton loading={busy} disabled={busy} onClick={() => void refreshProfile()}>
+          {t("iVerified")}
+        </CtaButton>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => void resend()}>
+            {t("resendEmail")}
+          </Button>
+          <Button type="button" variant="ghost" disabled={busy} onClick={() => setSent(false)}>
+            {t("changeEmail")}
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-[25px]">
+      <Field
+        type="email"
+        label={t("email")}
+        value={email}
+        onChange={setEmail}
+        placeholder="name@example.com"
+        autoComplete="email"
+        onSubmit={() => void send()}
+      />
+      {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
+      <CtaButton loading={busy} disabled={busy || !ready} onClick={() => void send()}>
+        {t("sendEmailLink")}
+      </CtaButton>
+    </div>
+  );
+}
+
 /**
  * The activation flow itself: whatever steps the account is missing, in order.
  *
@@ -247,8 +335,9 @@ export function ActivationFlow({ onFinished }: { onFinished?: () => void }) {
           <NamesStep onDone={() => void refreshProfile()} />
         ) : step === "phone" ? (
           <PhoneStep onDone={() => void refreshProfile()} />
+        ) : step === "email" ? (
+          <EmailStep />
         ) : (
-          // The email step arrives in phase 4.
           <PageLoader />
         )}
       </div>

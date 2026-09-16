@@ -14,7 +14,7 @@ export type ActivationStep = "names" | "email" | "phone";
  * `/activate` to render it, otherwise an account would be held with nowhere to
  * go. Each is a one-word change when its phase lands.
  */
-const ENFORCED: ActivationStep[] = ["names", "phone"];
+const ENFORCED: ActivationStep[] = ["names", "phone", "email"];
 
 /** Staff are outside activation entirely. */
 export function isStaff(profile: UserDoc | null) {

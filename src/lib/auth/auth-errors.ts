@@ -19,6 +19,8 @@ export type AuthErrorKey =
   | "authErrPopupClosed"
   | "authErrOtherProvider"
   | "authErrInvalidEmail"
+  | "authErrEmailInUse"
+  | "authErrRecentLogin"
   | "authErrGeneric";
 
 export function authErrorKey(err: unknown): AuthErrorKey {
@@ -67,6 +69,10 @@ export function authErrorKey(err: unknown): AuthErrorKey {
     case "auth/invalid-email":
     case "auth/missing-email":
       return "authErrInvalidEmail";
+    case "auth/email-already-in-use":
+      return "authErrEmailInUse";
+    case "auth/requires-recent-login":
+      return "authErrRecentLogin";
     default:
       return "authErrGeneric";
   }
