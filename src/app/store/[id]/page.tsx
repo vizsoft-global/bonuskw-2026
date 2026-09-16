@@ -193,7 +193,7 @@ export default function EbookPage() {
   const cardLabels = {
     enroll: t("addToCart"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
     pages: t("pages"),

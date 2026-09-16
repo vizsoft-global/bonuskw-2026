@@ -31,6 +31,7 @@ import {
 } from "@/lib/search/recents";
 import type { CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { courseThumb } from "@/lib/course/thumb";
 
 function normalizeSearch(value: unknown) {
@@ -188,19 +189,19 @@ export default function SearchPage() {
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
         authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
-        hours: Math.round(Number(course.totalVideoSeconds || 0) / 3600),
+        duration: courseRuntimeLabel(course.totalVideoSeconds, { hours: t("hrs"), minutes: t("min") }),
         batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.name : undefined,
         batchTone: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.tone : undefined,
         saved: savedIds.has(course.id),
         href: isEbookCourse(course) ? `/store/${course.id}` : `/course/${course.id}`,
       })),
-    [results, authors.data, batches.data, locale, savedIds],
+    [results, authors.data, batches.data, locale, savedIds, t],
   );
 
   const exploreLabels = {
     enroll: t("enroll"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
   };

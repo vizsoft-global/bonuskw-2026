@@ -10,10 +10,9 @@ export type EnrollStat = { icon: string; text: string };
 export function EnrollCta({
   chapters,
   lessons,
-  hours,
+  duration,
   chaptersLabel,
   lessonsLabel,
-  hoursLabel,
   stats: statsProp,
   price,
   enrollLabel,
@@ -28,10 +27,10 @@ export function EnrollCta({
 }: {
   chapters?: number;
   lessons?: number;
-  hours?: number;
+  /** Preformatted runtime ("2 Hrs" / "14 Min"); omitted when there is none. */
+  duration?: string;
   chaptersLabel?: string;
   lessonsLabel?: string;
-  hoursLabel?: string;
   stats?: EnrollStat[];
   price: string;
   enrollLabel: string;
@@ -49,7 +48,7 @@ export function EnrollCta({
     [
       chaptersLabel ? { icon: "/course/book.svg", text: `${chapters ?? 0} ${chaptersLabel}` } : null,
       lessonsLabel ? { icon: "/course/lessons.svg", text: `${lessons ?? 0} ${lessonsLabel}` } : null,
-      hoursLabel && hours ? { icon: "/course/clock.svg", text: `${hours} ${hoursLabel}` } : null,
+      duration ? { icon: "/course/clock.svg", text: duration } : null,
     ].filter(Boolean) as EnrollStat[];
   const disabled = Boolean(block) || busy;
 

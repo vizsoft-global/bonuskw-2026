@@ -103,7 +103,7 @@ export default function MySpacePage() {
   const cardLabels = {
     enroll: t("purchased"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
     pages: t("pages"),

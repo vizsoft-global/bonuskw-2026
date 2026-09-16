@@ -101,3 +101,20 @@ export const MONTHS = [
   "Nov",
   "Dec",
 ];
+
+/**
+ * A course's video runtime as the amount and unit to print it in: minutes while
+ * it is under an hour, whole hours above that.
+ *
+ * Rounded to whole hours, a 14-minute course came out as 0 and the readout was
+ * then dropped for having no figure — real content hidden. Minutes carry it
+ * instead. `null` means there is no runtime to show.
+ */
+export function runtimeParts(
+  seconds: number,
+): { amount: number; unit: "hours" | "minutes" } | null {
+  if (!(seconds > 0)) return null;
+  if (seconds < 3600) return { amount: Math.max(1, Math.round(seconds / 60)), unit: "minutes" };
+  return { amount: Math.round(seconds / 3600), unit: "hours" };
+}
+

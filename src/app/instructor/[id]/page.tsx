@@ -22,6 +22,7 @@ import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
 import { avatarSrc } from "@/lib/avatar";
+import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function InstructorPage() {
@@ -76,7 +77,7 @@ export default function InstructorPage() {
       author: name,
       authorPhoto: instructor.data ? avatarSrc(instructor.data, id) : undefined,
       lessons: ebook ? undefined : Number(row.numberLessons || 0),
-      hours: ebook ? undefined : Math.round(Number(row.totalVideoSeconds || 0) / 3600),
+      duration: ebook ? undefined : courseRuntimeLabel(row.totalVideoSeconds, { hours: t("hrs"), minutes: t("min") }),
       pages: ebook ? pages : undefined,
       batch: !ebook && row.batchesRef?.id ? batches.data?.[row.batchesRef.id] : undefined,
       saved: savedIds.has(row.id),
@@ -123,14 +124,14 @@ export default function InstructorPage() {
   const courseLabels = {
     enroll: t("enroll"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
   };
   const ebookLabels = {
     enroll: t("addToCart"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
     pages: t("pages"),

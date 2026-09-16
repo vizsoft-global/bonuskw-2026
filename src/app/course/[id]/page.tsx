@@ -37,6 +37,7 @@ import type { UserDoc } from "@/lib/types/firestore";
 import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
 import { avatarSrc } from "@/lib/avatar";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
+import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
@@ -271,7 +272,7 @@ export default function CoursePage() {
   const seconds = outline
     .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
     .reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0);
-  const hours = Math.round(seconds / 3600);
+  const runtime = courseRuntimeLabel(seconds, { hours: t("hrs"), minutes: t("min") });
   const enrolled = subscription.data?.status === "Ongoing";
   const hasAccess = enrolled || ownerAccess;
   const hasIntro = Boolean(c.videoRef || c.video);
@@ -326,10 +327,9 @@ export default function CoursePage() {
             <EnrolledCta
               chapters={chapters.data?.length || 0}
               lessons={lessons.data?.length || 0}
-              hours={hours}
+              duration={runtime}
               chaptersLabel={t("chapters")}
               lessonsLabel={t("lessons")}
-              hoursLabel={t("hrs")}
               title={t("youAreEnrolled")}
               label={t("continueLearning")}
               onContinue={() => router.push(`/course/${id}/learn`)}
@@ -338,10 +338,9 @@ export default function CoursePage() {
             <EnrollCta
               chapters={chapters.data?.length || 0}
               lessons={lessons.data?.length || 0}
-              hours={hours}
+              duration={runtime}
               chaptersLabel={t("chapters")}
               lessonsLabel={t("lessons")}
-              hoursLabel={t("hrs")}
               price={formatKwdLocale(c.price, locale)}
               enrollLabel={t("enrollNow")}
               emiPrice={t("emiMonths")

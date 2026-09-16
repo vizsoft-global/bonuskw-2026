@@ -18,7 +18,8 @@ export type ExploreItem = {
   author?: string;
   authorPhoto?: string;
   lessons?: number;
-  hours?: number;
+  /** Preformatted runtime ("2 Hrs" / "14 Min"); absent when the course has no video runtime. */
+  duration?: string;
   pages?: number;
   batch?: string;
   /** Colour of the batch chip; omitted = unknown (grey). */
@@ -31,7 +32,7 @@ export type ExploreItem = {
 export type ExploreLabels = {
   enroll: string;
   lessons: string;
-  hrs: string;
+  min: string;
   save: string;
   saved: string;
   pages?: string;
@@ -74,13 +75,13 @@ function Meta({
           </span>
         </span>
       ) : null}
-      {(item.hours ?? 0) > 0 ? (
+      {item.duration ? (
         <span className="flex items-center gap-[4px]">
           <span className="size-[10px] shrink-0 lg:size-3">
             <HomeIcon src="/home/duration.svg" />
           </span>
           <span className="truncate text-[10px] font-medium leading-none text-muted lg:text-[12px]">
-            {item.hours} {labels.hrs}
+            {item.duration}
           </span>
         </span>
       ) : null}

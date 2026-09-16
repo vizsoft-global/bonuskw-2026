@@ -53,6 +53,7 @@ import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
 import { loadContinueItems } from "@/lib/course/continue-items";
 import { loadLiveEnrollments } from "@/lib/course/enrollments";
+import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { courseThumb } from "@/lib/course/thumb";
 
 const SPLASH_KEY = "ba_splash_done";
@@ -168,12 +169,12 @@ function HomeBody({ uid }: { uid: string }) {
         author: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.name : undefined,
         authorPhoto: course.authorRef?.id ? authors.data?.[course.authorRef.id]?.photo : undefined,
         lessons: Number(course.numberLessons || 0),
-        hours: Math.round(Number(course.totalVideoSeconds || 0) / 3600),
+        duration: courseRuntimeLabel(course.totalVideoSeconds, { hours: t("hrs"), minutes: t("min") }),
         batch: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.name : undefined,
         batchTone: course.batchesRef?.id ? batches.data?.[course.batchesRef.id]?.tone : undefined,
         saved: savedIds.has(course.id),
       })),
-    [explore, authors.data, batches.data, locale, savedIds],
+    [explore, authors.data, batches.data, locale, savedIds, t],
   );
 
   async function enrol(course: CourseDoc & { id: string }) {
@@ -218,7 +219,7 @@ function HomeBody({ uid }: { uid: string }) {
   const exploreLabels = {
     enroll: t("enroll"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
   };

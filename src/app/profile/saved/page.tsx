@@ -23,6 +23,7 @@ import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { BatchDoc, CourseDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
+import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function SavedPage() {
@@ -73,13 +74,13 @@ export default function SavedPage() {
       author: course.authorRef?.id ? data.authors[course.authorRef.id]?.name : undefined,
       authorPhoto: course.authorRef?.id ? data.authors[course.authorRef.id]?.photo : undefined,
       lessons: Number(course.numberLessons || 0),
-      hours: Math.round(Number(course.totalVideoSeconds || 0) / 3600),
+      duration: courseRuntimeLabel(course.totalVideoSeconds, { hours: t("hrs"), minutes: t("min") }),
       batch: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.name : undefined,
       batchTone: course.batchesRef?.id ? data.batches[course.batchesRef.id]?.tone : undefined,
       saved: true,
       href: isEbookCourse(course) ? `/store/${course.id}` : `/course/${course.id}`,
     }));
-  }, [saved.data, locale]);
+  }, [saved.data, locale, t]);
 
   const courses = items.filter((item) => !item.href?.startsWith("/store/"));
   const books = items.filter((item) => item.href?.startsWith("/store/"));
@@ -87,7 +88,7 @@ export default function SavedPage() {
   const labels = {
     enroll: t("enroll"),
     lessons: t("lessons"),
-    hrs: t("hrs"),
+    min: t("min"),
     save: t("bookmark"),
     saved: t("saved"),
   };
