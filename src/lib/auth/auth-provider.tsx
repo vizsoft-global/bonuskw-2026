@@ -28,7 +28,7 @@ import {
   type User,
 } from "firebase/auth";
 import type { FirebaseError } from "firebase/app";
-import { doc, getDoc, onSnapshot } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, serverTimestamp, updateDoc } from "firebase/firestore";
 import {
   appleProvider,
   getDb,
@@ -93,6 +93,9 @@ type AuthState = {
 };
 
 const AuthContext = createContext<AuthState | null>(null);
+
+/** Guards the once-per-session write of "the student opened the app". */
+const LAST_SEEN_KEY = "ba_last_seen";
 let confirmation: ConfirmationResult | null = null;
 let verifier: RecaptchaVerifier | null = null;
 
@@ -140,6 +143,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       const next = { id: snap.id, ...(snap.data() as UserDoc) };
       setProfile(next);
+      // Records that the student opened the app — which is what a campaign
+      // uses to target "not seen in N days". Once per browser session is
+      // plenty, and it must never block or break the sign-in path.
+      if (
+        typeof window !== "undefined" &&
+        window.sessionStorage.getItem(LAST_SEEN_KEY) !== "1"
+      ) {
+        window.sessionStorage.setItem(LAST_SEEN_KEY, "1");
+        void updateDoc(doc(getDb(), collections.users, uid), {
+          lastActive: serverTimestamp(),
+        }).catch(() => undefined);
+      }
       return next;
     } catch {
       setProfile(null);

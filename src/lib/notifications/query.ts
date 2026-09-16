@@ -12,6 +12,10 @@ export type NotificationItem = {
   title: string;
   text: string;
   createdAt: Date | null;
+  /** A campaign can carry a picture; the row shows it in place of the icon. */
+  imageUrl: string | null;
+  /** Where a campaign's button points, when it has one. */
+  linkUrl: string | null;
 };
 
 /**
@@ -39,11 +43,20 @@ export function useUserNotifications() {
         .map((doc) => {
           const title = String(doc.get("notification_title") || "");
           const text = String(doc.get("notification_text") || "");
+          // Older rows keep the link and image inside `parameter_data`.
+          let params: { url?: string; image?: string } = {};
+          try {
+            params = JSON.parse(String(doc.get("parameter_data") || "{}")) as typeof params;
+          } catch {
+            params = {};
+          }
           return {
             id: doc.id,
             title,
             text: text || title,
             createdAt: asDate(doc.get("created_at") || doc.get("timestamp")),
+            imageUrl: String(doc.get("image_url") || params.image || "").trim() || null,
+            linkUrl: String(doc.get("link_url") || params.url || "").trim() || null,
           } satisfies NotificationItem;
         })
         .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
