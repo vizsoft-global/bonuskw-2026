@@ -13,7 +13,9 @@ export function emiLabel(
 ): string | null {
   if (plan.length < 2) return null;
   const first = Number(plan[0]);
-  const even = plan.every((v) => Math.abs(Number(v) - first) < 0.0005);
+  // A split that only differs by rounding (a few fils on the last installment)
+  // is still an even plan, and "26.666 x 3 months" reads better than listing it.
+  const even = plan.every((v) => Math.abs(Number(v) - first) <= 0.05);
   if (even) {
     return labels.months.replace("{amount}", format(first)).replace("{n}", String(plan.length));
   }
