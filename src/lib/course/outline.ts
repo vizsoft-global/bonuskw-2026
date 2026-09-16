@@ -213,6 +213,15 @@ export function buildOutline(input: {
     const lessons = chapterLessons.map((row) => {
       const lesson = row as unknown as LessonDoc;
       const lessonOpen = chapterOpen && !isLessonLocked(lesson);
+      const preview =
+        !lessonOpen && lesson.lessonStatus === "Unlock" && !isLessonLocked(lesson) && !isChapterLocked(c);
+      /**
+       * A preview lesson is reachable without owning the course — the video plays
+       * in a popup — so its attachments are reachable too. They used to follow
+       * `lessonOpen` alone, which left a watchable lesson with every file on it
+       * padlocked.
+       */
+      const reachable = lessonOpen || preview;
       const files = ((lesson.lesson_file_list ?? []) as LessonFile[])
         .filter((f) => f.lesson_file_link && f.lesson_status !== "Inactive")
         .map((f, i) => {
@@ -222,7 +231,7 @@ export function buildOutline(input: {
             name: fileNameFromUrl(url),
             url,
             kind: resourceKind({ url }),
-            locked: !lessonOpen,
+            locked: !reachable,
             downloadable: f.lesson_download_status !== false,
           } satisfies OutlineFile;
         });
@@ -233,7 +242,7 @@ export function buildOutline(input: {
         poster: input.posters?.[row.id],
         videoDuration: Number(lesson.videoDuration || input.durations?.[row.id] || 0),
         locked: !lessonOpen,
-        preview: !lessonOpen && lesson.lessonStatus === "Unlock" && !isLessonLocked(lesson) && !isChapterLocked(c),
+        preview,
         files,
       } satisfies OutlineLesson;
     });
