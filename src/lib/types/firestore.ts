@@ -49,6 +49,18 @@ export type UserDoc = {
   phoneVerified?: boolean;
   emailVerifed?: boolean;
   welcomeStatus?: boolean;
+  /**
+   * Set as the student activation flow completes — see
+   * `lib/auth/activation.ts`: one verified email, one verified phone, name and
+   * birth date (`dob`). Accounts that predate the flow are stamped
+   * `grandfathered` so they are never gated, and staff are outside it entirely.
+   */
+  verification?: {
+    emailVerifiedAt?: Timestamp | Date;
+    phoneVerifiedAt?: Timestamp | Date;
+    activatedAt?: Timestamp | Date;
+    grandfathered?: boolean;
+  };
   updatedAt?: Timestamp | Date;
   year_of_study?: string;
 };
