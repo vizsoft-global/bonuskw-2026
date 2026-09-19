@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import {
+  createUserWithEmailAndPassword,
   linkWithPhoneNumber,
   onAuthStateChanged,
   sendEmailVerification,
@@ -36,6 +37,7 @@ import {
   googleProvider,
 } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
+import { APP_ORIGIN } from "@/lib/firebase/config";
 import { normalizePhone } from "@/lib/utils";
 import {
   heartbeat,
@@ -66,6 +68,12 @@ type AuthState = {
   signInGoogle: () => Promise<SignInResult>;
   signInApple: () => Promise<SignInResult>;
   signInEmail: (email: string, password: string) => Promise<SignInResult>;
+  /**
+   * Creates the account for a new student and sends the verification link.
+   * Verification is never a gate: a mistyped address is the student's to fix,
+   * and they can sign in and browse while it is still unverified.
+   */
+  signUpEmail: (email: string, password: string) => Promise<SignInResult>;
   /** Redeems a single-use sign-in link an admin sent to the student. */
   signInWithLink: (token: string) => Promise<SignInResult>;
   resetPassword: (email: string) => Promise<void>;
@@ -412,6 +420,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const cred = await signInWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
         return afterSignIn(cred.user);
       },
+      signUpEmail: async (email, password) => {
+        const cred = await createUserWithEmailAndPassword(getFirebaseAuth(), email.trim(), password);
+        // Sent, never awaited as a gate. The account exists by the time this
+        // runs, so a mail failure must not fail the signup — `/activate` offers
+        // a resend, and the student can browse while it is unverified.
+        await sendEmailVerification(cred.user).catch(() => undefined);
+        return afterSignIn(cred.user);
+      },
       signInWithLink: async (linkToken) => {
         const res = await fetch("/api/auth/link/exchange", {
           method: "POST",
@@ -429,7 +445,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return afterSignIn(cred.user, undefined, { skipLegacyLink: true });
       },
       resetPassword: async (email) => {
-        await sendPasswordResetEmail(getFirebaseAuth(), email.trim());
+        // `continueUrl` brings the student back to the login screen once they
+        // have chosen a password. Without it Firebase finishes on its own
+        // generic page and leaves them with no obvious way into the app.
+        await sendPasswordResetEmail(getFirebaseAuth(), email.trim(), {
+          url: `${APP_ORIGIN}/login`,
+          handleCodeInApp: false,
+        });
       },
       sendLinkSms: async (phone) => {
         const current = getFirebaseAuth().currentUser;

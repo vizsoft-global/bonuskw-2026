@@ -10,11 +10,16 @@ export type ActivationStep = "names" | "email" | "phone";
 /**
  * The steps the flow enforces today.
  *
- * "email" and "phone" are not implemented yet: turning one on here also requires
- * `/activate` to render it, otherwise an account would be held with nowhere to
- * go. Each is a one-word change when its phase lands.
+ * Phone is deliberately *not* enforced. Kuwaiti carriers block enough
+ * verification SMS that holding a student on the phone step kept real people
+ * out of the app, which is the complaint the flow was generating. The number is
+ * asked for at the point of purchase instead, where the checkout can refuse the
+ * sale without locking anyone out of browsing.
+ *
+ * `/activate` still renders PhoneStep and `outstanding` still reports it, so
+ * re-enforcing it here is a one-word change.
  */
-const ENFORCED: ActivationStep[] = ["names", "phone", "email"];
+const ENFORCED: ActivationStep[] = ["names", "email"];
 
 /** Staff are outside activation entirely. */
 export function isStaff(profile: UserDoc | null) {

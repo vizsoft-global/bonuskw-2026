@@ -25,3 +25,13 @@ export const ALGOLIA_APP_ID =
 export const ADMIN_API_BASE =
   process.env.NEXT_PUBLIC_ADMIN_API_BASE ??
   "https://admin.bonuskw.com";
+
+/**
+ * Public origin of this app. Used as the `continueUrl` on Firebase action
+ * emails so a student finishes on a screen they recognise instead of Firebase's
+ * generic page. The host must be listed under Authentication > Settings >
+ * Authorized domains, or Firebase rejects the link with
+ * `auth/unauthorized-continue-uri`.
+ */
+export const APP_ORIGIN =
+  process.env.NEXT_PUBLIC_APP_URL ?? "https://app.bonuskw.com";

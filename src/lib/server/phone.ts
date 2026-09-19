@@ -20,6 +20,25 @@ export function toE164(raw: string | null | undefined, countryCode = "965"): str
   return `+${countryCode}${national}`;
 }
 
+/**
+ * Whether the academy has a number it can reach this student on.
+ *
+ * Asked at the point of purchase, never at sign-in: Kuwaiti carriers block
+ * enough verification SMS that a phone gate on entry kept real students out of
+ * the app. `phoneE164` proves ownership — it is written only after a code was
+ * verified, by the OTP gateway or from a Firebase-verified ID token.
+ * `phone_number` does not, but it is the number the academy has been reaching
+ * that student on for years, so refusing it at the till would lock out the
+ * legacy accounts this gate exists to protect.
+ */
+export function hasReachablePhone(
+  profile?: { phoneE164?: string | null; phone_number?: string | null } | null,
+) {
+  return Boolean(
+    String(profile?.phoneE164 ?? "").trim() || String(profile?.phone_number ?? "").trim(),
+  );
+}
+
 /** Every spelling a legacy doc might have stored for this E.164 number. */
 export function phoneVariants(e164: string, countryCode = "965"): string[] {
   const digits = e164.replace(/\D/g, "");

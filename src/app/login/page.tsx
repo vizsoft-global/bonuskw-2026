@@ -4,14 +4,14 @@ import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Mail } from "lucide-react";
-import { AuthHeading, AuthShell } from "@/components/auth/auth-shell";
+import { AuthHeaderLink, AuthHeading, AuthShell } from "@/components/auth/auth-shell";
 import { CtaButton } from "@/components/auth/cta-button";
 import { Field } from "@/components/auth/field";
 import { LegalNote } from "@/components/auth/legal-note";
 import { SocialButton } from "@/components/auth/social-button";
 import { PageLoader } from "@/components/shared/loader";
 import { SupportLink } from "@/components/auth/support-link";
-import { authErrorMessage } from "@/lib/auth/auth-errors";
+import { authErrorKey, authErrorMessage, type AuthErrorKey } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 import { digitsOnly } from "@/lib/utils";
@@ -37,12 +37,14 @@ function LoginForm() {
   const { t } = useI18n();
   const { sendSms, signInGoogle, signInApple, signInEmail, resetPassword } = useAuth();
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("phone");
+  const [mode, setMode] = useState<Mode>("email");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  /** The raw failure, so the screen can say more than one generic sentence. */
+  const [errKey, setErrKey] = useState<AuthErrorKey | "">("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -59,6 +61,16 @@ function LoginForm() {
     router.replace(result.needsOnboarding ? "/onboarding" : "/");
   }
 
+  /**
+   * Every failure lands here, so the screen can branch on the code. A wrong
+   * password is also what a Google or Apple account produces until it has one,
+   * which is why that case gets an extra sentence instead of a dead end.
+   */
+  function fail(err: unknown) {
+    setErrKey(authErrorKey(err));
+    setError(authErrorMessage(err, t));
+  }
+
   async function submitPhone() {
     if (!phoneReady) {
       setError(t("enterEightDigits"));
@@ -71,7 +83,7 @@ function LoginForm() {
       await sendSms(phone);
       router.push("/verify");
     } catch (err) {
-      setError(authErrorMessage(err, t));
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -85,7 +97,7 @@ function LoginForm() {
     try {
       landing(await signInEmail(email, password));
     } catch (err) {
-      setError(authErrorMessage(err, t));
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -102,7 +114,7 @@ function LoginForm() {
       await resetPassword(email);
       setNotice(t("resetEmailSent"));
     } catch (err) {
-      setError(authErrorMessage(err, t));
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -115,7 +127,7 @@ function LoginForm() {
     try {
       landing(await fn());
     } catch (err) {
-      setError(authErrorMessage(err, t));
+      fail(err);
     } finally {
       setBusy(false);
     }
@@ -192,6 +204,12 @@ function LoginForm() {
               </button>
             </div>
             {error ? <p className="text-sm text-accent">{error}</p> : null}
+            {/* A Google or Apple account has an address but no password, so the
+                only thing between that student and their account is not knowing
+                that Forgot password is how you set one. */}
+            {error && (errKey === "authErrWrongPassword" || errKey === "authErrOtherProvider") ? (
+              <p className="text-[13px] leading-relaxed text-muted">{t("socialAccountHint")}</p>
+            ) : null}
             {notice && !error ? <p className="text-sm text-muted">{notice}</p> : null}
             <CtaButton loading={busy} disabled={busy || !emailReady} onClick={() => void submitEmail()}>
               {t("continue")}
@@ -235,6 +253,7 @@ function LoginForm() {
           ) : null}
         </div>
 
+        <AuthHeaderLink prefix={t("noAccountSignup")} action={t("signupLink")} href="/register" />
         <LegalNote />
         <Link
           href="/logout"

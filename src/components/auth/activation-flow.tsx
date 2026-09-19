@@ -182,10 +182,19 @@ function PhoneStep({ onDone }: { onDone: () => void }) {
 
 function EmailStep() {
   const { t } = useI18n();
-  const { linkEmail, resendVerificationEmail, refreshProfile, checkIdentifier, logout } = useAuth();
+  const { user, linkEmail, resendVerificationEmail, refreshProfile, checkIdentifier, logout } =
+    useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
+  /**
+   * A password signup already carries its address, so it must not be asked for
+   * it again — and `updateEmail` cannot move an address onto itself. Seeding
+   * from the account (and starting on the "link sent" screen when there is one)
+   * is what lets the same step serve both a phone-created account, which has to
+   * type an address, and a signup, which only has to open its inbox.
+   */
+  const existing = user?.email ?? "";
+  const [email, setEmail] = useState(existing);
+  const [sent, setSent] = useState(Boolean(existing));
   /** Set when the address already belongs to another account. */
   const [taken, setTaken] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -206,14 +215,23 @@ function EmailStep() {
     setBusy(true);
     setError("");
     try {
-      const check = await checkIdentifier("email", email.trim());
+      const address = email.trim();
+      // Submitting the address the account already holds is not a change, it is
+      // "send me the link again" — and `updateEmail` would be asked to move the
+      // address onto itself, which Firebase refuses.
+      if (address === existing) {
+        await resendVerificationEmail();
+        setSent(true);
+        return;
+      }
+      const check = await checkIdentifier("email", address);
       if (check.state === "taken") {
         // Never claim an address that belongs to someone else's account: the
         // student signs in to that account instead.
         setTaken(methodName(check.methods));
         return;
       }
-      await linkEmail(email);
+      await linkEmail(address);
       setSent(true);
     } catch (err) {
       setError(authErrorMessage(err, t));

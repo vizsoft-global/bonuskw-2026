@@ -7,6 +7,7 @@ import type { BatchDoc, CourseDoc, PurchaseControls, UserDoc } from "@/lib/types
 import { batchIsLive } from "@/lib/course/access-window";
 import { isPublished } from "@/lib/course/status";
 import { legacyBookedIncrement, recountCourseStudents } from "@/lib/server/course-stats";
+import { hasReachablePhone } from "@/lib/server/phone";
 
 export const runtime = "nodejs";
 
@@ -30,6 +31,19 @@ export async function POST(req: NextRequest) {
           ? "Purchases are paused right now. Please check back soon."
           : "Course enrolment is paused right now. Please check back soon.",
         code: controls.catalogMode ? "purchases-disabled" : "courses-disabled",
+      },
+      { status: 403 },
+    );
+  }
+  // A reachable number is required to buy, never to browse. The admin panel can
+  // set or verify one for any student the carriers will not deliver a code to,
+  // which is what stops this becoming the dead end the login gate used to be.
+  if (!tester && !hasReachablePhone(profile)) {
+    return NextResponse.json(
+      {
+        error:
+          "Add a mobile number to your profile to enrol. It is how we send receipts, instalment reminders and account recovery.",
+        code: "phone-required",
       },
       { status: 403 },
     );
