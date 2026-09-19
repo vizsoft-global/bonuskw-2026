@@ -307,10 +307,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * A fresh invisible reCAPTCHA for every send. Reusing one across attempts
-   * (or after a client-side navigation re-mounted the container) makes the
-   * widget throw "reCAPTCHA has already been rendered in this element", which
-   * surfaced to students as an unexplained failure on the phone screen.
+   * A fresh invisible reCAPTCHA for every send.
+   *
+   * `grecaptcha.render()` refuses a node that already carries a widget, and
+   * clearing the previous verifier does not reliably detach it — the registry
+   * inside grecaptcha still knows the old node, even after its iframe is wiped.
+   * That is what surfaced to students as "reCAPTCHA has already been rendered
+   * in this element" on a second send.
+   *
+   * So the host in the root layout is never rendered into directly. Each attempt
+   * gets a brand-new child element, and a node grecaptcha has never seen cannot
+   * collide with one it has.
    */
   const ensureVerifier = () => {
     try {
@@ -319,9 +326,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       /* already cleared */
     }
     verifier = null;
-    const container = document.getElementById("ba-recaptcha");
-    if (container) container.innerHTML = "";
-    verifier = new RecaptchaVerifier(getFirebaseAuth(), "ba-recaptcha", {
+
+    const host = document.getElementById("ba-recaptcha");
+    if (host) host.replaceChildren();
+    const mount = document.createElement("div");
+    (host ?? document.body).appendChild(mount);
+
+    verifier = new RecaptchaVerifier(getFirebaseAuth(), mount, {
       size: "invisible",
     });
     return verifier;

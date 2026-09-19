@@ -14,6 +14,7 @@ import { SupportLink } from "@/components/auth/support-link";
 import { authErrorKey, authErrorMessage, type AuthErrorKey } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
 import { usePending } from "@/lib/auth/use-pending";
+import { useWebOtp } from "@/lib/auth/use-web-otp";
 import { useI18n } from "@/lib/i18n/locale";
 import { digitsOnly } from "@/lib/utils";
 
@@ -50,6 +51,13 @@ function LoginForm() {
   const [errKey, setErrKey] = useState<AuthErrorKey | "">("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
+  /** A code is on its way and the SMS listener should already be waiting. */
+  const [awaitingCode, setAwaitingCode] = useState(false);
+
+  // The code is read here, on the screen that asked for it, and stashed for
+  // `/verify` to pick up — arming it only once that screen mounts is what made
+  // the consent prompt arrive after the student had already typed the code.
+  useWebOtp({ enabled: awaitingCode });
 
   const phoneReady = phone.length === 8;
   const emailReady = /\S+@\S+\.\S+/.test(email) && password.length >= 6;
@@ -84,9 +92,11 @@ function LoginForm() {
       setError("");
       setNotice("");
       try {
+        setAwaitingCode(true);
         await sendSms(phone);
         router.push("/verify");
       } catch (err) {
+        setAwaitingCode(false);
         fail(err);
       } finally {
         setBusy(false);

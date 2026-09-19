@@ -9,6 +9,7 @@ import { PageLoader } from "@/components/shared/loader";
 import { SupportLink } from "@/components/auth/support-link";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePending } from "@/lib/auth/use-pending";
 import { useWebOtp } from "@/lib/auth/use-web-otp";
 import { useI18n } from "@/lib/i18n/locale";
 
@@ -31,41 +32,48 @@ function VerifyForm() {
   const [phone] = useState(
     () => (typeof window !== "undefined" ? window.sessionStorage.getItem("ba_phone") || "" : ""),
   );
+  /** One request at a time; `busy` alone is read too late to stop a double tap. */
+  const guard = usePending();
 
   async function verify() {
-    setBusy(true);
-    setError("");
-    try {
-      // The result carries the fresh profile state, so the redirect never
-      // reads a stale `needsOnboarding` from before the sign-in.
-      const result = await confirmSms(code);
-      router.replace(result.needsOnboarding ? "/onboarding" : "/");
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        // The result carries the fresh profile state, so the redirect never
+        // reads a stale `needsOnboarding` from before the sign-in.
+        const result = await confirmSms(code);
+        router.replace(result.needsOnboarding ? "/onboarding" : "/");
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   async function resend() {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await sendSms(phone);
-      setCode("");
-      setNotice(t("codeResent"));
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      setNotice("");
+      try {
+        await sendSms(phone);
+        setCode("");
+        setNotice(t("codeResent"));
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   const ready = code.replace(/\D/g, "").length === 6;
 
-  // The code was requested before this screen opened, so listen for it here.
-  useWebOtp({ enabled: code.length < 6, onCode: setCode });
+  // Still listening, in case the message lands after this screen opened, and
+  // picking up anything the login screen already caught.
+  useWebOtp({ enabled: code.length < 6, onCode: setCode, takeStashed: true });
 
   return (
     <AuthShell>
