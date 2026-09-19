@@ -184,21 +184,29 @@ export async function startSession(
     if (keep && row.doc.id === keep.doc.id) return;
     const sameDevice = row.sameDevice;
     const endedBy = sameDevice ? "duplicate" : row.live ? "takeover" : "stale";
+    // Plain-language cause, so admin Activity can show why a session ended
+    // without re-deriving it from the counters.
+    const endedReason =
+      endedBy === "takeover"
+        ? `Signed in on ${model}`
+        : endedBy === "stale"
+          ? "Expired after 15 minutes without activity"
+          : "Closed — this device signed in again";
     batch.update(row.doc.ref, {
       isActive: false,
       endedAt: FieldValue.serverTimestamp(),
       // takeover = the student chose this device over a live one; stale =
       // nobody had used it for a while; duplicate = another tab beat it here.
       endedBy,
-      // Plain-language cause, so admin Activity can show why a session ended
-      // without re-deriving it from the counters.
-      endedReason:
-        endedBy === "takeover"
-          ? `Signed in on ${model}`
-          : endedBy === "stale"
-            ? "Expired after 15 minutes without activity"
-            : "Closed — this device signed in again",
+      endedReason,
       ...(row.live && !sameDevice ? { endedFrom: model } : {}),
+    });
+    // The user profile's Activity tab reads `activityLog`, not the sessions
+    // collection, so a forced end has to be written there too.
+    batch.set(db.collection(collections.activityLog).doc(), {
+      userRef,
+      action: `session:ended by system (${endedReason})`,
+      createdAt: FieldValue.serverTimestamp(),
     });
   });
 
@@ -221,6 +229,13 @@ export async function startSession(
     browser: input.browser || "",
     ip: input.ip,
     location: input.city,
+  });
+
+  // The sign-in itself, so the profile's Activity tab has a session history.
+  batch.set(db.collection(collections.activityLog).doc(), {
+    userRef,
+    action: `session:signed in on ${model}${input.city ? ` from ${input.city}` : ""}`,
+    createdAt: FieldValue.serverTimestamp(),
   });
 
   const deviceRef = db.collection(collections.userdeviceinfo).doc();
@@ -270,6 +285,21 @@ export async function kickSession(uid: string, sessionId: string, by: "self" | "
     endedBy: by,
     endedReason: by === "self-other" ? "Signed out from the devices list" : "Signed out",
   });
+  // Mirrored into `activityLog` for the profile's Activity tab.
+  try {
+    const userRef = (owned.snap.get("userref") ?? owned.snap.get("userRef") ?? null) as
+      | DocumentReference
+      | null;
+    if (userRef) {
+      await getAdminDb().collection(collections.activityLog).add({
+        userRef,
+        action: by === "self-other" ? "session:signed out from the devices list" : "session:signed out",
+        createdAt: FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (err) {
+    console.error("activity log failed", err instanceof Error ? err.message : err);
+  }
   return true;
 }
 
