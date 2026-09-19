@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { usePending } from "@/lib/auth/use-pending";
+import { useWebOtp } from "@/lib/auth/use-web-otp";
 import { useI18n } from "@/lib/i18n/locale";
 
 /**
@@ -38,6 +39,9 @@ export function PhoneStep({ onDone }: { onDone: () => void }) {
 
   const phoneReady = phone.length === 8;
   const codeReady = code.replace(/\D/g, "").length === 6;
+
+  // Offers the code from the SMS while we are waiting for one.
+  useWebOtp({ enabled: sent && code.length < 6, onCode: setCode });
 
   async function send() {
     if (!phoneReady) return;

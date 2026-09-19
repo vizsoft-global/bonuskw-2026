@@ -9,6 +9,7 @@ import { PageLoader } from "@/components/shared/loader";
 import { SupportLink } from "@/components/auth/support-link";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { useWebOtp } from "@/lib/auth/use-web-otp";
 import { useI18n } from "@/lib/i18n/locale";
 
 function maskPhone(phone: string) {
@@ -62,6 +63,9 @@ function VerifyForm() {
   }
 
   const ready = code.replace(/\D/g, "").length === 6;
+
+  // The code was requested before this screen opened, so listen for it here.
+  useWebOtp({ enabled: code.length < 6, onCode: setCode });
 
   return (
     <AuthShell>
