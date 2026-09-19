@@ -445,13 +445,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return afterSignIn(cred.user, undefined, { skipLegacyLink: true });
       },
       resetPassword: async (email) => {
-        // `continueUrl` brings the student back to the login screen once they
-        // have chosen a password. Without it Firebase finishes on its own
-        // generic page and leaves them with no obvious way into the app.
-        await sendPasswordResetEmail(getFirebaseAuth(), email.trim(), {
-          url: `${APP_ORIGIN}/login`,
-          handleCodeInApp: false,
-        });
+        const auth = getFirebaseAuth();
+        const address = email.trim();
+        try {
+          // `continueUrl` brings the student back to the login screen once they
+          // have chosen a password. Without it Firebase finishes on its own
+          // generic page and leaves them with no obvious way into the app.
+          await sendPasswordResetEmail(auth, address, {
+            url: `${APP_ORIGIN}/login`,
+            handleCodeInApp: false,
+          });
+        } catch (err) {
+          // `auth/unauthorized-continue-uri` means the app's domain is not in the
+          // project's Authorized domains list. A reset that ends on Firebase's
+          // own page is worse than one that returns here, but far better than no
+          // reset at all — so fall back rather than failing the student.
+          if ((err as FirebaseError)?.code === "auth/unauthorized-continue-uri") {
+            await sendPasswordResetEmail(auth, address);
+            return;
+          }
+          throw err;
+        }
       },
       sendLinkSms: async (phone) => {
         const current = getFirebaseAuth().currentUser;
