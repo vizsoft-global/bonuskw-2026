@@ -8,11 +8,6 @@ import {
 import { getAdminDb } from "@/lib/firebase/admin";
 import { collections } from "@/lib/firebase/collections";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const DEVICE_WINDOW_MS = 30 * DAY_MS;
-const DEFAULT_MAX_DEVICES = 4;
-const DEFAULT_MAX_CITIES = 2;
-
 export type SessionIdentity = {
   uid: string;
   email?: string;
@@ -27,8 +22,6 @@ export type StartSessionInput = {
   ip: string;
   city: string;
 };
-
-export type DevicePolicy = { maxDevices30d: number; maxCitiesPerDay: number };
 
 export type DeviceEntry = {
   id: string;
@@ -52,84 +45,20 @@ function toDate(value: DateLike): Date | null {
   return null;
 }
 
-export async function readDevicePolicy(): Promise<DevicePolicy> {
-  const snap = await getAdminDb().collection(collections.adminConfig).doc("studentApp").get();
-  const policy = (snap.get("devicePolicy") ?? {}) as Partial<DevicePolicy>;
-  return {
-    maxDevices30d:
-      typeof policy.maxDevices30d === "number" && policy.maxDevices30d > 0
-        ? policy.maxDevices30d
-        : DEFAULT_MAX_DEVICES,
-    maxCitiesPerDay:
-      typeof policy.maxCitiesPerDay === "number" && policy.maxCitiesPerDay > 0
-        ? policy.maxCitiesPerDay
-        : DEFAULT_MAX_CITIES,
-  };
-}
+/*
+ * Device and city limits were retired. Sessions never expire now and the only
+ * rule is one live session at a time (see `startSession`). Nothing in either app
+ * ever read the flags these used to write, so the policy is gone rather than
+ * relaxed — a limit that silently signs people out is worse than no limit.
+ */
 
-export async function evaluateDeviceFlags(uid: string, currentCity: string) {
-  const db = getAdminDb();
-  const userRef = db.collection(collections.users).doc(uid);
-  const now = Date.now();
-  const windowStart = new Date(now - DEVICE_WINDOW_MS);
-  const dayStart = new Date(now - DAY_MS);
-
-  const [policy, deviceSnap, sessionSnap] = await Promise.all([
-    readDevicePolicy(),
-    db
-      .collection(collections.userdeviceinfo)
-      .where("device_user_ref", "==", userRef)
-      .limit(100)
-      .get(),
-    db.collection(collections.sessions).where("userref", "==", userRef).limit(200).get(),
-  ]);
-
-  const devices = new Set<string>();
-  deviceSnap.docs.forEach((doc) => {
-    const info = doc.get("device_info") as
-      | { device_id?: string; device_login_time?: DateLike }
-      | undefined;
-    const loginAt = toDate(info?.device_login_time);
-    if (!info?.device_id || !loginAt || loginAt < windowStart) return;
-    devices.add(info.device_id);
-  });
-
-  const cities = new Set<string>();
-  sessionSnap.docs.forEach((doc) => {
-    const loginAt = toDate(doc.get("loginDateTime") as DateLike);
-    if (!loginAt || loginAt < dayStart) return;
-    const city = String(doc.get("location") ?? "").trim();
-    if (city) cities.add(city.toLowerCase());
-  });
-  if (currentCity) cities.add(currentCity.toLowerCase());
-
-  const reasons: string[] = [];
-  if (devices.size > policy.maxDevices30d) reasons.push(`${devices.size} devices in 30 days`);
-  if (cities.size > policy.maxCitiesPerDay) reasons.push(`${cities.size} cities in 24 hours`);
-  if (!reasons.length) return { flagged: false as const, deviceCount: devices.size };
-
-  const reason = reasons.join("; ");
-  await Promise.all([
-    userRef.set(
-      { deviceFlag: { level: "review", reason, at: FieldValue.serverTimestamp() } },
-      { merge: true },
-    ),
-    db.collection(collections.deviceFlags).doc(uid).set(
-      {
-        userRef,
-        level: "review",
-        reason,
-        deviceCount: devices.size,
-        cityCount: cities.size,
-        cleared: false,
-        updatedAt: FieldValue.serverTimestamp(),
-        windowStart,
-      },
-      { merge: true },
-    ),
-  ]);
-  return { flagged: true as const, deviceCount: devices.size };
-}
+/*
+ * Nothing forces a sign-out any more. The only way a session ends without the
+ * student tapping sign out is a take-over from another device (which the student
+ * themself chose), a stale session nobody has heartbeated for 15 minutes, or an
+ * admin kick. Each of those is recorded on the `sessions` row as
+ * `endedBy` / `endedFrom` / `endedAt` so admin Activity can show who ended it.
+ */
 
 /** Another device's session as shown in the "already signed in" prompt. */
 export type ConflictingSession = {
@@ -191,9 +120,21 @@ export async function startSession(
     .get();
 
   const now = Date.now();
+  // A wiped browser hands out a new device id (iOS ITP, private mode, cleared
+  // storage). Same model, browser and IP is the same device, so it must not read
+  // as a second sign-in and trigger a take-over prompt.
+  const myFingerprint = [input.model || "Web", input.os || "Web", input.browser || "", input.ip]
+    .map((v) => String(v ?? "").trim().toLowerCase())
+    .join("|");
+  const fingerprintOf = (doc: QueryDocumentSnapshot) =>
+    ["device", "os", "browser", "ip"]
+      .map((key) => String(doc.get(key) ?? "").trim().toLowerCase())
+      .join("|");
   const rows = active.docs.map((doc) => ({
     doc,
     deviceId: String(doc.get("uniqueId") ?? ""),
+    sameDevice:
+      String(doc.get("uniqueId") ?? "") === input.deviceId || fingerprintOf(doc) === myFingerprint,
     live: isLive(doc, now),
   }));
 
@@ -201,7 +142,7 @@ export async function startSession(
   // Sessions left behind by a closed tab, a wiped browser or an abandoned phone
   // are closed out quietly and the login continues — they used to keep forcing
   // the take-over prompt, and taking over signed the student's real device out.
-  const liveOthers = rows.filter((row) => row.deviceId !== input.deviceId && row.live);
+  const liveOthers = rows.filter((row) => !row.sameDevice && row.live);
   if (liveOthers.length && !opts.force) {
     const conflict: ConflictingSession[] = liveOthers
       .map((row) => {
@@ -230,7 +171,7 @@ export async function startSession(
   // isActive:false, and a tab still listening to it signed the whole browser
   // out — Firebase auth state is shared across tabs.
   const mine = rows
-    .filter((row) => row.deviceId === input.deviceId)
+    .filter((row) => row.sameDevice)
     .sort((a, b) => {
       const at = toDate(a.doc.get("loginDateTime") as DateLike)?.getTime() ?? 0;
       const bt = toDate(b.doc.get("loginDateTime") as DateLike)?.getTime() ?? 0;
@@ -241,13 +182,22 @@ export async function startSession(
   const batch = db.batch();
   rows.forEach((row) => {
     if (keep && row.doc.id === keep.doc.id) return;
-    const sameDevice = row.deviceId === input.deviceId;
+    const sameDevice = row.sameDevice;
+    const endedBy = sameDevice ? "duplicate" : row.live ? "takeover" : "stale";
     batch.update(row.doc.ref, {
       isActive: false,
       endedAt: FieldValue.serverTimestamp(),
       // takeover = the student chose this device over a live one; stale =
       // nobody had used it for a while; duplicate = another tab beat it here.
-      endedBy: sameDevice ? "duplicate" : row.live ? "takeover" : "stale",
+      endedBy,
+      // Plain-language cause, so admin Activity can show why a session ended
+      // without re-deriving it from the counters.
+      endedReason:
+        endedBy === "takeover"
+          ? `Signed in on ${model}`
+          : endedBy === "stale"
+            ? "Expired after 15 minutes without activity"
+            : "Closed — this device signed in again",
       ...(row.live && !sameDevice ? { endedFrom: model } : {}),
     });
   });
@@ -293,11 +243,6 @@ export async function startSession(
   });
 
   await batch.commit();
-  try {
-    await evaluateDeviceFlags(identity.uid, input.city);
-  } catch (err) {
-    console.error("evaluateDeviceFlags failed", err instanceof Error ? err.message : err);
-  }
   return { ok: true, sessionId: sessionRef.id };
 }
 
@@ -316,10 +261,15 @@ export async function heartbeat(uid: string, sessionId: string) {
   return { isActive: owned.snap.get("isActive") !== false };
 }
 
-export async function kickSession(uid: string, sessionId: string) {
+export async function kickSession(uid: string, sessionId: string, by: "self" | "self-other" = "self") {
   const owned = await ownedSession(uid, sessionId);
   if (!owned) return false;
-  await owned.ref.update({ isActive: false, endedAt: FieldValue.serverTimestamp() });
+  await owned.ref.update({
+    isActive: false,
+    endedAt: FieldValue.serverTimestamp(),
+    endedBy: by,
+    endedReason: by === "self-other" ? "Signed out from the devices list" : "Signed out",
+  });
   return true;
 }
 
