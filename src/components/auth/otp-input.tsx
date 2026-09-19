@@ -2,6 +2,24 @@
 
 import { useEffect, useRef } from "react";
 
+/**
+ * A six-box one-time code field backed by a SINGLE real input.
+ *
+ * The boxes are decoration; the input underneath them is the field the browser
+ * actually talks to. That matters because the code arrives in one of three ways
+ * — Chrome's WebOTP consent ("Allow Chrome to read the message below and enter
+ * the code"), the iOS keyboard suggestion, or our own `get()` call — and all
+ * three are unreliable against six separate inputs:
+ *
+ *  - the browser has to guess which box to fill, and Chrome's autofill only
+ *    looks for `autocomplete="one-time-code"`, which can sit on one box only;
+ *  - autofill writes the DOM value directly, so React never observes the change,
+ *    and a controlled input then reverts to its empty state on the next render —
+ *    the code arrives and is wiped before it can be seen.
+ *
+ * One input removes both problems. It is invisible (the boxes show the digits)
+ * and covers the row, so tapping anywhere lands in it.
+ */
 export function OtpInput({
   length = 6,
   value,
@@ -11,84 +29,43 @@ export function OtpInput({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const refs = useRef<Array<HTMLInputElement | null>>([]);
+  const inputRef = useRef<HTMLInputElement | null>(null);
   const chars = value.replace(/\D/g, "").slice(0, length);
 
   /**
-   * Focus the first box as soon as the boxes appear.
-   *
-   * Two reasons, and the first is the one that matters: the keyboard's own code
-   * suggestion — and the system autofill chip — insert into whichever field has
-   * focus. Without a focused field the student taps the suggestion and nothing
-   * happens, which reads as the feature being broken. It also brings the keypad
-   * up, which is where they are going next anyway.
-   *
-   * Deliberately no `autoFocus` attribute: that fires during hydration, before
-   * the page is interactive, and is dropped on mobile.
+   * Focus on mount so the code suggestion has a target, and so the keypad is up
+   * where the student is going next. Not `autoFocus`: that fires during
+   * hydration, before the page is interactive, and is dropped on mobile.
    */
   useEffect(() => {
-    refs.current[0]?.focus();
+    inputRef.current?.focus();
   }, []);
 
-  function setDigits(next: string) {
-    onChange(next.replace(/\D/g, "").slice(0, length));
-  }
-
   return (
-    <div className="flex w-full gap-2">
-      {Array.from({ length }, (_, i) => (
-        <input
-          key={i}
-          ref={(el) => {
-            refs.current[i] = el;
-          }}
-          value={chars[i] ?? ""}
-          type="tel"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          autoComplete={i === 0 ? "one-time-code" : "off"}
-          aria-label={`Digit ${i + 1}`}
-          placeholder="-"
-          onChange={(e) => {
-            const typed = e.target.value.replace(/\D/g, "");
-            const next = chars.split("");
-            while (next.length < length) next.push("");
-            if (!typed) {
-              next[i] = "";
-              setDigits(next.join(""));
-              return;
-            }
-            // SMS autofill and fast typing can drop several digits into one
-            // box; spread them across the following boxes.
-            if (typed.length > 1) {
-              const fill = typed.slice(0, length - i);
-              for (let k = 0; k < fill.length; k += 1) next[i + k] = fill[k];
-              setDigits(next.join(""));
-              refs.current[Math.min(i + fill.length, length - 1)]?.focus();
-              return;
-            }
-            next[i] = typed;
-            setDigits(next.join(""));
-            refs.current[i + 1]?.focus();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Backspace" && !chars[i] && i > 0) {
-              e.preventDefault();
-              const next = chars.split("");
-              next[i - 1] = "";
-              setDigits(next.join(""));
-              refs.current[i - 1]?.focus();
-            }
-          }}
-          onPaste={(e) => {
-            e.preventDefault();
-            const pasted = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, length);
-            setDigits(pasted);
-            refs.current[Math.min(pasted.length, length - 1)]?.focus();
-          }}
-          className="h-[59px] min-w-0 flex-1 rounded-[12px] border-[1.5px] border-line-strong bg-transparent text-center text-[16px] font-medium text-text outline-none placeholder:text-muted"
-        />
-      ))}
+    <div className="relative flex w-full gap-2">
+      <div className="flex w-full gap-2" aria-hidden>
+        {Array.from({ length }, (_, i) => (
+          <div
+            key={i}
+            className="grid h-[59px] min-w-0 flex-1 place-items-center rounded-[12px] border-[1.5px] border-line-strong bg-transparent text-[16px] font-medium text-text"
+          >
+            {chars[i] ?? <span className="text-muted">-</span>}
+          </div>
+        ))}
+      </div>
+      <input
+        ref={inputRef}
+        value={chars}
+        onChange={(e) => onChange(e.target.value.replace(/\D/g, "").slice(0, length))}
+        type="text"
+        inputMode="numeric"
+        pattern="[0-9]*"
+        autoComplete="one-time-code"
+        maxLength={length}
+        aria-label="One-time code"
+        className="absolute inset-0 h-full w-full cursor-text rounded-[12px] bg-transparent text-transparent caret-transparent outline-none focus:ring-2 focus:ring-[#0c5eff]/40"
+      />
     </div>
   );
 }
+
