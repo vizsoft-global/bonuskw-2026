@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useEffect, useRef } from "react";
 
 export function OtpInput({
   length = 6,
@@ -13,6 +13,22 @@ export function OtpInput({
 }) {
   const refs = useRef<Array<HTMLInputElement | null>>([]);
   const chars = value.replace(/\D/g, "").slice(0, length);
+
+  /**
+   * Focus the first box as soon as the boxes appear.
+   *
+   * Two reasons, and the first is the one that matters: the keyboard's own code
+   * suggestion — and the system autofill chip — insert into whichever field has
+   * focus. Without a focused field the student taps the suggestion and nothing
+   * happens, which reads as the feature being broken. It also brings the keypad
+   * up, which is where they are going next anyway.
+   *
+   * Deliberately no `autoFocus` attribute: that fires during hydration, before
+   * the page is interactive, and is dropped on mobile.
+   */
+  useEffect(() => {
+    refs.current[0]?.focus();
+  }, []);
 
   function setDigits(next: string) {
     onChange(next.replace(/\D/g, "").slice(0, length));
