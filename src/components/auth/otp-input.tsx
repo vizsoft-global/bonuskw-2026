@@ -30,6 +30,11 @@ export function OtpInput({
   onChange: (value: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const onChangeRef = useRef(onChange);
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
   const chars = value.replace(/\D/g, "").slice(0, length);
 
   /**
@@ -40,6 +45,27 @@ export function OtpInput({
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
+
+  /**
+   * A listener on the node itself, alongside React's `onChange`.
+   *
+   * Autofill writes the DOM value directly, and React only reports a change it
+   * can prove happened — so the value a browser injected can be reverted by the
+   * next render without anyone seeing it. Reading the node covers that case no
+   * matter which component of the browser did the writing. Calling through twice
+   * for one keystroke is harmless: the handler is idempotent.
+   */
+  useEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    const read = () => onChangeRef.current(el.value.replace(/\D/g, "").slice(0, length));
+    el.addEventListener("input", read);
+    el.addEventListener("change", read);
+    return () => {
+      el.removeEventListener("input", read);
+      el.removeEventListener("change", read);
+    };
+  }, [length]);
 
   return (
     <div className="relative flex w-full gap-2">
