@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { DownloadCircle, FileGlyph, fileTypeLabel, isPreviewable } from "@/components/course/file-art";
+import { DownloadCircle, FileGlyph, fileTypeLabel, previewKind } from "@/components/course/file-art";
 import { formatBytes } from "@/lib/course/resource-kind";
 import type { OutlineFile } from "@/lib/course/outline";
 import { useI18n } from "@/lib/i18n/locale";
@@ -24,7 +24,8 @@ export function FilePreview({ file, onClose }: { file: OutlineFile; onClose: () 
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  const previewable = isPreviewable(file);
+  const kind = previewKind(file);
+  const previewable = kind !== null;
 
   return (
     <div
@@ -72,10 +73,18 @@ export function FilePreview({ file, onClose }: { file: OutlineFile; onClose: () 
         </div>
         <div className="min-h-0 flex-1 overflow-hidden rounded-[16px] bg-surface ring-1 ring-white/10">
           {!previewable ? (
-            <div className="grid h-full place-items-center px-6 text-center text-[13px]" style={{ color: "rgba(255,255,255,0.7)" }}>
-              {t("previewUnavailable")}
+            <div className="grid h-full place-items-center gap-3 px-6 text-center text-[13px]" style={{ color: "rgba(255,255,255,0.7)" }}>
+              <p>{t("previewUnavailable")}</p>
+              <a
+                href={file.url}
+                download={file.name}
+                className="flex h-9 items-center gap-1.5 rounded-full bg-[#0c5eff] px-4 text-[12px] font-semibold text-white"
+              >
+                <DownloadCircle className="size-4" />
+                {t("download")}
+              </a>
             </div>
-          ) : file.kind === "image" ? (
+          ) : kind === "image" ? (
             <div className="grid h-full place-items-center bg-black/40 p-2">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={file.url} alt={file.name} className="max-h-full max-w-full object-contain" />

@@ -89,6 +89,19 @@ export function FileDownloadIcon({ className }: { className?: string }) {
 }
 
 /** Whether a file can be shown in the preview dialog instead of downloaded. */
-export function isPreviewable(file: Pick<OutlineFile, "kind">) {
-  return file.kind === "pdf" || file.kind === "image";
+/**
+ * What the viewer can render in place. The extension is the fallback, because a
+ * file whose `kind` was never set still deserves an inline PDF view instead of
+ * being pushed to a new tab.
+ */
+export function previewKind(file: Pick<OutlineFile, "kind"> & { url?: string; name?: string }) {
+  if (file.kind === "pdf" || file.kind === "image") return file.kind;
+  const hay = `${file.url ?? ""} ${file.name ?? ""}`.toLowerCase();
+  if (/\.(png|jpe?g|webp|gif|avif)(\?|#|$)/.test(hay)) return "image" as const;
+  if (/\.pdf(\?|#|$)/.test(hay)) return "pdf" as const;
+  return null;
+}
+
+export function isPreviewable(file: Pick<OutlineFile, "kind"> & { url?: string; name?: string }) {
+  return previewKind(file) !== null;
 }
