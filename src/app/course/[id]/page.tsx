@@ -112,11 +112,19 @@ export default function CoursePage() {
     try {
       if (c.coursePaymentType === "Free") {
         const token = await user.getIdToken();
-        await fetch("/api/enrol/free", {
+        const res = await fetch("/api/enrol/free", {
           method: "POST",
           headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
           body: JSON.stringify({ courseId: id }),
         });
+        // The route refuses enrolment for its own reasons — no reachable phone
+        // number, or purchases paused. Without this check the student was sent
+        // to the course as though enrolled and found nothing waiting there.
+        if (!res.ok) {
+          const json = (await res.json().catch(() => ({}))) as { error?: string };
+          setCartError(json.error || t("paymentFailed"));
+          return;
+        }
         await invalidateEnrolment(qc);
         router.push(`/course/${id}/learn`);
         return;

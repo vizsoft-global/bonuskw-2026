@@ -177,6 +177,7 @@ export function ProfileHub() {
         <div className="flex flex-col gap-[15px]">
           <SectionLabel>{t("account")}</SectionLabel>
           <MenuRow href="/profile/personal" icon="/profile/info.svg" label={t("personal")} active={path === "/profile/personal"} />
+          <MenuRow href="/profile/phone" icon="/profile/phone.svg" label={t("mobileNumber")} active={path === "/profile/phone"} />
           <MenuRow href="/profile/saved" icon="/profile/heart.svg" label={t("savedCourses")} active={path === "/profile/saved"} />
           <MenuRow href="/profile/devices" icon="/profile/phone.svg" label={t("deviceLogs")} active={path === "/profile/devices"} />
           <MenuRow href="/profile/password" icon="/profile/passcode.svg" label={t("changePassword")} active={path === "/profile/password"} />

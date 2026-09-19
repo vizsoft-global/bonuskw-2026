@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { doc, updateDoc } from "firebase/firestore";
 import { CtaButton } from "@/components/auth/cta-button";
 import {
@@ -97,7 +98,21 @@ export default function PersonalPage() {
           <SectionLabel>{t("basicDetails")}</SectionLabel>
           <div className="mt-[15px] flex flex-col gap-[15px]">
             <ProfileField label={t("fullName")} value={name} onChange={setName} placeholder={t("enterName")} />
-            <ProfileField label={t("mobileNumber")} value={profile?.phone_number || ""} readOnly />
+            <ProfileField
+              label={t("mobileNumber")}
+              value={profile?.phoneE164 || profile?.phone_number || ""}
+              readOnly
+              trailing={
+                // Read-only here because a number is only set by proving a code;
+                // the field points at the screen that does that.
+                <Link
+                  href="/profile/phone"
+                  className="shrink-0 text-[13px] font-medium text-[#0c5eff]"
+                >
+                  {profile?.phoneE164 || profile?.phone_number ? t("edit") : t("addPhoneLink")}
+                </Link>
+              }
+            />
             <ProfileField label={t("emailAddress")} value={email} onChange={setEmail} placeholder={t("enterEmail")} />
           </div>
           <div className="mt-8">

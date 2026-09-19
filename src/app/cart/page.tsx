@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
@@ -31,6 +32,8 @@ type CreateResponse = {
   redirectUrl?: string | null;
   url?: string | null;
   error?: string;
+  /** Why the server refused, e.g. `phone-required`. */
+  code?: string;
 };
 
 /**
@@ -63,6 +66,8 @@ export default function CartPage() {
   const [accept, setAccept] = useState(false);
   const [termsOpen, setTermsOpen] = useState(false);
   const [error, setError] = useState("");
+  /** The server refused because the account has no number to reach the student on. */
+  const [phoneRequired, setPhoneRequired] = useState(false);
   const [busy, setBusy] = useState(false);
   // True while the browser is being handed to MyFatoorah's hosted page.
   const [redirecting, setRedirecting] = useState(false);
@@ -235,6 +240,7 @@ export default function CartPage() {
     if (!user || !accept || !cart.lines.length || busy) return;
     setBusy(true);
     setError("");
+    setPhoneRequired(false);
     try {
       const latest = await loadCart(user.uid);
       const token = await user.getIdToken();
@@ -260,6 +266,9 @@ export default function CartPage() {
       });
       const json = (await res.json()) as CreateResponse;
       if (!res.ok) {
+        // A missing phone number is the one refusal the student can fix, so it
+        // gets a way to the screen that sets one rather than a sentence alone.
+        setPhoneRequired(json.code === "phone-required");
         setError(json.error || t("paymentFailed"));
         return;
       }
@@ -412,6 +421,14 @@ export default function CartPage() {
         </p>
       ) : null}
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
+      {phoneRequired ? (
+        <Link
+          href="/profile/phone"
+          className="text-[13px] font-medium text-[#0c5eff] underline underline-offset-2"
+        >
+          {t("addPhoneTitle")}
+        </Link>
+      ) : null}
       <div className="flex flex-col items-center gap-2.5">
         {busy || redirecting ? (
           <div className="grid h-[49px] w-full place-items-center gap-1 text-[12px] text-muted">
