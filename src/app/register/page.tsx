@@ -14,6 +14,7 @@ import { SocialButton } from "@/components/auth/social-button";
 import { PageLoader } from "@/components/shared/loader";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
+import { usePending } from "@/lib/auth/use-pending";
 import { useI18n } from "@/lib/i18n/locale";
 
 /**
@@ -28,6 +29,8 @@ function RegisterForm() {
   const { t } = useI18n();
   const { signUpEmail, signInGoogle, signInApple } = useAuth();
   const router = useRouter();
+  /** One request at a time; `busy` alone is read too late to stop a double tap. */
+  const guard = usePending();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -46,15 +49,17 @@ function RegisterForm() {
 
   async function submit() {
     if (!ready) return;
-    setBusy(true);
-    setError("");
-    try {
-      landing(await signUpEmail(email, password));
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        landing(await signUpEmail(email, password));
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   /**
@@ -64,15 +69,17 @@ function RegisterForm() {
    * existing account simply signs in.
    */
   async function social(fn: () => Promise<SignInResult>) {
-    setBusy(true);
-    setError("");
-    try {
-      landing(await fn());
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        landing(await fn());
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   const toggle = (

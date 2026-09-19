@@ -13,6 +13,7 @@ import { PageLoader } from "@/components/shared/loader";
 import { SupportLink } from "@/components/auth/support-link";
 import { authErrorKey, authErrorMessage, type AuthErrorKey } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
+import { usePending } from "@/lib/auth/use-pending";
 import { useI18n } from "@/lib/i18n/locale";
 import { digitsOnly } from "@/lib/utils";
 
@@ -37,6 +38,8 @@ function LoginForm() {
   const { t } = useI18n();
   const { sendSms, signInGoogle, signInApple, signInEmail, resetPassword } = useAuth();
   const router = useRouter();
+  /** One request at a time; `busy` alone is read too late to stop a double tap. */
+  const guard = usePending();
   const [mode, setMode] = useState<Mode>("email");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -76,31 +79,35 @@ function LoginForm() {
       setError(t("enterEightDigits"));
       return;
     }
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      await sendSms(phone);
-      router.push("/verify");
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      setNotice("");
+      try {
+        await sendSms(phone);
+        router.push("/verify");
+      } catch (err) {
+        fail(err);
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   async function submitEmail() {
     if (!emailReady) return;
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      landing(await signInEmail(email, password));
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      setNotice("");
+      try {
+        landing(await signInEmail(email, password));
+      } catch (err) {
+        fail(err);
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   async function forgot() {
@@ -108,29 +115,33 @@ function LoginForm() {
       setError(t("authErrInvalidEmail"));
       return;
     }
-    setBusy(true);
-    setError("");
-    try {
-      await resetPassword(email);
-      setNotice(t("resetEmailSent"));
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await resetPassword(email);
+        setNotice(t("resetEmailSent"));
+      } catch (err) {
+        fail(err);
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   async function social(fn: () => Promise<SignInResult>) {
-    setBusy(true);
-    setError("");
-    setNotice("");
-    try {
-      landing(await fn());
-    } catch (err) {
-      fail(err);
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      setNotice("");
+      try {
+        landing(await fn());
+      } catch (err) {
+        fail(err);
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   return (

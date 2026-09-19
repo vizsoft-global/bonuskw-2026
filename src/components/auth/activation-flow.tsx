@@ -15,6 +15,7 @@ import { PageLoader } from "@/components/shared/loader";
 import { authErrorMessage } from "@/lib/auth/auth-errors";
 import { useActivationGate } from "@/lib/auth/activation";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { usePending } from "@/lib/auth/use-pending";
 import { collections } from "@/lib/firebase/collections";
 import { getDb } from "@/lib/firebase/client";
 import { useI18n } from "@/lib/i18n/locale";
@@ -97,6 +98,8 @@ function PhoneStep({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
   const { sendLinkSms, confirmLinkSms } = useAuth();
   const router = useRouter();
+  /** One request at a time; `busy` alone is read too late to stop a double tap. */
+  const guard = usePending();
   const [phone, setPhone] = useState("");
   const [sent, setSent] = useState(false);
   const [code, setCode] = useState("");
@@ -108,38 +111,42 @@ function PhoneStep({ onDone }: { onDone: () => void }) {
 
   async function send() {
     if (!phoneReady) return;
-    setBusy(true);
-    setError("");
-    try {
-      await sendLinkSms(phone);
-      setSent(true);
-      setCode("");
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await sendLinkSms(phone);
+        setSent(true);
+        setCode("");
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   async function verify() {
-    setBusy(true);
-    setError("");
-    try {
-      const result = await confirmLinkSms(code);
-      if (result.switched) {
-        // The number already belonged to an account: the code proved ownership,
-        // so the session was moved to that account by the provider. Send the
-        // student home — the guard re-reads that account's own state, which may
-        // itself still owe a step.
-        router.replace("/");
-        return;
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const result = await confirmLinkSms(code);
+        if (result.switched) {
+          // The number already belonged to an account: the code proved ownership,
+          // so the session was moved to that account by the provider. Send the
+          // student home — the guard re-reads that account's own state, which may
+          // itself still owe a step.
+          router.replace("/");
+          return;
+        }
+        onDone();
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
       }
-      onDone();
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   return (
@@ -185,6 +192,8 @@ function EmailStep() {
   const { user, linkEmail, resendVerificationEmail, refreshProfile, checkIdentifier, logout } =
     useAuth();
   const router = useRouter();
+  /** One request at a time; `busy` alone is read too late to stop a double tap. */
+  const guard = usePending();
   /**
    * A password signup already carries its address, so it must not be asked for
    * it again — and `updateEmail` cannot move an address onto itself. Seeding
@@ -212,32 +221,34 @@ function EmailStep() {
 
   async function send() {
     if (!ready) return;
-    setBusy(true);
-    setError("");
-    try {
-      const address = email.trim();
-      // Submitting the address the account already holds is not a change, it is
-      // "send me the link again" — and `updateEmail` would be asked to move the
-      // address onto itself, which Firebase refuses.
-      if (address === existing) {
-        await resendVerificationEmail();
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const address = email.trim();
+        // Submitting the address the account already holds is not a change, it is
+        // "send me the link again" — and `updateEmail` would be asked to move the
+        // address onto itself, which Firebase refuses.
+        if (address === existing) {
+          await resendVerificationEmail();
+          setSent(true);
+          return;
+        }
+        const check = await checkIdentifier("email", address);
+        if (check.state === "taken") {
+          // Never claim an address that belongs to someone else's account: the
+          // student signs in to that account instead.
+          setTaken(methodName(check.methods));
+          return;
+        }
+        await linkEmail(address);
         setSent(true);
-        return;
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
       }
-      const check = await checkIdentifier("email", address);
-      if (check.state === "taken") {
-        // Never claim an address that belongs to someone else's account: the
-        // student signs in to that account instead.
-        setTaken(methodName(check.methods));
-        return;
-      }
-      await linkEmail(address);
-      setSent(true);
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    });
   }
 
   async function switchAccount() {
@@ -251,15 +262,17 @@ function EmailStep() {
   }
 
   async function resend() {
-    setBusy(true);
-    setError("");
-    try {
-      await resendVerificationEmail();
-    } catch (err) {
-      setError(authErrorMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await resendVerificationEmail();
+      } catch (err) {
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
   }
 
   /**
