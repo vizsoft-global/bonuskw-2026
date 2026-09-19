@@ -71,9 +71,9 @@ function VerifyForm() {
 
   const ready = code.replace(/\D/g, "").length === 6;
 
-  // Still listening, in case the message lands after this screen opened, and
-  // picking up anything the login screen already caught.
-  useWebOtp({ enabled: code.length < 6, onCode: setCode, takeStashed: true });
+  // Armed here, on the screen with the boxes — not on the screen that requested
+  // the SMS, because that request dies with the navigation.
+  useWebOtp({ enabled: code.length < 6, onCode: setCode });
 
   return (
     <AuthShell>

@@ -20,38 +20,24 @@ import { useEffect, useRef } from "react";
  *
  *     Without that line the browser will not hand the code over.
  *
- * Because either can be missing, this fails silently by design: the student
+ * Because either gate can be closed, this fails silently by design: the student
  * types the code exactly as before. It must never surface an error, and it must
  * never be the only way in.
- */
-/**
- * The last code a listener received.
  *
- * Chrome resolves `get()` on the screen that asked for the SMS, and the student
- * is then navigated to the screen with the code boxes on it. Without carrying
- * the code across that hop the prompt only lands once they have already read
- * the message and typed it in, which is what makes the whole thing pointless.
+ * Arm this on the screen that shows the code boxes, and nowhere else. Asking on
+ * the screen that merely *requests* the SMS looks tempting — a pending request
+ * as early as possible — but that request dies with the screen, and the consent
+ * dialog then belongs to a `get()` whose promise was already aborted. The
+ * student taps Allow and nothing lands, because the first request also claimed
+ * the message and the second never sees it.
  */
-let delivered: string | null = null;
-
-/** Reads and clears a code that arrived on a screen the student has left. */
-export function takeDeliveredOtp(): string | null {
-  const code = delivered;
-  delivered = null;
-  return code;
-}
-
 export function useWebOtp({
   enabled,
   onCode,
-  takeStashed = false,
 }: {
   /** Arm the listener only while a code is actually awaited. */
   enabled: boolean;
-  /** Optional; a screen with no code boxes of its own can just leave it stashed. */
-  onCode?: (code: string) => void;
-  /** Deliver a code stashed by the screen that requested the SMS. */
-  takeStashed?: boolean;
+  onCode: (code: string) => void;
 }) {
   // Kept in a ref so a caller passing an inline function does not re-arm the
   // request on every render — `get()` is a listening operation, not a cheap one.
@@ -59,17 +45,6 @@ export function useWebOtp({
   useEffect(() => {
     handler.current = onCode;
   }, [onCode]);
-
-  /**
-   * Hand over anything the previous screen caught, once, on mount. Delivered
-   * through the same callback the live listener uses, so the screen has one way
-   * to receive a code rather than two.
-   */
-  useEffect(() => {
-    if (!takeStashed) return;
-    const pending = takeDeliveredOtp();
-    if (pending) handler.current?.(pending);
-  }, [takeStashed]);
 
   useEffect(() => {
     if (!enabled) return;
@@ -89,11 +64,7 @@ export function useWebOtp({
       .then((credential) => {
         const code = (credential as unknown as { code?: string } | null)?.code;
         if (!code) return;
-        const clean = code.replace(/\D/g, "").slice(0, 6);
-        // Stashed as well as handed over, so a screen that is about to unmount
-        // does not lose the code to the navigation that unmounts it.
-        delivered = clean;
-        handler.current?.(clean);
+        handler.current(code.replace(/\D/g, "").slice(0, 6));
       })
       .catch(() => {
         // Aborted, dismissed, or the message was not formatted for us. Nothing
