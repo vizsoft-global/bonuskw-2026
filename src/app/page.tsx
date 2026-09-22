@@ -12,6 +12,7 @@ import {
   getDocs,
   updateDoc,
 } from "firebase/firestore";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Splash } from "@/components/auth/splash";
 import { ContinueCard } from "@/components/home/continue-card";
@@ -49,6 +50,7 @@ import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import type { CourseDoc, SettingsDoc } from "@/lib/types/firestore";
+import { localizedText, usePromotions } from "@/lib/promotions/use-promotions";
 import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
 import { loadContinueItems } from "@/lib/course/continue-items";
@@ -118,6 +120,7 @@ function HomeBody({ uid }: { uid: string }) {
   const profileSelection = selectionFromProfile(profile, tax);
 
   const courses = useQuery({ queryKey: ["courses"], queryFn: listCourses, staleTime: CATALOG_STALE_MS });
+  const offers = usePromotions();
   const stories = useQuery({
     queryKey: ["stories"],
     queryFn: async () => {
@@ -255,6 +258,46 @@ function HomeBody({ uid }: { uid: string }) {
             <div className={exploreRailClass}>
               {(continueLearning.data ?? []).map((item) => (
                 <ContinueCard key={item.courseId} item={item} labels={continueLabels} />
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {(offers.data ?? []).length ? (
+          <section className="flex flex-col gap-5 px-0 py-5">
+            <div className="flex items-center justify-between">
+              <h2 className="text-[14px] font-semibold text-text">{t("offers")}</h2>
+              <Link href="/offers" prefetch className="text-[12px] font-medium text-[#0c5eff]">
+                {t("offersViewAll")}
+              </Link>
+            </div>
+            <div className={exploreRailClass}>
+              {(offers.data ?? []).map((promo) => (
+                <Link
+                  key={promo.id}
+                  href="/offers"
+                  prefetch
+                  className="w-[260px] shrink-0 overflow-hidden rounded-[12px] border border-line bg-surface lg:w-[360px]"
+                >
+                  {promo.bannerImage ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={promo.bannerImage}
+                      alt=""
+                      className="h-[130px] w-full object-cover lg:h-[170px]"
+                    />
+                  ) : (
+                    <div className="h-[130px] w-full bg-surface-2 lg:h-[170px]" />
+                  )}
+                  <div className="flex flex-col gap-1 p-3">
+                    <p className="line-clamp-1 text-[13px] font-semibold text-text">
+                      {localizedText(promo.name, locale) || t("offers")}
+                    </p>
+                    {promo.badge ? (
+                      <span className="text-[11px] font-medium text-[#0c5eff]">{promo.badge}</span>
+                    ) : null}
+                  </div>
+                </Link>
               ))}
             </div>
           </section>
