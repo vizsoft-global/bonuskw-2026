@@ -46,6 +46,7 @@ export function usePromotions() {
   return useQuery({
     queryKey: ["promotions", user?.uid],
     enabled: Boolean(user),
+    staleTime: 5 * 60_000,
     queryFn: async (): Promise<Promotion[]> => {
       const token = await user!.getIdToken();
       const res = await fetch("/api/promotions", {
