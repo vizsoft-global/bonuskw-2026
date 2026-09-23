@@ -66,7 +66,10 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
               title={title}
               src={src}
               className="h-full w-full"
+              /* `allow` is what Chrome reads; the `allowFullScreen` attribute is
+                 what iOS Safari and in-app WebViews still require. */
               allow="fullscreen; autoplay; encrypted-media"
+              allowFullScreen
             />
           ) : ticket?.error ? (
             <div className="grid h-full w-full place-items-center px-6 text-center text-[13px] text-muted">

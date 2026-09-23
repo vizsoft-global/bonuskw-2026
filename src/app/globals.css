@@ -504,6 +504,50 @@ html:not(.dark) .bg-primary img {
   }
 }
 
+/*
+ * Fullscreen. The stage is what goes fullscreen, so the iframe (and the
+ * provider's own controls inside it) grow with it instead of staying in the
+ * 16:9 letterbox. `--fill` is the fallback the page uses on iOS, where the
+ * Fullscreen API does not exist for elements; the real API is styled through
+ * :fullscreen. Either way the video is centred on black in both orientations.
+ */
+.learn-stage:fullscreen,
+.learn-stage:-webkit-full-screen,
+.learn-stage--fill {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+}
+
+.learn-stage--fill {
+  /* Above the app header, nav rail and mini player, below dialogs. */
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+}
+
+/*
+ * Pinned layout on an iPhone sits under the status bar, and an absolutely
+ * positioned child ignores the stage's own padding — so the title and the
+ * controls (including the exit button) step down past the notch themselves.
+ */
+.learn-stage--fill .learn-overlay-top {
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+}
+
+.learn-stage:fullscreen .learn-video,
+.learn-stage:-webkit-full-screen .learn-video,
+.learn-stage--fill .learn-video {
+  width: 100%;
+  height: 100%;
+  aspect-ratio: auto;
+}
+
+.learn-stage--fill .learn-video {
+  border-radius: 0;
+}
+
 @keyframes learn-dock-in {
   from {
     opacity: 0;

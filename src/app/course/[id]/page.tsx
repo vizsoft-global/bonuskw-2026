@@ -28,6 +28,7 @@ import { invalidateEnrolment } from "@/lib/course/invalidate";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
+import { usePurchasedChapterIds } from "@/lib/course/use-chapter-purchases";
 import { useOwnerAccess } from "@/lib/course/use-owner-access";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -69,6 +70,10 @@ export default function CoursePage() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const videoMeta = useLessonVideoMeta(lessons.data);
   const subscription = useCourseSubscription(id, user?.uid);
+  // Chapters bought one at a time. A chapter purchase is a `chapterAccess` row,
+  // not an enrolment, so it is tracked separately and unlocks less: its own
+  // lessons and files, but not the course's tests.
+  const chapterAccess = usePurchasedChapterIds(id, user?.uid);
   // The instructor (or a co-instructor) of this course, and the manager of its
   // university, see it without buying it.
   const ownerAccess = useOwnerAccess(id);
@@ -273,6 +278,7 @@ export default function CoursePage() {
     quizzes: quizzes.data ?? [],
     resources: resources.data ?? [],
     subscription: subscription.data ?? null,
+    purchasedChapterIds: chapterAccess.data,
     ownerAccess,
     posters,
     durations,
@@ -293,11 +299,16 @@ export default function CoursePage() {
     counts.tests ? `${counts.tests} ${t("tests").toLowerCase()}` : null,
   ].filter(Boolean) as string[];
   const enrolled = subscription.data?.status === "Ongoing";
+  // Whole-course access: it is what opens the tests and the "you're enrolled"
+  // header. A chapter buyer is deliberately outside this.
   const hasAccess = enrolled || ownerAccess;
+  // Reaching a lesson also happens through a chapter purchase, so the tap
+  // handler follows the lesson's own lock rather than the course enrolment.
+  const canOpenLessons = hasAccess || Boolean(chapterAccess.data?.size);
   const hasIntro = Boolean(c.videoRef || c.video);
 
   function openLesson(lesson: OutlineLesson) {
-    if (hasAccess && !lesson.locked) {
+    if (canOpenLessons && !lesson.locked) {
       router.push(`/course/${id}/learn?lesson=${lesson.id}`);
       return;
     }

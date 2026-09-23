@@ -51,7 +51,10 @@ export function CourseCover({
           title={video.label}
           src={video.src}
           className="absolute inset-0 h-full w-full"
+          /* The directive is Chrome's; the attribute is what iOS Safari and
+             in-app WebViews still ask for before they allow fullscreen. */
           allow="fullscreen; autoplay; encrypted-media"
+          allowFullScreen
         />
       ) : (
         <>

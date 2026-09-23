@@ -16,6 +16,7 @@ export function invalidateEnrolment(qc: QueryClient) {
     qc.invalidateQueries({ queryKey: ["courses"] }),
     qc.invalidateQueries({ queryKey: ["course"] }),
     qc.invalidateQueries({ queryKey: ["subscription"] }),
+    qc.invalidateQueries({ queryKey: ["chapter-access"] }),
     qc.invalidateQueries({ queryKey: ["stats"] }),
   ]);
 }

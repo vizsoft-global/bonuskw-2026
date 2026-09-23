@@ -21,12 +21,14 @@ import { buildOutline, type OutlineFile } from "@/lib/course/outline";
 import { useLessonVideoMeta } from "@/lib/course/use-lesson-posters";
 import { useQuizResults } from "@/lib/course/use-quiz-results";
 import { useCourseSubscription } from "@/lib/course/use-subscription";
+import { usePurchasedChapterIds } from "@/lib/course/use-chapter-purchases";
 import { useOwnerAccess } from "@/lib/course/use-owner-access";
 import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
 import { VideoTracker } from "@/lib/analytics/video-tracker";
 import { playerSrc, type PlaybackTicket } from "@/lib/video/player-src";
+import { useFullscreen } from "@/lib/video/use-fullscreen";
 
 function LearnBody() {
   const { id } = useParams<{ id: string }>();
@@ -40,6 +42,9 @@ function LearnBody() {
   const resources = useQuery({ queryKey: ["resources", id], queryFn: () => listResources(id) });
   const course = useQuery({ queryKey: ["course", id], queryFn: () => getCourse(id) });
   const subscription = useCourseSubscription(id, user?.uid);
+  // Chapters bought one at a time: a chapter purchase is not an enrolment, so
+  // the outline has to be told about them or it locks what was paid for.
+  const chapterAccess = usePurchasedChapterIds(id, user?.uid);
   // Instructors, co-instructors and the university manager reach the course
   // without an enrolment row.
   const ownerAccess = useOwnerAccess(id);
@@ -92,12 +97,13 @@ function LearnBody() {
         quizzes: quizzes.data ?? [],
         resources: resources.data ?? [],
         subscription: subscription.data ?? null,
+        purchasedChapterIds: chapterAccess.data,
         ownerAccess,
         posters,
         durations,
         locale,
       }),
-    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, ownerAccess, posters, durations, locale],
+    [chapters.data, lessons.data, quizzes.data, resources.data, subscription.data, chapterAccess.data, ownerAccess, posters, durations, locale],
   );
 
   // Lessons the outline hides — a locked lesson, or any lesson of a locked
@@ -106,9 +112,18 @@ function LearnBody() {
     outline.flatMap((item) => (item.kind === "chapter" ? item.lessons.map((l) => l.id) : [])),
   );
   const visibleQuizIds = new Set(outline.filter((item) => item.kind === "quiz").map((item) => item.id));
-  // Fall back to the first visible lesson until one is chosen; no effect needed.
+  /**
+   * Fall back to the first lesson the student can actually open, then to the
+   * first visible one. A chapter buyer has no enrolment, so "first visible"
+   * used to drop them on a locked lesson of a chapter they never bought, where
+   * the player could only refuse them.
+   */
+  const firstOpenId = outline
+    .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
+    .find((item) => !item.locked)?.id;
   const lesson =
     (lessons.data ?? []).find((item) => item.id === lessonId && visibleLessonIds.has(item.id)) ||
+    (lessons.data ?? []).find((item) => item.id === firstOpenId) ||
     (lessons.data ?? []).find((item) => visibleLessonIds.has(item.id));
   const activeQuiz = quizId
     ? ((quizzes.data ?? []).find((q) => q.id === quizId && visibleQuizIds.has(q.id)) as
@@ -250,14 +265,21 @@ function LearnBody() {
   }
 
   function openQuiz(nextId: string) {
+    // A test fills the stage, so a pinned player would cover it.
+    fullscreen.release();
     setQuizId(nextId);
     setOtp(null);
     router.replace(`/course/${id}/learn?quiz=${nextId}`);
   }
 
+  // The provider player does not render its own fullscreen control on every
+  // phone, so the stage carries one of its own.
+  const fullscreen = useFullscreen(stageEl);
   const src = playerSrc(otp);
-  // Keep the dock through the brief OTP refetch when the user picks another lesson.
-  const docked = scrolledPast && !dockHidden && !activeQuiz && Boolean(src || otpBusy);
+  // Keep the dock through the brief OTP refetch when the user picks another
+  // lesson. A fullscreen page must not also pin a mini player onto itself.
+  const docked =
+    scrolledPast && !dockHidden && !activeQuiz && !fullscreen.active && Boolean(src || otpBusy);
   const { videoElRef, pos: pipPos, dragging: pipDragging, onPointerDown, onPointerMove, onPointerUp } = usePipDrag(docked);
 
   const loading = lessons.isPending || course.isPending || chapters.isPending;
@@ -329,7 +351,12 @@ function LearnBody() {
               ) : (
                 <div
                   ref={setStageEl}
-                  className="relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-line"
+                  className={cn(
+                    "learn-stage relative grid h-full w-full place-items-center overflow-hidden rounded-[12px] border-[0.5px] border-line",
+                    // iOS has no element fullscreen: the stage pins itself over
+                    // the page instead of staying a 16:9 letterbox.
+                    fullscreen.filling && "learn-stage--fill",
+                  )}
                   style={{ background: "#0a0a0a" }}
                 >
                   {docked ? (
@@ -362,7 +389,11 @@ function LearnBody() {
                         title={String(lesson?.name || "Lesson")}
                         src={src}
                         className="absolute inset-0 h-full w-full"
+                        /* `allow` is what Chrome reads; the `allowFullScreen`
+                           attribute is what iOS Safari and in-app WebViews still
+                           require before they let the player go fullscreen. */
                         allow="fullscreen; autoplay; encrypted-media"
+                        allowFullScreen
                         onLoad={(e) => {
                           e.currentTarget.dataset.loaded = "1";
                         }}
@@ -443,7 +474,7 @@ function LearnBody() {
                         </div>
                       </div>
                     ) : (
-                      <div className="pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
+                      <div className="learn-overlay-top pointer-events-none absolute start-3 top-2.5 lg:start-5 lg:top-4">
                         <p className="text-[12px] font-medium leading-4 lg:text-[15px] lg:leading-5" style={{ color: "#fafafa" }}>
                           {String(lesson?.name || courseName)}
                         </p>
@@ -453,7 +484,7 @@ function LearnBody() {
                       </div>
                     )}
                     {docked ? null : (
-                      <div className="absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
+                      <div className="learn-overlay-top absolute end-3 top-2.5 flex items-center gap-1.5 lg:end-5 lg:top-4">
                         {prevLesson ? (
                           <button
                             type="button"
@@ -478,6 +509,19 @@ function LearnBody() {
                             <SkipIcon direction="forward" />
                           </button>
                         ) : null}
+                        {/* The provider player hides its own fullscreen control on
+                            several phones, so the page offers one that always works. */}
+                        <button
+                          type="button"
+                          onClick={fullscreen.toggle}
+                          aria-label={fullscreen.active ? t("exitFullscreen") : t("fullscreen")}
+                          aria-pressed={fullscreen.active}
+                          title={fullscreen.active ? t("exitFullscreen") : t("fullscreen")}
+                          className="grid size-7 shrink-0 place-items-center rounded-[8px] backdrop-blur-sm lg:size-8"
+                          style={{ background: "rgba(0,0,0,0.5)", color: "#fff" }}
+                        >
+                          <FullscreenIcon kind={fullscreen.active ? "exit" : "enter"} />
+                        </button>
                       </div>
                     )}
                   </div>
@@ -686,6 +730,38 @@ function DockIcon({ kind }: { kind: "expand" | "close" }) {
         <>
           <path d="M6 6l12 12" />
           <path d="M18 6L6 18" />
+        </>
+      )}
+    </svg>
+  );
+}
+
+/** Fullscreen glyph: corners pushing out to fill the screen, and back in. */
+function FullscreenIcon({ kind }: { kind: "enter" | "exit" }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className="size-3.5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      {kind === "enter" ? (
+        <>
+          <path d="M4 9V4h5" />
+          <path d="M15 4h5v5" />
+          <path d="M20 15v5h-5" />
+          <path d="M9 20H4v-5" />
+        </>
+      ) : (
+        <>
+          <path d="M9 4v5H4" />
+          <path d="M20 9h-5V4" />
+          <path d="M15 20v-5h5" />
+          <path d="M4 15h5v5" />
         </>
       )}
     </svg>
