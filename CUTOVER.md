@@ -9,4 +9,3 @@ Still to do:
 1. Point `bonuskw.com` at the `bonuskw-2026` Vercel project.
 2. Remove `settings.masterPassword` and rotate Tap keys that are embedded in the Flutter app.
 3. Archive the Flutter web hosting target.
-4. Remove the dead App Store / Play Store buttons from the `bonuskw.com` WordPress theme (both listings 404).
