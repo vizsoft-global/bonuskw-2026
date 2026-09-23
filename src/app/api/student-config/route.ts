@@ -19,14 +19,16 @@ export const dynamic = "force-dynamic";
  */
 export async function GET() {
   let chapterPrefix = true;
+  let showLessonsAndHours = false;
   try {
     const snap = await getAdminDb().collection(collections.adminConfig).doc("studentApp").get();
     chapterPrefix = snap.get("chapterPrefix") !== false;
+    showLessonsAndHours = snap.get("showLessonsAndHours") === true;
   } catch (err) {
     console.error("[student-config]", err instanceof Error ? err.message : err);
   }
   return NextResponse.json(
-    { chapterPrefix },
+    { chapterPrefix, showLessonsAndHours },
     {
       headers: {
         "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",

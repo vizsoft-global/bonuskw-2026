@@ -22,6 +22,8 @@ export type StudentConfig = {
    * "Chapter 3: Algebra" unless this is explicitly false.
    */
   chapterPrefix?: boolean;
+  /** Settings > General > Course cards: the lesson count and runtime on cards. */
+  showLessonsAndHours?: boolean;
 };
 
 export async function fetchStudentConfig(): Promise<StudentConfig> {
@@ -56,4 +58,27 @@ export function useChapterNumbers() {
     staleTime: 10 * 60 * 1000,
   });
   return data?.chapterPrefix !== false;
+}
+
+/**
+ * Whether course cards and the course page say how many lessons a course has
+ * and how long it runs. Absent means off, so both stay hidden until an admin
+ * switches them on (Settings > General > Course cards).
+ *
+ * Comes from `/api/student-config` for the same reason chapter numbers do: the
+ * rules only let signed-in users read `adminConfig`, so reading the document
+ * directly would leave a guest on the default. The cache is short so an admin
+ * sees the change on the next reload rather than ten minutes later.
+ */
+export function useLessonsAndHours() {
+  const { data } = useQuery({
+    queryKey: ["student-config", "showLessonsAndHours"],
+    queryFn: async () => {
+      const res = await fetch("/api/student-config", { cache: "no-store" });
+      if (!res.ok) throw new Error("Could not load student config");
+      return (await res.json()) as { showLessonsAndHours?: boolean };
+    },
+    staleTime: 60 * 1000,
+  });
+  return data?.showLessonsAndHours === true;
 }

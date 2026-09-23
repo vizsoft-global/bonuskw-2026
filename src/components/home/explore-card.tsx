@@ -1,7 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { BatchBadge, CourseThumb } from "./course-thumb";
 import { HomeIcon } from "./icon";
 import type { BatchTone } from "@/lib/course/batch-status";
+import { useLessonsAndHours } from "@/lib/settings/use-student-config";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
 
@@ -49,6 +52,9 @@ function Meta({
   item: ExploreItem;
   labels: ExploreLabels;
 }) {
+  // Off by default: an admin turns the lesson count and runtime back on in
+  // Settings > General > Course cards.
+  const showStats = useLessonsAndHours();
   if (typeof item.pages === "number") {
     if (item.pages <= 0) return null;
     return (
@@ -65,7 +71,7 @@ function Meta({
 
   return (
     <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1">
-      {(item.lessons ?? 0) > 0 ? (
+      {showStats && (item.lessons ?? 0) > 0 ? (
         <span className="flex items-center gap-[4px]">
           <span className="size-[10px] shrink-0 lg:size-3">
             <HomeIcon src="/home/lesson.svg" />
@@ -75,7 +81,7 @@ function Meta({
           </span>
         </span>
       ) : null}
-      {item.duration ? (
+      {showStats && item.duration ? (
         <span className="flex items-center gap-[4px]">
           <span className="size-[10px] shrink-0 lg:size-3">
             <HomeIcon src="/home/duration.svg" />

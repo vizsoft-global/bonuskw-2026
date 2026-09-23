@@ -37,6 +37,7 @@ import type { UserDoc } from "@/lib/types/firestore";
 import { playerSrc, requestPlayback, type PlaybackTicket } from "@/lib/video/player-src";
 import { avatarSrc } from "@/lib/avatar";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
+import { useLessonsAndHours } from "@/lib/settings/use-student-config";
 import { courseRuntimeLabel } from "@/lib/course/runtime";
 import { emiLabel } from "@/lib/course/emi-label";
 import { courseThumb } from "@/lib/course/thumb";
@@ -47,6 +48,8 @@ export default function CoursePage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
   const gate = usePurchaseGate();
+  // Settings > General > Course cards. Off unless an admin switches it on.
+  const showStats = useLessonsAndHours();
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
@@ -282,6 +285,13 @@ export default function CoursePage() {
     .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
     .reduce((sum, lesson) => sum + Number(lesson.videoDuration || durations[lesson.id] || 0), 0);
   const runtime = courseRuntimeLabel(seconds, { hours: t("hrs"), minutes: t("min") });
+  // The "Lessons and Chapters" header counts. The lesson count drops out with
+  // the admin's switch, so the separators follow whichever parts remain.
+  const headerCounts = [
+    showStats ? `${counts.lessons} ${t("lessons")}` : null,
+    counts.files ? `${counts.files} ${t("attachments").toLowerCase()}` : null,
+    counts.tests ? `${counts.tests} ${t("tests").toLowerCase()}` : null,
+  ].filter(Boolean) as string[];
   const enrolled = subscription.data?.status === "Ongoing";
   const hasAccess = enrolled || ownerAccess;
   const hasIntro = Boolean(c.videoRef || c.video);
@@ -336,9 +346,9 @@ export default function CoursePage() {
             <EnrolledCta
               chapters={chapters.data?.length || 0}
               lessons={lessons.data?.length || 0}
-              duration={runtime}
+              duration={showStats ? runtime : undefined}
               chaptersLabel={t("chapters")}
-              lessonsLabel={t("lessons")}
+              lessonsLabel={showStats ? t("lessons") : undefined}
               title={t("youAreEnrolled")}
               label={t("continueLearning")}
               onContinue={() => router.push(`/course/${id}/learn`)}
@@ -347,9 +357,9 @@ export default function CoursePage() {
             <EnrollCta
               chapters={chapters.data?.length || 0}
               lessons={lessons.data?.length || 0}
-              duration={runtime}
+              duration={showStats ? runtime : undefined}
               chaptersLabel={t("chapters")}
-              lessonsLabel={t("lessons")}
+              lessonsLabel={showStats ? t("lessons") : undefined}
               price={formatKwdLocale(c.price, locale)}
               enrollLabel={t("enrollNow")}
               emiPrice={
@@ -384,11 +394,11 @@ export default function CoursePage() {
 
       <div className="mt-5 flex items-center gap-2 border-b border-line pb-2">
         <span className="text-[15px] font-semibold text-text">{t("lessonsAndChapters")}</span>
-        <span className="rounded-[8px] bg-surface px-1.5 py-0.5 text-[10px] text-muted">
-          {counts.lessons} {t("lessons")}
-          {counts.files ? ` · ${counts.files} ${t("attachments").toLowerCase()}` : ""}
-          {counts.tests ? ` · ${counts.tests} ${t("tests").toLowerCase()}` : ""}
-        </span>
+        {headerCounts.length ? (
+          <span className="rounded-[8px] bg-surface px-1.5 py-0.5 text-[10px] text-muted">
+            {headerCounts.join(" · ")}
+          </span>
+        ) : null}
       </div>
       {outline.length ? (
         <ChapterSections
