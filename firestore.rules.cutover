@@ -1,7 +1,33 @@
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    function signedIn() {
+// SUPERSEDED -- do not deploy this file.
+//
+// This was a partial draft: it named only the collections the student app owns
+// and left out `course`, `chapter`, `lessons`, `quizzes`, `batches` and the
+// rest of the catalogue. Firestore denies any collection its rules do not
+// mention, so releasing this file verbatim would have blacked out the whole
+// catalogue for every student.
+//
+// The hardening is done: it landed in the rules the project actually deploys
+// from, bonuskw-admin/firestore.rules (commit "rules: gate every write on
+// ownership or a panel role", released to bonus-academy), where it sits on top
+// of the catalogue rules instead of replacing them. Change the rules there and
+// deploy with `npx firebase deploy --only firestore:rules`.
+//
+// What that hardening does, for reference:
+//   * users: create stays self-only, read stays public, update needs ownership
+//     or a panel role (it was `allow write: if true` -- any visitor could
+//     rewrite any user row, including their own userRole), delete is staff.
+//   * userCart: one document per uid, written only by its owner, previously
+//     `create: if true` plus `write: if isSignedIn()`.
+//   * every other `if isSignedIn()` write grant became
+//     `isPanelStaff() || isSuperAdmin()`, the same two helpers that mirror
+//     resolvePanelRoleId() in the admin panel.
+//
+// Kept below only as a record of the original intent.
+//
+// rules_version = '2';
+// service cloud.firestore {
+//   match /databases/{database}/documents {
+//     function signedIn() {
       return request.auth != null;
     }
     function isSelf(uid) {
