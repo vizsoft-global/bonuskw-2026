@@ -32,6 +32,8 @@ export type Promotion = {
   endsAt?: string | null;
   reward?: PromoReward | null;
   tiers?: PromoTier[] | null;
+  /** A flat-amount tier pays again for every full group of its item count. */
+  repeatTiers?: boolean;
   courses?: PromoCourse[] | null;
 };
 

@@ -55,7 +55,7 @@ export default function OffersPage() {
         .map((tier) => {
           const value =
             tier.fixed != null ? formatKwdLocale(tier.fixed, locale) : `${tier.percent ?? 0}%`;
-          return t("offerTierLine")
+          return t(promo.repeatTiers && tier.fixed != null ? "offerTierRepeatLine" : "offerTierLine")
             .replace("{count}", String(tier.minItems ?? 0))
             .replace("{value}", value);
         })
