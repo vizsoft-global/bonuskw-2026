@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import { useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
+import { HelpButton } from "@/components/support/help-button";
 import { AuthProvider } from "@/lib/auth/auth-provider";
 import { CartProvider } from "@/lib/cart/cart-provider";
 import { LiveCatalog } from "@/lib/catalog/live-catalog";
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             <CartProvider>
               <LiveCatalog />
               {children}
+              <HelpButton />
               <Toaster />
             </CartProvider>
           </AuthProvider>

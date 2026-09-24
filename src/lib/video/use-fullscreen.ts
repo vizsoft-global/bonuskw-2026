@@ -68,6 +68,7 @@ export function useFullscreen(element: HTMLElement | null) {
   const release = useCallback(() => {
     fillingRef.current = false;
     setFilling(false);
+    document.documentElement.removeAttribute("data-video-fill");
     document.body.style.removeProperty("overflow");
     if (fullscreenElement()) {
       const api = prefixed();
@@ -94,6 +95,8 @@ export function useFullscreen(element: HTMLElement | null) {
     }
     fillingRef.current = true;
     setFilling(true);
+    // Lets the floating Help button hide during iOS "fill" fullscreen.
+    document.documentElement.dataset.videoFill = "1";
     // The pinned layer sits over a page that would still scroll under it.
     document.body.style.overflow = "hidden";
   }, [element]);
@@ -118,7 +121,10 @@ export function useFullscreen(element: HTMLElement | null) {
   // page scroll-locked behind it.
   useEffect(
     () => () => {
-      if (fillingRef.current) document.body.style.removeProperty("overflow");
+      if (fillingRef.current) {
+        document.body.style.removeProperty("overflow");
+        document.documentElement.removeAttribute("data-video-fill");
+      }
     },
     [],
   );
