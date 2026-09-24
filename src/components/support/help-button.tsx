@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { usePathname } from "next/navigation";
 import { LifeBuoy, Loader2, X } from "lucide-react";
-import { domToJpeg } from "modern-screenshot";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getFirebaseAuth } from "@/lib/firebase/client";
 import { useI18n } from "@/lib/i18n/locale";
+import {
+  afterPaint,
+  captureViewport,
+  clearDraft,
+  hasDraftSnapshot,
+  loadDraft,
+  saveDraft,
+  subscribeDraft,
+  withTimeout,
+} from "@/lib/support/capture";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -102,6 +111,8 @@ function collectDevice() {
   };
 }
 
+type PageInfo = { url: string; path: string; title: string; referrer?: string };
+
 export function HelpButton() {
   const pathname = usePathname();
   const { t, locale } = useI18n();
@@ -118,7 +129,9 @@ export function HelpButton() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [website, setWebsite] = useState("");
-  const buttonRef = useRef<HTMLButtonElement>(null);
+  const hasDraft = useSyncExternalStore(subscribeDraft, hasDraftSnapshot, () => false);
+  const shotRef = useRef<Promise<string | null> | null>(null);
+  const pageRef = useRef<PageInfo | null>(null);
 
   const hideOnPath = pathname.startsWith("/checkout/return");
   const raisedForTabs = TAB_BAR_PATHS.has(pathname);
@@ -126,6 +139,11 @@ export function HelpButton() {
   useEffect(() => {
     installErrorHook();
   }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    saveDraft({ category, message, name, email, phone });
+  }, [open, category, message, name, email, phone]);
 
   useEffect(() => {
     const sync = () => {
@@ -152,35 +170,22 @@ export function HelpButton() {
     };
   }, []);
 
-  async function start() {
-    if (capturing || open) return;
-    setCapturing(true);
-    let shot: string | null = null;
-    try {
-      if (buttonRef.current) buttonRef.current.style.visibility = "hidden";
-      shot = await domToJpeg(document.body, {
-        quality: 0.7,
-        scale: Math.min(1, 1600 / Math.max(document.body.scrollWidth, 1)),
-        filter: (node) => {
-          if (!(node instanceof HTMLElement)) return true;
-          return !node.dataset.helpWidget;
-        },
-      });
-    } catch (err) {
-      console.warn("[help] screenshot failed", err);
-    } finally {
-      if (buttonRef.current) buttonRef.current.style.visibility = "";
-      setCapturing(false);
-    }
-    setScreenshot(shot);
-    setIncludeShot(Boolean(shot));
-    setCategory("bug");
-    setMessage("");
+  function start() {
+    if (open) return;
+    pageRef.current = {
+      url: window.location.href,
+      path: pathname || window.location.pathname,
+      title: document.title,
+      referrer: document.referrer || undefined,
+    };
+    const draft = loadDraft();
+    setCategory((draft?.category as Category) || "bug");
+    setMessage(draft?.message ?? "");
     setWebsite("");
     if (!user) {
-      setName("");
-      setEmail("");
-      setPhone("");
+      setName(draft?.name ?? "");
+      setEmail(draft?.email ?? "");
+      setPhone(draft?.phone ?? "");
     } else {
       setName(
         profile?.display_name ||
@@ -190,7 +195,26 @@ export function HelpButton() {
       setEmail(profile?.email || user.email || "");
       setPhone(profile?.phone_number || profile?.phoneE164 || "");
     }
+    setScreenshot(null);
+    setIncludeShot(true);
+    setCapturing(true);
     setOpen(true);
+
+    const shot = afterPaint().then(captureViewport);
+    shotRef.current = shot;
+    void shot.then((data) => {
+      if (shotRef.current !== shot) return;
+      setScreenshot(data);
+      setIncludeShot(Boolean(data));
+      setCapturing(false);
+    });
+  }
+
+  function close() {
+    if (busy) return;
+    shotRef.current = null;
+    setCapturing(false);
+    setOpen(false);
   }
 
   async function submit() {
@@ -209,6 +233,10 @@ export function HelpButton() {
     }
     setBusy(true);
     try {
+      let shot = screenshot;
+      if (includeShot && !shot && shotRef.current) {
+        shot = await withTimeout(shotRef.current, 5000);
+      }
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
       };
@@ -226,23 +254,24 @@ export function HelpButton() {
           name: name.trim() || undefined,
           email: email.trim() || undefined,
           phone: phone.trim() || undefined,
-          page: {
+          page: pageRef.current ?? {
             url: window.location.href,
             path: pathname || window.location.pathname,
             title: document.title,
-            referrer: document.referrer || undefined,
           },
           device: {
             ...collectDevice(),
             locale: locale || document.documentElement.lang || undefined,
           },
           recentErrors: [...errorBuffer],
-          screenshotDataUrl: includeShot ? screenshot : null,
+          screenshotDataUrl: includeShot ? shot : null,
         }),
       });
       const json = (await res.json()) as { number?: number; error?: string };
       if (!res.ok) throw new Error(json.error || t("ticketFailed"));
       toast.success(t("ticketReceived", { number: String(json.number ?? 0) }));
+      clearDraft();
+      shotRef.current = null;
       setOpen(false);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("ticketFailed"));
@@ -256,11 +285,9 @@ export function HelpButton() {
   return (
     <>
       <button
-        ref={buttonRef}
         type="button"
         data-help-widget="1"
-        onClick={() => void start()}
-        disabled={capturing}
+        onClick={start}
         aria-label={t("help")}
         className={cn(
           "fixed end-4 z-50 flex size-12 items-center justify-center rounded-full bg-text text-bg shadow-lg transition hover:opacity-90",
@@ -270,18 +297,17 @@ export function HelpButton() {
         style={{ marginBottom: "env(safe-area-inset-bottom)" }}
         title={t("help")}
       >
-        {capturing ? (
-          <Loader2 className="size-5 animate-spin" />
-        ) : (
-          <LifeBuoy className="size-5" />
-        )}
+        <LifeBuoy className="size-5" />
+        {hasDraft && !open ? (
+          <span className="absolute end-0.5 top-0.5 size-3 rounded-full border-2 border-bg bg-amber-500" />
+        ) : null}
       </button>
 
       {open ? (
         <div
           data-help-widget="1"
           className="fixed inset-0 z-[70] flex items-end justify-center bg-black/50 p-3 sm:items-center"
-          onClick={() => !busy && setOpen(false)}
+          onClick={close}
         >
           <div
             className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl bg-surface p-4 shadow-xl"
@@ -296,7 +322,7 @@ export function HelpButton() {
                 type="button"
                 aria-label={t("cancel")}
                 className="rounded-md p-1 text-muted hover:bg-surface-2"
-                onClick={() => !busy && setOpen(false)}
+                onClick={close}
               >
                 <X className="size-4" />
               </button>
@@ -325,6 +351,7 @@ export function HelpButton() {
                   {t("helpMessage")}
                 </label>
                 <textarea
+                  autoFocus
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   rows={4}
@@ -374,7 +401,7 @@ export function HelpButton() {
                 aria-hidden
               />
 
-              {screenshot ? (
+              {capturing || screenshot ? (
                 <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line p-2">
                   <input
                     type="checkbox"
@@ -386,12 +413,19 @@ export function HelpButton() {
                     <span className="block text-sm font-medium text-text">
                       {t("includeScreenshot")}
                     </span>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={screenshot}
-                      alt=""
-                      className="mt-2 max-h-36 w-full rounded-lg bg-surface-2 object-contain object-top"
-                    />
+                    {screenshot ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={screenshot}
+                        alt=""
+                        className="mt-2 max-h-36 w-full rounded-lg bg-surface-2 object-contain object-top"
+                      />
+                    ) : (
+                      <span className="mt-2 flex h-20 items-center justify-center gap-2 rounded-lg bg-surface-2 text-xs text-muted">
+                        <Loader2 className="size-4 animate-spin" />
+                        {t("capturingScreenshot")}
+                      </span>
+                    )}
                   </span>
                 </label>
               ) : null}
@@ -400,7 +434,7 @@ export function HelpButton() {
                 <Button
                   variant="outline"
                   disabled={busy}
-                  onClick={() => setOpen(false)}
+                  onClick={close}
                 >
                   {t("cancel")}
                 </Button>
