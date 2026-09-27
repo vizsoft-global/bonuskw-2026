@@ -1,6 +1,7 @@
 "use client";
 
 import { useDeferredValue, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthors } from "@/lib/catalog/use-authors";
@@ -644,7 +645,7 @@ export default function SearchPage() {
         ) : null}
       </button>
 
-      {drawer ? (
+      {drawer ? createPortal(
         <div className="fixed inset-0 z-[110] lg:hidden" role="dialog" aria-modal="true">
           <button type="button" aria-label={t("close")} className="absolute inset-0 bg-black/60" onClick={() => setDrawer(false)} />
           <div className="absolute inset-y-0 end-0 flex w-[86%] max-w-sm flex-col bg-surface pt-[env(safe-area-inset-top)]">
@@ -673,7 +674,8 @@ export default function SearchPage() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body,
       ) : null}
     </AppShell>
   );
