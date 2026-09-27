@@ -16,6 +16,7 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { usePromotions } from "@/lib/promotions/use-promotions";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
@@ -340,10 +341,27 @@ function AppChrome({ children }: { children: ReactNode }) {
     queryFn: () => loadCart(user!.uid),
   });
   const cartCount = cart.data?.lines.length ?? 0;
-  const offerCount = usePromotions().data?.length ?? 0;
+  const promos = usePromotions();
+  const catalog = useQuery({
+    queryKey: ["courses"],
+    queryFn: listCourses,
+    staleTime: 5 * 60_000,
+  });
+  const offerCount = promos.data?.length ?? 0;
+  const showOffers = offerCount > 0;
+  const showEbooks = !catalog.isFetched || storeEbooks(catalog.data ?? []).length > 0;
   const offersTab = { href: "/offers", key: "offers" as const, icon: "/home/star.svg", iconActive: "/home/star.svg" };
-  const desktopTabs = [tabs[0], offersTab, ...tabs.slice(1)];
-  const mobileTabs = offerCount > 0 ? [tabs[0], offersTab, ...tabs.slice(1)] : tabs;
+  const navTabs = [
+    tabs[0],
+    ...(showOffers ? [offersTab] : []),
+    ...(showEbooks ? [tabs[1]] : []),
+    ...tabs.slice(2),
+  ];
+
+  useEffect(() => {
+    if (path === "/offers" && promos.isFetched && !showOffers) router.replace("/");
+    if (path === "/store" && catalog.isFetched && storeEbooks(catalog.data ?? []).length === 0) router.replace("/");
+  }, [path, promos.isFetched, showOffers, catalog.isFetched, catalog.data, router]);
   const uniName = university.data || "";
   const displayName = profile?.display_name || t("profile");
   const isChrome = chromePaths.has(path);
@@ -374,7 +392,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                 <BrandLogo size="nav" />
               </Link>
               <nav className="flex items-center gap-2">
-                {desktopTabs.map((tab) => {
+                {navTabs.map((tab) => {
                   const active =
                     tab.href === "/" ? path === "/" : path === tab.href || path.startsWith(`${tab.href}/`);
                   return (
@@ -522,7 +540,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           )}
           aria-hidden={!showTabBar}
         >
-          {mobileTabs.map((tab) => {
+          {navTabs.map((tab) => {
             const active = tab.href === "/" ? path === "/" : path === tab.href;
             return (
               <TabItem
