@@ -299,7 +299,15 @@ export default function CartPage() {
   const toneLabel = (tone: BatchTone) =>
     t(tone === "active" ? "batchOpen" : tone === "upcoming" ? "batchUpcoming" : "batchClosed");
 
-  const listTotal = cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
+  // The server's list prices, not the snapshot taken at add time, so the
+  // subtotal, discount and total always add up.
+  const listTotal = quote?.lines
+    ? quote.lines.reduce((sum, q) => sum + (q.owned ? 0 : q.listPrice || 0), 0)
+    : cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
+  const promoNames = (quote?.promotions ?? [])
+    .map((p) => suggestionText(p.name ?? null, locale))
+    .filter(Boolean)
+    .join(", ");
   const walletApplied = useWallet ? Math.max(0, Number(quote?.walletApplied) || 0) : 0;
   const walletBalance = Math.max(0, Number(quote?.walletBalance) || 0);
   const due = Math.max(0, (quote?.dueNow ?? listTotal) - walletApplied);
@@ -367,7 +375,11 @@ export default function CartPage() {
       <div className="flex flex-col gap-2 border-b border-line pb-4">
         {summaryRow(t("subtotal"), formatKwdLocale(listTotal, locale))}
         {promoTotal > 0
-          ? summaryRow(t("discountLabel"), `− ${formatKwdLocale(promoTotal, locale)}`, "accent")
+          ? summaryRow(
+              promoNames ? `${t("discountLabel")} · ${promoNames}` : t("discountLabel"),
+              `− ${formatKwdLocale(promoTotal, locale)}`,
+              "accent",
+            )
           : null}
         {walletApplied > 0
           ? summaryRow(t("walletCredit"), `− ${formatKwdLocale(walletApplied, locale)}`, "accent")

@@ -32,6 +32,7 @@ export type Quote = {
   couponCode?: string | null;
   promotionDiscount?: number;
   savings?: number;
+  promotions?: Array<{ id: string; name?: { en?: string; ar?: string } | null; discount: number }>;
   suggestions?: Array<{
     promotionId?: string;
     message?: { en?: string; ar?: string } | string | null;

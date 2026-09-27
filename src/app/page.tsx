@@ -46,6 +46,7 @@ import {
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
 import { useOwnership } from "@/lib/cart/ownership";
+import { imageFor } from "@/lib/media/image-url";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
@@ -291,24 +292,27 @@ function HomeBody({ uid }: { uid: string }) {
                   key={promo.id}
                   href="/offers"
                   prefetch
-                  className="w-[260px] shrink-0 overflow-hidden rounded-[12px] border border-line bg-surface lg:w-[360px]"
+                  className="w-[calc((100%-30px)/2.3)] shrink-0 overflow-hidden rounded-[10px] border border-line bg-surface transition-colors hover:border-muted lg:w-[calc((100%-75px)/3.5)]"
                 >
                   {promo.bannerImage ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                      src={promo.bannerImage}
+                      src={imageFor("courseCard", promo.bannerImage)}
                       alt=""
-                      className="h-[130px] w-full object-cover lg:h-[170px]"
+                      loading="lazy"
+                      className="aspect-[2/1] w-full object-cover"
                     />
                   ) : (
-                    <div className="h-[130px] w-full bg-surface-2 lg:h-[170px]" />
+                    <div className="aspect-[2/1] w-full bg-surface-2" />
                   )}
-                  <div className="flex flex-col gap-1 p-3">
-                    <p className="line-clamp-1 text-[13px] font-semibold text-text">
+                  <div className="flex items-center justify-between gap-2 px-2.5 py-2">
+                    <p className="line-clamp-1 text-[12px] font-semibold text-text">
                       {localizedText(promo.name, locale) || t("offers")}
                     </p>
                     {promo.badge ? (
-                      <span className="text-[11px] font-medium text-[#0c5eff]">{promo.badge}</span>
+                      <span className="shrink-0 rounded-full bg-[#0c5eff]/15 px-2 py-0.5 text-[10px] font-medium text-[#0c5eff]">
+                        {promo.badge}
+                      </span>
                     ) : null}
                   </div>
                 </Link>
