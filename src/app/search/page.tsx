@@ -323,7 +323,7 @@ export default function SearchPage() {
   return (
     <AppShell loading={courses.isPending} title={t("searchTitle")} skeleton={<SearchSkeleton />}>
       <div className="flex flex-col gap-3 pt-2 lg:pt-4">
-        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-start">
         <label
           className={cn(
             "flex h-11 w-full shrink-0 items-center gap-2.5 rounded-full border bg-surface px-4 lg:w-80",
