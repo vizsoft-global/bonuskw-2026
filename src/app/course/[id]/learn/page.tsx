@@ -76,13 +76,13 @@ function LearnBody() {
   });
 
   useEffect(() => {
-    if (subscription.isLoading || chapterAccess.isLoading) return;
+    if (course.isPending || subscription.isLoading || chapterAccess.isLoading) return;
     const enrolled = subscription.data?.status === "Ongoing";
     const bought = Boolean(chapterAccess.data && chapterAccess.data.size > 0);
     if (enrolled || bought || ownerAccess) return;
     const lesson = params.get("lesson");
     router.replace(`/course/${id}${lesson ? `?preview=${lesson}` : ""}`);
-  }, [subscription.isLoading, subscription.data, chapterAccess.isLoading, chapterAccess.data, ownerAccess, id, params, router]);
+  }, [course.isPending, subscription.isLoading, subscription.data, chapterAccess.isLoading, chapterAccess.data, ownerAccess, id, params, router]);
 
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [quizId, setQuizId] = useState(params.get("quiz") || "");

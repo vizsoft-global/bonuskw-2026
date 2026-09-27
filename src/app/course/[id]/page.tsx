@@ -2,7 +2,7 @@
 
 import { toast } from "@/components/ui/toaster";
 import { openCart } from "@/components/cart/cart-panel";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
@@ -57,6 +57,8 @@ export default function CoursePage() {
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
   const [preview, setPreview] = useState<OutlineLesson | null>(null);
+  const search = useSearchParams();
+  const [linkPreviewClosed, setLinkPreviewClosed] = useState(false);
   const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
   const [intro, setIntro] = useState<PlaybackTicket | null>(null);
   const [introBusy, setIntroBusy] = useState(false);
@@ -278,7 +280,6 @@ export default function CoursePage() {
   }
   // One outline in the instructor's order: every chapter is a section holding
   // its lessons, its files and the tests that follow it.
-  const search = useSearchParams();
   const outline = buildOutline({
     chapters: chapters.data ?? [],
     lessons: lessons.data ?? [],
@@ -314,14 +315,14 @@ export default function CoursePage() {
   const canOpenLessons = hasAccess || Boolean(chapterAccess.data?.size);
   const hasIntro = Boolean(c.videoRef || c.video);
 
-  useEffect(() => {
-    const wanted = search.get("preview");
-    if (!wanted) return;
-    const lesson = outline
-      .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
-      .find((row) => row.id === wanted && row.preview);
-    if (lesson) setPreview(lesson);
-  }, [search, outline]);
+  const wantedPreview = linkPreviewClosed ? null : search.get("preview");
+  const shownPreview =
+    preview ??
+    (wantedPreview
+      ? outline
+          .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
+          .find((row) => row.id === wantedPreview && row.preview) ?? null
+      : null);
 
   function openLesson(lesson: OutlineLesson) {
     if (canOpenLessons && !lesson.locked) {
@@ -451,12 +452,15 @@ export default function CoursePage() {
           {t("unlockingSoon")}
         </p>
       )}
-      {preview ? (
+      {shownPreview ? (
         <VideoPopup
-          lessonId={preview.id}
-          title={preview.name}
-          files={preview.files.filter((file) => !file.locked)}
-          onClose={() => setPreview(null)}
+          lessonId={shownPreview.id}
+          title={shownPreview.name}
+          files={shownPreview.files.filter((file) => !file.locked)}
+          onClose={() => {
+            setPreview(null);
+            setLinkPreviewClosed(true);
+          }}
         />
       ) : null}
       {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
