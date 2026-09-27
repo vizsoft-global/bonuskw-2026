@@ -16,6 +16,10 @@ export const catalog = {
     searchPopular: "Most popular",
     searchRelevance: "Relevance",
     searchResults: "{count} results",
+    searchFilters: "Filters",
+    searchShow: "Show",
+    searchShowResults: "Show {count} results",
+    searchAll: "All",
   },
   ar: {
     searchType: "النوع",
@@ -33,5 +37,9 @@ export const catalog = {
     searchPopular: "الأكثر شعبية",
     searchRelevance: "الأكثر صلة",
     searchResults: "{count} نتيجة",
+    searchFilters: "الفلاتر",
+    searchShow: "عرض",
+    searchShowResults: "عرض {count} نتيجة",
+    searchAll: "الكل",
   },
 } as const;

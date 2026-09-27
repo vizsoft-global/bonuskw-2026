@@ -517,7 +517,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           className={cn(
             "relative z-10 mx-auto w-full max-w-[1040px] px-[15px] lg:px-0 lg:pb-10",
             showTabBar ? "pb-32" : path.includes("/learn") ? "pb-4" : "pb-10",
-            path.startsWith("/profile") && "lg:max-w-[1280px] lg:px-[30px]",
+            (path.startsWith("/profile") || path === "/search") && "lg:max-w-[1280px] lg:px-[30px]",
             path.includes("/learn") && "lg:max-w-[1600px] lg:px-6 lg:pb-3",
           )}
         >

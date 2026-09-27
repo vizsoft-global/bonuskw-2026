@@ -243,7 +243,7 @@ export function ExploreGridCard({
   const href = itemHref(item);
   const showEnroll = enrollOnImage ? !enrollBlocked : true;
   return (
-    <article className="flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full" priority={priority}>
@@ -259,7 +259,7 @@ export function ExploreGridCard({
               haptic("medium");
               onEnroll();
             }}
-            className="absolute bottom-1.5 start-1.5 z-10 h-7 rounded-[16px] bg-[#0c5eff] px-3 text-[11px] font-medium leading-none text-white"
+            className="absolute bottom-1.5 start-1.5 z-10 h-7 translate-y-1 rounded-[16px] bg-[#0c5eff] px-3 text-[11px] font-medium leading-none text-white opacity-0 shadow-lg transition-[opacity,transform] duration-150 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 [@media(hover:none)]:hidden"
           >
             {labels.enroll}
           </button>
