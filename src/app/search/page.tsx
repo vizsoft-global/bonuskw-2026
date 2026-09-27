@@ -460,7 +460,8 @@ export default function SearchPage() {
         value={instructor}
         onChange={setInstructor}
         options={instructorIds
-          .map((id) => ({ value: id, label: instructors.data?.[id] || id, count: instructors_.get(id) }))
+          .filter((id) => instructors.data?.[id])
+          .map((id) => ({ value: id, label: instructors.data![id], count: instructors_.get(id) }))
           .sort((a, b) => a.label.localeCompare(b.label))}
       />
     </div>
