@@ -13,6 +13,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { getCourse, getDocsByIds } from "@/lib/catalog/queries";
 import { avatarSrc } from "@/lib/avatar";
 import { batchInfo, type BatchInfo } from "@/lib/course/batch-status";
@@ -103,7 +104,7 @@ export default function SavedPage() {
       toast.error(enrolmentClosedMessage(err, t));
       return;
     }
-    router.push("/cart");
+    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function unsave(courseId: string) {

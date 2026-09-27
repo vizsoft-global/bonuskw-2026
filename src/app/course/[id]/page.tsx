@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -140,7 +142,11 @@ export default function CoursePage() {
       // Re-reads the batch and refuses if enrolment is closed, even when the
       // page was opened before the batch ended.
       await addCourseLine(user.uid, { ...c, id }, paymentType);
-      router.push("/cart");
+      if (paymentType === "EMI") {
+        router.push("/cart");
+        return;
+      }
+      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       if (err instanceof EnrolmentClosedError) {
         setCartError(enrolmentClosedMessage(err, t));
@@ -195,7 +201,7 @@ export default function CoursePage() {
           addedAt: Date.now(),
         }),
       );
-      router.push("/cart");
+      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       if (err instanceof EnrolmentClosedError) {
         setCartError(enrolmentClosedMessage(err, t));

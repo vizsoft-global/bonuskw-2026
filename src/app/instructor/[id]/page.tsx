@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -94,7 +96,7 @@ export default function InstructorPage() {
     if (gate.blockFor(purchaseKindFor(row))) return;
     if (isEbookCourse(row)) await addEbookToCart(user.uid, row);
     else await addCourseToCart(user.uid, row);
-    router.push("/cart");
+    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function toggleSave(courseId: string) {

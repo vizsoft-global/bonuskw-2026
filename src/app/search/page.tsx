@@ -15,6 +15,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { useBatches } from "@/lib/catalog/use-batches";
 import { getDb } from "@/lib/firebase/client";
@@ -228,7 +229,7 @@ export default function SearchPage() {
       toast.error(enrolmentClosedMessage(err, t));
       return;
     }
-    router.push("/cart");
+    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function toggleSave(courseId: string) {

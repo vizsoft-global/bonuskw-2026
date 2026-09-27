@@ -212,9 +212,12 @@ function EmailStep() {
   if (sent) {
     return (
       <div className="flex flex-col gap-[25px]">
-        <p className="text-[13px] leading-relaxed text-muted">
-          {t("verifyEmailBody", { email })}
-        </p>
+        <ol className="flex flex-col gap-2 text-[13px] leading-relaxed text-muted">
+          <li>{t("verifyEmailStep1", { email })}</li>
+          <li>{t("verifyEmailStep2")}</li>
+          <li>{t("verifyEmailStep3")}</li>
+        </ol>
+        <p className="rounded-xl bg-[#f5d08a]/15 p-3 text-[12px] leading-relaxed text-text">{t("verifyEmailSpam")}</p>
         {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
         <CtaButton loading={busy} disabled={busy} onClick={() => void refreshProfile()}>
           {t("iVerified")}

@@ -1,5 +1,7 @@
 "use client";
 
+import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -129,7 +131,7 @@ export default function EbookPage() {
     setCartError("");
     try {
       await addEbookToCart(user.uid, target);
-      router.push("/cart");
+      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       setCartError(err instanceof Error ? err.message : "Could not add to cart");
     } finally {

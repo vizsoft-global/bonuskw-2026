@@ -24,6 +24,10 @@ export type QuoteLine = {
 
 export type Quote = {
   dueNow?: number;
+  /** Server-decided wallet figures; `walletApplied` is how much credit this cart uses. */
+  walletBalance?: number;
+  walletApplied?: number;
+  gatewayDue?: number;
   couponDiscount?: number;
   couponCode?: string | null;
   promotionDiscount?: number;

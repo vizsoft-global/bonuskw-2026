@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { exploreGridClass } from "@/components/home/explore-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -20,6 +22,26 @@ import {
   type Promotion,
 } from "@/lib/promotions/use-promotions";
 import { cn } from "@/lib/utils";
+
+function OfferCountdown({ endsAt, fallback }: { endsAt: string; fallback: string | null }) {
+  const { t } = useI18n();
+  const [left, setLeft] = useState("");
+  useEffect(() => {
+    const tick = () => {
+      const diff = new Date(endsAt).getTime() - Date.now();
+      if (diff <= 0) return setLeft(t("offerEnded"));
+      const hours = Math.floor(diff / 3_600_000);
+      const days = Math.floor(hours / 24);
+      const h = hours % 24;
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      setLeft(t("offerCountdown").replace("{d}", String(days)).replace("{h}", String(h)).replace("{m}", String(m)));
+    };
+    tick();
+    const id = window.setInterval(tick, 30_000);
+    return () => window.clearInterval(id);
+  }, [endsAt, t]);
+  return <span className="text-[10px] font-medium leading-none text-muted">{left || fallback}</span>;
+}
 
 export default function OffersPage() {
   const { t, locale } = useI18n();
@@ -99,7 +121,7 @@ export default function OffersPage() {
         return;
       }
       await addCourseLine(user.uid, course);
-      router.push("/cart");
+      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       setError(enrolmentClosedMessage(err, t));
     } finally {
@@ -129,7 +151,7 @@ export default function OffersPage() {
         setError(t("offerUnavailable"));
         return;
       }
-      router.push("/cart");
+      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       setError(enrolmentClosedMessage(err, t));
     } finally {
@@ -178,11 +200,7 @@ export default function OffersPage() {
                           {t("offerFeatured")}
                         </span>
                       ) : null}
-                      {ends ? (
-                        <span className="text-[10px] font-medium leading-none text-muted">
-                          {ends}
-                        </span>
-                      ) : null}
+                      {promo.endsAt ? <OfferCountdown endsAt={promo.endsAt} fallback={ends} /> : null}
                     </div>
                     {title ? (
                       <h2 className="text-[16px] font-semibold leading-snug text-text">{title}</h2>

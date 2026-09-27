@@ -13,20 +13,26 @@ import { getAdminDb } from "@/lib/firebase/admin";
  * corrupt the figure the way an increment can.
  *
  * Test enrolments (dev-mode testers) are not students and are left out.
- * Kept in step with `bonuskw-admin/src/lib/server/course-stats.ts`, which
- * recounts from the same rows after a paid enrolment.
+ * Only ongoing enrolments in the course's current batch count — earlier terms
+ * must not carry over. Kept in step with
+ * `bonuskw-admin/src/lib/server/course-stats.ts`.
  */
 export async function recountCourseStudents(courseId: string): Promise<number> {
   const db = getAdminDb();
   const courseRef = db.collection(collections.course).doc(courseId);
+  const course = await courseRef.get();
+  const currentBatchId = course.exists ? (course.get("batchesRef")?.id as string | undefined) : undefined;
   const snap = await db
     .collection(collections.subscription)
     .where("courseRef", "==", courseRef)
-    .select("userRef", "isTest")
+    .where("status", "==", "Ongoing")
+    .select("userRef", "isTest", "batchesRef")
     .get();
   const students = new Set<string>();
   for (const row of snap.docs) {
     if (row.get("isTest") === true) continue;
+    const batchId = (row.get("batchesRef") as { id?: string } | undefined)?.id;
+    if (currentBatchId ? batchId !== currentBatchId : Boolean(batchId)) continue;
     const id = (row.get("userRef") as { id?: string } | undefined)?.id;
     if (id) students.add(id);
   }

@@ -61,6 +61,7 @@ export default function CartPage() {
   const [couponError, setCouponError] = useState("");
   // Why the whole cart cannot be priced (blocks checkout).
   const [quoteError, setQuoteError] = useState("");
+  const [useWallet, setUseWallet] = useState(true);
   const [quoting, setQuoting] = useState(false);
   const [ready, setReady] = useState(false);
   const [accept, setAccept] = useState(false);
@@ -81,7 +82,9 @@ export default function CartPage() {
         await refreshQuote(next);
       })
       .finally(() => setReady(true));
-  }, [user]);
+    // `refreshQuote` reads `useWallet`; toggling it re-prices the cart.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, useWallet]);
 
   // Live batch state for every course in the cart. A line added weeks ago can
   // outlive its batch, so the chip and the Pay button follow today's data,
@@ -131,6 +134,7 @@ export default function CartPage() {
           paymentType: line.paymentType,
         })),
         couponCode: couponCode?.trim() || undefined,
+        useWallet,
       }),
     });
     const body = (await res.json().catch(() => ({}))) as Quote;
@@ -261,6 +265,7 @@ export default function CartPage() {
             paymentType: line.paymentType,
           })),
           couponCode: latest.couponCode,
+          useWallet,
           redirectUrl: `${window.location.origin}/checkout/return`,
         }),
       });
@@ -295,7 +300,9 @@ export default function CartPage() {
     t(tone === "active" ? "batchOpen" : tone === "upcoming" ? "batchUpcoming" : "batchClosed");
 
   const listTotal = cart.lines.reduce((sum, line) => sum + (Number(line.price) || 0), 0);
-  const due = quote?.dueNow ?? listTotal;
+  const walletApplied = useWallet ? Math.max(0, Number(quote?.walletApplied) || 0) : 0;
+  const walletBalance = Math.max(0, Number(quote?.walletBalance) || 0);
+  const due = Math.max(0, (quote?.dueNow ?? listTotal) - walletApplied);
   const quotedInstallments = (line: CartLine) => quoteLineFor(quote, line)?.installments ?? undefined;
   // Coupon lands on exactly one line server-side; surface which one.
   const couponLine = quote?.lines?.find((q) => (q.couponDiscount ?? 0) > 0);
@@ -362,6 +369,9 @@ export default function CartPage() {
         {promoTotal > 0
           ? summaryRow(t("discountLabel"), `− ${formatKwdLocale(promoTotal, locale)}`, "accent")
           : null}
+        {walletApplied > 0
+          ? summaryRow(t("walletCredit"), `− ${formatKwdLocale(walletApplied, locale)}`, "accent")
+          : null}
         {couponTotal > 0
           ? summaryRow(
               `${t("coupon")} · ${quote?.couponCode ?? ""}`,
@@ -382,6 +392,20 @@ export default function CartPage() {
         <p className="rounded-[10px] bg-[#f24822]/10 p-3 text-[12px] leading-relaxed text-[#f24822]">
           {quoteError}
         </p>
+      ) : null}
+      {walletBalance > 0 ? (
+        <label className="flex items-center justify-between gap-3 rounded-[12px] border border-line p-3 text-[12px]">
+          <span className="min-w-0">
+            <span className="block font-medium text-text">{t("useWallet")}</span>
+            <span className="text-muted">{t("walletBalanceLabel").replace("{amount}", formatKwdLocale(walletBalance, locale))}</span>
+          </span>
+          <input
+            type="checkbox"
+            className="size-4"
+            checked={useWallet}
+            onChange={(e) => setUseWallet(e.target.checked)}
+          />
+        </label>
       ) : null}
       {freeCheckout ? (
         <div className="flex items-start gap-3 rounded-[12px] bg-[#1f9d4d]/15 p-3">

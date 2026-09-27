@@ -45,6 +45,7 @@ import {
 } from "@/lib/taxonomy/use-taxonomy";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
+import { openCart } from "@/components/cart/cart-panel";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
@@ -188,7 +189,7 @@ function HomeBody({ uid }: { uid: string }) {
       toast.error(enrolmentClosedMessage(err, t));
       return;
     }
-    router.push("/cart");
+    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function toggleSave(courseId: string) {
@@ -261,6 +262,21 @@ function HomeBody({ uid }: { uid: string }) {
               ))}
             </div>
           </section>
+        ) : null}
+
+        {(offers.data ?? []).length ? (
+          <Link
+            href="/offers"
+            className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-[#f24822]/15 px-4 py-3 lg:hidden"
+          >
+            <span className="min-w-0">
+              <span className="block text-sm font-semibold text-text">{t("offers")}</span>
+              <span className="block text-[12px] text-muted">{t("offersBanner").replace("{n}", String(offers.data?.length ?? 0))}</span>
+            </span>
+            <span className="grid min-w-6 place-items-center rounded-full bg-[#f24822] px-2 text-[11px] font-semibold leading-6 text-white">
+              {offers.data?.length}
+            </span>
+          </Link>
         ) : null}
 
         {(offers.data ?? []).length ? (

@@ -16,8 +16,10 @@ import { createPortal } from "react-dom";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
+import { usePromotions } from "@/lib/promotions/use-promotions";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
+import { CartPanel, openCart } from "@/components/cart/cart-panel";
 import { CustomPopupHost } from "@/components/home/custom-popup";
 import { InstallButton, InstallPrompt } from "@/components/system/install-prompt";
 import { HomeIcon } from "@/components/home/icon";
@@ -99,25 +101,44 @@ function GlassIcon({
   label,
   icon,
   badge,
+  onClick,
 }: {
-  href: string;
+  href?: string;
   label: string;
   icon: string;
   badge?: number;
+  onClick?: () => void;
 }) {
-  return (
-    <Link
-      href={href}
-      prefetch
-      aria-label={label}
-      className="relative flex items-center rounded-[47px] border-[0.5px] border-line bg-surface-2 p-[5px] backdrop-blur-[15px] transition-transform duration-150 active:scale-95"
-    >
+  const inner = (
+    <>
       <span className="relative size-10 overflow-visible rounded-[28px]">
         <span className="absolute start-2.5 top-[10px] size-5">
           <HomeIcon src={icon} />
         </span>
         {badge ? <CountBadge count={badge} /> : null}
       </span>
+    </>
+  );
+  if (onClick) {
+    return (
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        className="relative flex items-center rounded-[47px] border-[0.5px] border-line bg-surface-2 p-[5px] backdrop-blur-[15px] transition-transform duration-150 active:scale-95"
+      >
+        {inner}
+      </button>
+    );
+  }
+  return (
+    <Link
+      href={href || "/"}
+      prefetch
+      aria-label={label}
+      className="relative flex items-center rounded-[47px] border-[0.5px] border-line bg-surface-2 p-[5px] backdrop-blur-[15px] transition-transform duration-150 active:scale-95"
+    >
+      {inner}
     </Link>
   );
 }
@@ -319,6 +340,7 @@ function AppChrome({ children }: { children: ReactNode }) {
     queryFn: () => loadCart(user!.uid),
   });
   const cartCount = cart.data?.lines.length ?? 0;
+  const offerCount = usePromotions().data?.length ?? 0;
   const uniName = university.data || "";
   const displayName = profile?.display_name || t("profile");
   const isChrome = chromePaths.has(path);
@@ -331,6 +353,7 @@ function AppChrome({ children }: { children: ReactNode }) {
     <ShellContext.Provider value={ctx}>
       <div className="relative min-h-dvh overflow-x-hidden bg-app-top text-text">
         <CatalogWarmup />
+        <CartPanel count={cartCount} />
         <CustomPopupHost />
         <InstallPrompt />
         <HeaderGlow />
@@ -368,6 +391,21 @@ function AppChrome({ children }: { children: ReactNode }) {
                     </Link>
                   );
                 })}
+                {offerCount > 0 ? (
+                  <Link
+                    href="/offers"
+                    prefetch
+                    className={cn(
+                      "relative rounded-full px-5 py-2 text-[14px] font-medium",
+                      path.startsWith("/offers") ? "bg-surface-2 text-text" : "text-[#f24822]",
+                    )}
+                  >
+                    {t("offers")}
+                    <span className="absolute -top-1 end-1 grid min-w-4 place-items-center rounded-full bg-[#f24822] px-1 text-[9px] font-semibold leading-4 text-white">
+                      {offerCount}
+                    </span>
+                  </Link>
+                ) : null}
               </nav>
             </div>
             <div className="flex items-center gap-[15px]">
@@ -387,7 +425,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                 </button>
               )}
               <NotificationsMenu />
-              <GlassIcon href="/cart" label={t("cart")} icon="/home/cart.svg" badge={cartCount} />
+              <GlassIcon label={t("cart")} icon="/home/cart.svg" badge={cartCount} onClick={() => openCart()} />
               <ProfileMenu
                 className={cn(
                   "flex items-center gap-2.5 rounded-[47px] border-[0.5px] border-line bg-surface-2 ps-[5px] pe-2.5 backdrop-blur-[15px]",
@@ -459,12 +497,12 @@ function AppChrome({ children }: { children: ReactNode }) {
                     </span>
                   </Link>
                   <NotificationsBellButton />
-                  <Link href="/cart" prefetch aria-label={t("cart")} className="relative grid size-10 place-items-center">
+                  <button type="button" aria-label={t("cart")} onClick={() => openCart()} className="relative grid size-10 place-items-center">
                     <span className="size-5">
                       <HomeIcon src="/home/cart.svg" />
                     </span>
                     <CountBadge count={cartCount} />
-                  </Link>
+                  </button>
                 </div>
               </div>
               <div ref={bindExtra} className="relative empty:hidden empty:pt-0 pt-[15px]" />
@@ -510,7 +548,12 @@ function AppChrome({ children }: { children: ReactNode }) {
           )}
           aria-hidden={!showTabBar}
         >
-          {tabs.map((tab) => {
+          {[
+            ...tabs,
+            ...(offerCount > 0
+              ? [{ href: "/offers", key: "offers" as const, icon: "/home/star.svg", iconActive: "/home/star.svg" }]
+              : []),
+          ].map((tab) => {
             const active = tab.href === "/" ? path === "/" : path === tab.href;
             return (
               <TabItem
