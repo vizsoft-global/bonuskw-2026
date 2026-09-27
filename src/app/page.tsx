@@ -228,9 +228,16 @@ function HomeBody({ uid }: { uid: string }) {
     saved: t("saved"),
   };
   const storyItems = stories.data ?? [];
+  const continuePending = Boolean(subs.data) && !continueLearning.isFetched;
+  const homeReady =
+    courses.isFetched &&
+    stories.isFetched &&
+    subs.isFetched &&
+    offers.isFetched &&
+    !continuePending;
 
   return (
-    <AppShell headerExtra={<StoriesRow stories={storyItems} />} loading={courses.isPending} skeleton={<HomeSkeleton />}>
+    <AppShell headerExtra={<StoriesRow stories={storyItems} />} loading={!homeReady} skeleton={<HomeSkeleton />}>
       <div className="flex flex-col">
         {gate.tester ? (
           <div className="pt-3 lg:pt-5">
@@ -241,16 +248,8 @@ function HomeBody({ uid }: { uid: string }) {
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
 
-        <div className="flex flex-col gap-5 pt-5 lg:flex-row lg:items-center lg:gap-[30px] lg:pt-4">
-          <StatsCard
-            streak={stats.data?.streakDays || 0}
-            courses={subs.data?.length || 0}
-            hours={hours}
-            labels={statsLabels}
-          />
-          <div className="hidden min-w-0 flex-1 lg:block">
-            <StoriesRow stories={storyItems} fade />
-          </div>
+        <div className="hidden pt-4 lg:block">
+          <StoriesRow stories={storyItems} fade />
         </div>
 
         {(continueLearning.data ?? []).length ? (

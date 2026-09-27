@@ -1,8 +1,10 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { FilePreview } from "@/components/course/file-preview";
 import { Loader } from "@/components/shared/loader";
+import type { OutlineFile } from "@/lib/course/outline";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 import { playerSrc, requestPlayback } from "@/lib/video/player-src";
@@ -12,8 +14,19 @@ import { playerSrc, requestPlayback } from "@/lib/video/player-src";
  * before enrolling. Signed-out visitors can watch too: the server only hands
  * out a ticket when the lesson is marked as a free preview.
  */
-export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; title: string; onClose: () => void }) {
+export function VideoPopup({
+  lessonId,
+  title,
+  files = [],
+  onClose,
+}: {
+  lessonId: string;
+  title: string;
+  files?: OutlineFile[];
+  onClose: () => void;
+}) {
   const { t } = useI18n();
+  const [file, setFile] = useState<OutlineFile | null>(null);
   const { user } = useAuth();
   // Tickets are short-lived, so one is requested per opening and never cached.
   const { data: ticket } = useQuery({
@@ -37,10 +50,10 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-[120] grid place-items-center bg-black/80 px-3 backdrop-blur-sm"
+      className="fixed inset-0 z-[120] flex flex-col bg-black px-3 pt-[max(12px,env(safe-area-inset-top))] pb-[max(12px,env(safe-area-inset-bottom))] sm:grid sm:place-items-center sm:bg-black/80 sm:backdrop-blur-sm"
       onClick={onClose}
     >
-      <div className="w-full max-w-[960px]" onClick={(e) => e.stopPropagation()}>
+      <div className="flex h-full w-full flex-col sm:h-auto sm:max-w-[960px]" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center justify-between gap-3 px-1">
           <p className="min-w-0 truncate text-[14px] font-medium text-text">
             <span className="me-2 rounded-full bg-[#0c5eff] px-2 py-0.5 text-[10px] font-semibold text-white">
@@ -81,7 +94,28 @@ export function VideoPopup({ lessonId, title, onClose }: { lessonId: string; tit
             </div>
           )}
         </div>
+        {files.length ? (
+          <ul className="mt-3 max-h-40 overflow-y-auto rounded-xl bg-surface p-2 text-text">
+            {files.map((row) => (
+              <li key={row.id} className="flex items-center justify-between gap-2 px-2 py-1.5 text-[13px]">
+                <button type="button" onClick={() => setFile(row)} className="min-w-0 truncate text-start">
+                  {row.name}
+                </button>
+                {row.downloadable ? (
+                  <a href={row.url} download className="shrink-0 text-[12px] text-[#0c5eff]">
+                    {t("download")}
+                  </a>
+                ) : null}
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </div>
+      {file ? (
+        <div onClick={(e) => e.stopPropagation()}>
+          <FilePreview file={file} onClose={() => setFile(null)} />
+        </div>
+      ) : null}
     </div>
   );
 }

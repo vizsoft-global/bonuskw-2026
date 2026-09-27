@@ -226,7 +226,7 @@ export default function OffersPage() {
                   </div>
                 </div>
 
-                <div className={exploreGridClass}>
+                <div className={cn(exploreGridClass, "lg:grid-cols-4")}>
                   {courses.map((course) => (
                     <OfferGridCard
                       key={course.id}

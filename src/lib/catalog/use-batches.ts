@@ -18,6 +18,7 @@ export function useBatches(ids: string[]) {
     queryKey: ["batches-info", key],
     enabled: key.length > 0,
     staleTime: STALE_MS,
+    placeholderData: (previous) => previous,
     queryFn: async () => {
       const rows = await getDocsByIds(collections.batches, key.split(","));
       return Object.fromEntries(

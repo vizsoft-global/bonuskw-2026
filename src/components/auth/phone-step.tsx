@@ -12,6 +12,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { usePending } from "@/lib/auth/use-pending";
 import { useWebOtp } from "@/lib/auth/use-web-otp";
 import { useI18n } from "@/lib/i18n/locale";
+import { useSkipPhoneVerification } from "@/lib/settings/use-student-config";
 
 /**
  * Attaches a verified mobile number to the signed-in account.
@@ -27,7 +28,8 @@ import { useI18n } from "@/lib/i18n/locale";
  */
 export function PhoneStep({ onDone }: { onDone: () => void }) {
   const { t } = useI18n();
-  const { sendLinkSms, confirmLinkSms } = useAuth();
+  const { sendLinkSms, confirmLinkSms, user, refreshProfile } = useAuth();
+  const skipVerification = useSkipPhoneVerification();
   const router = useRouter();
   /** One request at a time; `busy` alone is read too late to stop a double tap. */
   const guard = usePending();
@@ -54,6 +56,30 @@ export function PhoneStep({ onDone }: { onDone: () => void }) {
         setCode("");
       } catch (err) {
         setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+
+  async function saveWithoutCode() {
+    if (!phoneReady || !user) return;
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        const token = await user.getIdToken();
+        const res = await fetch("/api/profile/phone", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
+          body: JSON.stringify({ phone }),
+        });
+        const json = (await res.json().catch(() => ({}))) as { error?: string };
+        if (!res.ok) throw new Error(json.error || "Could not save the number");
+        await refreshProfile();
+        onDone();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Could not save the number");
       } finally {
         setBusy(false);
       }
@@ -103,16 +129,16 @@ export function PhoneStep({ onDone }: { onDone: () => void }) {
           onChange={setPhone}
           placeholder="0000 0000"
           autoComplete="tel-national"
-          onSubmit={() => void send()}
+          onSubmit={() => void (skipVerification ? saveWithoutCode() : send())}
         />
       )}
       {error ? <p className="text-[12px] text-[#f24822]">{error}</p> : null}
       <CtaButton
         loading={busy}
         disabled={busy || (sent ? !codeReady : !phoneReady)}
-        onClick={() => void (sent ? verify() : send())}
+        onClick={() => void (sent ? verify() : skipVerification ? saveWithoutCode() : send())}
       >
-        {sent ? t("verifyCode") : t("sendCode")}
+        {sent ? t("verifyCode") : skipVerification ? t("save") : t("sendCode")}
       </CtaButton>
       {sent ? (
         <SupportLink phone={phoneReady ? `+965 ${phone}` : undefined} className="self-start" />

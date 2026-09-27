@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthors } from "@/lib/catalog/use-authors";
-import { ArrowUpDown, Clock, Shapes, X } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { arrayRemove, arrayUnion, collection, doc, getDocs, query, updateDoc, where } from "firebase/firestore";
 import { HomeIcon } from "@/components/home/icon";
-import { ExploreGridCard, exploreGridClass, type ExploreItem } from "@/components/home/explore-card";
+import { ExploreGridCard, type ExploreItem } from "@/components/home/explore-card";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { SearchSkeleton } from "@/components/shared/skeleton";
@@ -20,10 +20,10 @@ import { listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { useBatches } from "@/lib/catalog/use-batches";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
-import { isEbookCourse } from "@/lib/format";
+import { asDate, isEbookCourse } from "@/lib/format";
 import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import { useTaxonomy } from "@/lib/taxonomy/use-taxonomy";
+import { filterCoursesByTaxonomy, optionsFor, useTaxonomy, type TaxonomySelection } from "@/lib/taxonomy/use-taxonomy";
 import {
   clearRecentSearches,
   loadRecentSearches,
@@ -54,15 +54,15 @@ function FilterSelect({
   children: React.ReactNode;
 }) {
   return (
-    <div className="relative">
+    <div className="relative shrink-0">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full appearance-none rounded-xl border border-line bg-surface py-2.5 ps-3 pe-10 text-text"
+        className="h-9 appearance-none rounded-full border border-line bg-surface py-0 ps-3 pe-8 text-[12px] text-text"
       >
         {children}
       </select>
-      <span className="pointer-events-none absolute end-3 top-[calc(50%+2px)] size-3.5 -translate-y-1/2 rotate-90">
+      <span className="pointer-events-none absolute end-2.5 top-1/2 size-3 -translate-y-1/2 rotate-90">
         <HomeIcon src="/home/chevron.svg" />
       </span>
     </div>
@@ -76,16 +76,22 @@ export default function SearchPage() {
   const gate = usePurchaseGate();
   const router = useRouter();
   const [q, setQ] = useState("");
+  const deferredQ = useDeferredValue(q);
+  const searching = deferredQ !== q;
+  const [cols, setCols] = useState(5);
   const [sort, setSort] = useState("");
-  const [topic, setTopic] = useState("");
+  const [taxSel, setTaxSel] = useState<TaxonomySelection>({ country: "", university: "", category: "", topic: "" });
+  const [kind, setKind] = useState("");
+  const [price, setPrice] = useState("");
+  const [payment, setPayment] = useState("");
+  const [term, setTerm] = useState("");
+  const [instructor, setInstructor] = useState("");
   const [focused, setFocused] = useState(true);
   const [recents, setRecents] = useState<string[]>([]);
-  const mobileInputRef = useRef<HTMLInputElement>(null);
   const desktopInputRef = useRef<HTMLInputElement>(null);
 
   function focusInput() {
-    const mobile = window.matchMedia("(max-width: 1023px)").matches;
-    (mobile ? mobileInputRef : desktopInputRef).current?.focus();
+    desktopInputRef.current?.focus();
   }
 
   /**
@@ -100,6 +106,8 @@ export default function SearchPage() {
   }
 
   useEffect(() => {
+    const saved = Number(window.localStorage.getItem("ba-search-cols"));
+    if (saved >= 3 && saved <= 6) setCols(saved);
     focusInput();
   }, []);
 
@@ -148,14 +156,10 @@ export default function SearchPage() {
   // that used to sit here fired a request per keystroke and only fed a debug
   // count, so it is gone (the /api/search route stays for whoever wants it).
 
-  const results = useMemo(() => {
-    // Every published course on the platform, whatever university it belongs
-    // to — search is the one place the profile's taxonomy never narrows.
+  const matched = useMemo(() => {
     const base = publishedCourses(courses.data ?? []);
-    // Wild match: case/accent-insensitive, every typed word must appear in the
-    // course name (any language), subtitle, SKU or instructor name.
-    const words = normalizeSearch(q).split(" ").filter(Boolean);
-    let rows = base.filter((c) => {
+    const words = normalizeSearch(deferredQ).split(" ").filter(Boolean);
+    const rows = base.filter((c) => {
       if (!words.length) return true;
       const hay = normalizeSearch(
         [
@@ -173,24 +177,63 @@ export default function SearchPage() {
       );
       return words.every((w) => hay.includes(w));
     });
-    if (topic) rows = rows.filter((c) => c.branchRef?.id === topic);
-    rows = [...rows].sort((a, b) => {
+    return filterCoursesByTaxonomy(rows, taxSel).filter((c) => {
+      if (kind === "ebook" && !isEbookCourse(c)) return false;
+      if (kind === "course" && isEbookCourse(c)) return false;
+      const free = c.coursePaymentType === "Free" || !(Number(c.price) > 0);
+      if (price === "free" && !free) return false;
+      if (price === "paid" && free) return false;
+      if (payment === "emi" && !c.emiPaymentStatus) return false;
+      if (instructor && c.authorRef?.id !== instructor) return false;
+      return true;
+    });
+  }, [courses.data, instructors.data, deferredQ, taxSel, kind, price, payment, instructor]);
+
+  const batchIds = [...new Set(matched.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
+  const batches = useBatches(batchIds);
+
+  const results = useMemo(() => {
+    const rows = matched.filter((c) => {
+      if (!term) return true;
+      const tone = c.batchesRef?.id ? batches.data?.[c.batchesRef.id]?.tone : undefined;
+      return tone === term;
+    });
+    return [...rows].sort((a, b) => {
+      if (sort === "newest") {
+        const left = asDate((a as CourseDoc & { created_time?: unknown }).created_time)?.getTime() ?? 0;
+        const right = asDate((b as CourseDoc & { created_time?: unknown }).created_time)?.getTime() ?? 0;
+        return right - left;
+      }
+      if (sort === "popular") return (b.studentCount || 0) - (a.studentCount || 0);
+      if (sort === "rating") return (b.totalRatting || 0) - (a.totalRatting || 0);
       if (sort === "price_desc") return (b.price || 0) - (a.price || 0);
       if (sort === "price_asc") return (a.price || 0) - (b.price || 0);
       return 0;
     });
-    return rows;
-  }, [courses.data, instructors.data, q, sort, topic]);
+  }, [matched, batches.data, term, sort]);
 
-  // Topics that at least one course is filed under, shown by name.
-  const topicIds = new Set((courses.data ?? []).map((c) => c.branchRef?.id).filter(Boolean));
-  const topics = tax.topics.filter((b) => topicIds.has(b.id));
+  const optionPool = filterCoursesByTaxonomy(publishedCourses(courses.data ?? []), {
+    country: taxSel.country,
+    university: taxSel.university,
+    category: taxSel.category,
+    topic: "",
+  });
+  const present = {
+    country: new Set(publishedCourses(courses.data ?? []).map((c) => c.countryRef?.id).filter(Boolean)),
+    university: new Set(optionPool.map((c) => c.universityRef?.id).filter(Boolean)),
+    category: new Set(optionPool.map((c) => c.categoryRef?.id).filter(Boolean)),
+    topic: new Set(optionPool.map((c) => c.branchRef?.id).filter(Boolean)),
+  };
+  const taxOptions = optionsFor(tax, taxSel);
+  const countries = taxOptions.countries.filter((item) => present.country.has(item.id));
+  const universities = taxOptions.universities.filter((item) => present.university.has(item.id));
+  const categories = taxOptions.categories.filter((item) => present.category.has(item.id));
+  const topics = taxOptions.topics.filter((item) => present.topic.has(item.id));
+  const instructorIds = [...new Set(optionPool.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
   const showRecents = recents.length > 0 && (focused || !q.trim());
 
   const authorIds = [...new Set(results.map((c) => c.authorRef?.id).filter(Boolean))] as string[];
-  const batchIds = [...new Set(results.map((c) => c.batchesRef?.id).filter(Boolean))] as string[];
   const authors = useAuthors(authorIds);
-  const batches = useBatches(batchIds);
 
   const savedKey = (profile?.fvrtCourseList ?? []).map((ref) => ref.id).join(",");
   const savedIds = useMemo(() => new Set(savedKey ? savedKey.split(",") : []), [savedKey]);
@@ -243,158 +286,234 @@ export default function SearchPage() {
     await refreshProfile();
   }
 
+  function clearFilters() {
+    setSort("");
+    setTaxSel({ country: "", university: "", category: "", topic: "" });
+    setKind("");
+    setPrice("");
+    setPayment("");
+    setTerm("");
+    setInstructor("");
+  }
+
+  const sortLabel =
+    sort === "newest" ? t("searchNewest")
+    : sort === "popular" ? t("searchPopular")
+    : sort === "rating" ? t("rating")
+    : sort === "price_desc" ? t("priceHigh")
+    : sort === "price_asc" ? t("priceLow")
+    : "";
+  const chips: { id: string; label: string; clear: () => void }[] = [];
+  if (sortLabel) chips.push({ id: "sort", label: sortLabel, clear: () => setSort("") });
+  const countryName = countries.find((item) => item.id === taxSel.country)?.name;
+  const universityName = universities.find((item) => item.id === taxSel.university)?.name;
+  const categoryName = categories.find((item) => item.id === taxSel.category)?.name;
+  const topicName = topics.find((item) => item.id === taxSel.topic)?.name;
+  if (countryName) chips.push({ id: "country", label: countryName, clear: () => setTaxSel({ country: "", university: "", category: "", topic: "" }) });
+  if (universityName) chips.push({ id: "university", label: universityName, clear: () => setTaxSel((s) => ({ ...s, university: "", category: "", topic: "" })) });
+  if (categoryName) chips.push({ id: "category", label: categoryName, clear: () => setTaxSel((s) => ({ ...s, category: "", topic: "" })) });
+  if (topicName) chips.push({ id: "topic", label: topicName, clear: () => setTaxSel((s) => ({ ...s, topic: "" })) });
+  if (kind) chips.push({ id: "kind", label: kind === "ebook" ? t("searchEbooks") : t("searchCourses"), clear: () => setKind("") });
+  if (price) chips.push({ id: "price", label: price === "free" ? t("searchFree") : t("searchPaid"), clear: () => setPrice("") });
+  if (payment) chips.push({ id: "payment", label: t("searchEmi"), clear: () => setPayment("") });
+  if (term) chips.push({ id: "term", label: term === "upcoming" ? t("searchUpcoming") : t("searchOpen"), clear: () => setTerm("") });
+  const instructorName = instructor ? instructors.data?.[instructor] : "";
+  if (instructorName) chips.push({ id: "instructor", label: instructorName, clear: () => setInstructor("") });
+
   return (
-    <AppShell
-      loading={courses.isPending}
-      title={t("searchTitle")}
-      skeleton={<SearchSkeleton />}
-      searchField={
-        <input
-          ref={mobileInputRef}
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          onFocus={onInputFocus}
-          onBlur={() => {
-            setFocused(false);
-            commitQuery();
-          }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commitQuery();
-            }
-          }}
-          placeholder={t("search")}
-          className="h-11 w-full bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
-        />
-      }
-    >
-      <div className="grid gap-6 lg:grid-cols-[240px_1fr]">
-        <aside className="hidden space-y-4 rounded-[16px] border border-line bg-surface p-4 text-sm lg:block">
-          <h2 className="text-lg font-semibold">{t("filter")}</h2>
-          <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-muted">
-              <ArrowUpDown className="size-4" />
-              {t("sort")}
-            </span>
-            <FilterSelect value={sort} onChange={setSort}>
-              <option value="">—</option>
-              <option value="price_desc">{t("priceHigh")}</option>
-              <option value="price_asc">{t("priceLow")}</option>
-            </FilterSelect>
-          </label>
-          <label className="block">
-            <span className="mb-2 flex items-center gap-2 text-muted">
-              <Shapes className="size-4" />
-              {t("topic")}
-            </span>
-            <FilterSelect value={topic} onChange={setTopic}>
-              <option value="">{t("all")}</option>
-              {topics.map((item) => (
-                <option key={item.id} value={item.id}>
-                  {item.name}
-                </option>
-              ))}
-            </FilterSelect>
-          </label>
-        </aside>
-        <div>
-          <label
-            className={cn(
-              "mt-2 hidden h-[51px] w-full items-center gap-2.5 rounded-[47px] border-[0.5px] bg-black/25 px-[15px] backdrop-blur-[15px] transition lg:flex",
-              focused
-                ? "border-[#f6360b]/70 ring-2 ring-[#f6360b]/30"
-                : "border-line",
-            )}
-          >
-            <span className="size-5 shrink-0">
-              <HomeIcon src="/home/search.svg" />
-            </span>
-            <input
-              ref={desktopInputRef}
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              onFocus={onInputFocus}
-              onBlur={() => {
-                setFocused(false);
-                commitQuery();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  commitQuery();
-                }
-              }}
-              placeholder={t("search")}
-              className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
-            />
-          </label>
-          {showRecents ? (
-            <div className="mt-3">
-              <div className="mb-2 flex items-center justify-between">
-                <p className="flex items-center gap-1.5 text-[12px] text-muted">
-                  <Clock className="size-3.5" />
-                  {t("recentSearches")}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => setRecents(clearRecentSearches())}
-                  className="text-[12px] text-muted hover:text-text"
-                >
-                  {t("clear")}
-                </button>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {recents.map((item) => (
-                  <span
-                    key={item}
-                    className="flex min-h-11 items-center gap-1 rounded-full border border-line bg-surface-2 py-1 ps-3 pe-1.5 text-[12px] text-text"
-                  >
-                    <button
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setQ(item);
-                        commitQuery(item);
-                        focusInput();
-                      }}
-                    >
-                      {item}
-                    </button>
-                    <button
-                      type="button"
-                      aria-label={t("clear")}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setRecents(removeRecentSearch(item))}
-                      className="grid size-8 place-items-center rounded-full text-muted hover:text-text"
-                    >
-                      <X className="size-3" />
-                    </button>
-                  </span>
-                ))}
-              </div>
-            </div>
-          ) : null}
-          {items.length ? (
-            <div className={cn("mt-5", exploreGridClass, "lg:grid-cols-[repeat(auto-fill,minmax(227px,1fr))]")}>
-              {items.map((item) => {
-                const course = results.find((c) => c.id === item.id);
-                return (
-                  <ExploreGridCard
-                    key={item.id}
-                    item={item}
-                    labels={exploreLabels}
-                    onEnroll={() => course && void enrol(course)}
-                    onSave={() => void toggleSave(item.id)}
-                    enrollBlocked={course ? gate.blockFor(purchaseKindFor(course)) : undefined}
-                  />
-                );
-              })}
-            </div>
-          ) : (
-            <EmptyState icon="/home/search.svg" title={t("emptySearchTitle")} body={t("emptySearchBody")} />
+    <AppShell loading={courses.isPending} title={t("searchTitle")} skeleton={<SearchSkeleton />}>
+      <div className="flex flex-col gap-3 pt-2 lg:pt-4">
+        <div className="flex flex-col gap-2 lg:flex-row lg:items-center">
+        <label
+          className={cn(
+            "flex h-11 w-full shrink-0 items-center gap-2.5 rounded-full border bg-surface px-4 lg:w-80",
+            focused ? "border-[#f6360b]/70" : "border-line",
           )}
+        >
+          <span className="size-4 shrink-0">
+            {searching ? (
+              <span className="block size-4 animate-spin rounded-full border-2 border-line border-t-[#f24822]" />
+            ) : (
+              <HomeIcon src="/home/search.svg" />
+            )}
+          </span>
+          <input
+            ref={desktopInputRef}
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            onFocus={onInputFocus}
+            onBlur={() => {
+              setFocused(false);
+              commitQuery();
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commitQuery();
+              }
+            }}
+            placeholder={t("search")}
+            className="h-full min-w-0 flex-1 bg-transparent text-[14px] text-text outline-none placeholder:text-muted"
+          />
+        </label>
+
+        <div className="-mx-4 flex items-center gap-2 overflow-x-auto px-4 lg:mx-0 lg:flex-1 lg:flex-wrap lg:overflow-visible lg:px-0">
+          <FilterSelect value={taxSel.country} onChange={(country) => setTaxSel({ country, university: "", category: "", topic: "" })}>
+            <option value="">{t("country")}</option>
+            {countries.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect value={taxSel.university} onChange={(university) => setTaxSel((s) => ({ ...s, university, category: "", topic: "" }))}>
+            <option value="">{t("university")}</option>
+            {universities.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect value={taxSel.category} onChange={(category) => setTaxSel((s) => ({ ...s, category, topic: "" }))}>
+            <option value="">{t("category")}</option>
+            {categories.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect value={taxSel.topic} onChange={(topic) => setTaxSel((s) => ({ ...s, topic }))}>
+            <option value="">{t("topic")}</option>
+            {topics.map((item) => (
+              <option key={item.id} value={item.id}>{item.name}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect value={kind} onChange={setKind}>
+            <option value="">{t("searchType")}</option>
+            <option value="course">{t("searchCourses")}</option>
+            <option value="ebook">{t("searchEbooks")}</option>
+          </FilterSelect>
+          <FilterSelect value={price} onChange={setPrice}>
+            <option value="">{t("searchPrice")}</option>
+            <option value="free">{t("searchFree")}</option>
+            <option value="paid">{t("searchPaid")}</option>
+          </FilterSelect>
+          <FilterSelect value={payment} onChange={setPayment}>
+            <option value="">{t("searchPayment")}</option>
+            <option value="emi">{t("searchEmi")}</option>
+          </FilterSelect>
+          <FilterSelect value={term} onChange={setTerm}>
+            <option value="">{t("searchTerm")}</option>
+            <option value="active">{t("searchOpen")}</option>
+            <option value="upcoming">{t("searchUpcoming")}</option>
+          </FilterSelect>
+          <FilterSelect value={instructor} onChange={setInstructor}>
+            <option value="">{t("instructor")}</option>
+            {instructorIds.map((id) => (
+              <option key={id} value={id}>{instructors.data?.[id] || id}</option>
+            ))}
+          </FilterSelect>
+          <FilterSelect value={sort} onChange={setSort}>
+            <option value="">{t("sort")}</option>
+            <option value="newest">{t("searchNewest")}</option>
+            <option value="popular">{t("searchPopular")}</option>
+            <option value="rating">{t("rating")}</option>
+            <option value="price_asc">{t("priceLow")}</option>
+            <option value="price_desc">{t("priceHigh")}</option>
+          </FilterSelect>
+          <span className="ms-auto hidden shrink-0 items-center gap-1 lg:inline-flex">
+            {[3, 4, 5, 6].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => {
+                  setCols(n);
+                  window.localStorage.setItem("ba-search-cols", String(n));
+                }}
+                className={cn("grid size-8 place-items-center rounded-full text-[12px]", cols === n ? "bg-text text-bg" : "bg-surface-2 text-muted")}
+              >
+                {n}
+              </button>
+            ))}
+          </span>
         </div>
+        </div>
+        {chips.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
+            {chips.map((chip) => (
+              <button
+                key={chip.id}
+                type="button"
+                onClick={chip.clear}
+                className="inline-flex h-9 items-center gap-1.5 rounded-full bg-surface-2 px-3 text-[12px] text-text"
+              >
+                {chip.label}
+                <X className="size-3 text-muted" />
+              </button>
+            ))}
+            <span className="text-[12px] text-muted">{t("searchResults", { count: results.length })}</span>
+            <button type="button" onClick={clearFilters} className="text-[12px] text-muted hover:text-text">
+              {t("clearAll")}
+            </button>
+          </div>
+        ) : null}
+
+        {showRecents ? (
+          <div>
+            <div className="mb-2 flex items-center justify-between">
+              <p className="flex items-center gap-1.5 text-[12px] text-muted">
+                <Clock className="size-3.5" />
+                {t("recentSearches")}
+              </p>
+              <button type="button" onClick={() => setRecents(clearRecentSearches())} className="text-[12px] text-muted hover:text-text">
+                {t("clear")}
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {recents.map((item) => (
+                <span key={item} className="flex items-center gap-1 rounded-full border border-line bg-surface-2 py-1 ps-3 pe-1.5 text-[12px] text-text">
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => {
+                      setQ(item);
+                      commitQuery(item);
+                      focusInput();
+                    }}
+                  >
+                    {item}
+                  </button>
+                  <button
+                    type="button"
+                    aria-label={t("clear")}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => setRecents(removeRecentSearch(item))}
+                    className="grid size-7 place-items-center rounded-full text-muted hover:text-text"
+                  >
+                    <X className="size-3" />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        {items.length ? (
+          <div className={cn("grid grid-cols-2 gap-x-3 gap-y-4 sm:grid-cols-3", cols === 3 && "lg:grid-cols-3", cols === 4 && "lg:grid-cols-4", cols === 5 && "lg:grid-cols-5", cols === 6 && "lg:grid-cols-6")}>
+            {items.map((item, index) => {
+              const course = results.find((c) => c.id === item.id);
+              const blocked = !course || isEbookCourse(course) ? "skip" : gate.blockFor(purchaseKindFor(course));
+              return (
+                <ExploreGridCard
+                  key={item.id}
+                  item={item}
+                  labels={exploreLabels}
+                  enrollOnImage
+                  priority={index < 4}
+                  onEnroll={() => course && void enrol(course)}
+                  onSave={() => void toggleSave(item.id)}
+                  enrollBlocked={blocked || undefined}
+                />
+              );
+            })}
+          </div>
+        ) : courses.isFetched && !searching ? (
+          <EmptyState icon="/home/search.svg" title={t("emptySearchTitle")} body={t("emptySearchBody")} />
+        ) : null}
       </div>
     </AppShell>
   );

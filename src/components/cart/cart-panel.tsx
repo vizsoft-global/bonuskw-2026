@@ -8,6 +8,7 @@ import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { lineKey, loadCart, removeLine, saveCart, type CartLine, type CartState } from "@/lib/cart/store";
+import { imageFor } from "@/lib/media/image-url";
 
 let opener: ((open: boolean) => void) | null = null;
 
@@ -81,7 +82,7 @@ export function CartPanel({ count }: { count: number }) {
               <span className="grid size-14 shrink-0 place-items-center overflow-hidden rounded-lg bg-surface-2">
                 {line.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={line.image} alt="" className="size-full object-cover" />
+                  <img src={imageFor("courseCard", line.image)} alt="" width={112} height={112} className="size-full object-cover" />
                 ) : null}
               </span>
               <span className="min-w-0 flex-1">

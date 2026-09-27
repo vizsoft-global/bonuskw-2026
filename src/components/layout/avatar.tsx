@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { imageFor } from "@/lib/media/image-url";
 import { cn } from "@/lib/utils";
 
 export function Avatar({
@@ -27,7 +28,7 @@ export function Avatar({
     >
       {showImage ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" className="h-full w-full object-cover" onError={() => setFailed(src ?? null)} />
+        <img src={imageFor("avatar", src)} alt="" width={64} height={64} className="h-full w-full object-cover" onError={() => setFailed(src ?? null)} />
       ) : (
         (name || "B").slice(0, 1).toUpperCase()
       )}

@@ -1,5 +1,6 @@
 import { BrandThumb } from "@/components/shared/brand-thumb";
 import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
+import { imageFor, type ImageUse } from "@/lib/media/image-url";
 import { cn } from "@/lib/utils";
 
 export function hasThumb(src?: string | null) {
@@ -16,6 +17,8 @@ export function CourseThumb({
   seed,
   className,
   aspect = "5/3",
+  use = "courseCard",
+  priority,
   children,
 }: {
   image?: string;
@@ -23,6 +26,9 @@ export function CourseThumb({
   seed?: string | null;
   className?: string;
   aspect?: "5/3" | "3/4";
+  /** Which Cloudflare size to request. */
+  use?: ImageUse;
+  priority?: boolean;
   children?: React.ReactNode;
 }) {
   return (
@@ -35,7 +41,16 @@ export function CourseThumb({
     >
       {hasThumb(image) ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={image} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+        <img
+          src={imageFor(use, image)}
+          alt=""
+          width={aspect === "3/4" ? 480 : 640}
+          height={aspect === "3/4" ? 640 : 384}
+          loading={priority ? "eager" : "lazy"}
+          fetchPriority={priority ? "high" : "auto"}
+          decoding="async"
+          className="absolute inset-0 h-full w-full object-cover"
+        />
       ) : (
         <ThumbPlaceholder seed={seed} />
       )}

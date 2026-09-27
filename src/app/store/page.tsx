@@ -172,16 +172,8 @@ export default function StorePage() {
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
 
-        <div className="flex flex-col gap-5 pt-5 lg:flex-row lg:items-center lg:gap-[30px] lg:pt-4">
-          <StatsCard
-            streak={stats.data?.streakDays || 0}
-            courses={subs.data?.length || 0}
-            hours={hours}
-            labels={statsLabels}
-          />
-          <div className="hidden min-w-0 flex-1 lg:block">
-            <StoriesRow stories={storyItems} fade />
-          </div>
+        <div className="hidden pt-4 lg:block">
+          <StoriesRow stories={storyItems} fade />
         </div>
 
         {featuredItems.length ? (

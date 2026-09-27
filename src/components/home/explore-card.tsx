@@ -228,30 +228,50 @@ export function ExploreGridCard({
   onEnroll,
   onSave,
   enrollBlocked,
+  enrollOnImage,
+  priority,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
   onEnroll: () => void;
   onSave?: () => void;
   enrollBlocked?: string;
+  /** Search results: Enroll sits on the image, and only when it can be used. */
+  enrollOnImage?: boolean;
+  priority?: boolean;
 }) {
   const href = itemHref(item);
+  const showEnroll = enrollOnImage ? !enrollBlocked : true;
   return (
     <article className="flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={href} className="block">
-          <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full">
+          <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full" priority={priority}>
             <ThumbOverlay item={item} />
             {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
+        {enrollOnImage && showEnroll ? (
+          <button
+            type="button"
+            onClick={() => {
+              haptic("medium");
+              onEnroll();
+            }}
+            className="absolute bottom-1.5 start-1.5 z-10 h-7 rounded-[16px] bg-[#0c5eff] px-3 text-[11px] font-medium leading-none text-white"
+          >
+            {labels.enroll}
+          </button>
+        ) : null}
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-2 lg:gap-2">
         <Link href={href} className="line-clamp-2 px-1 text-[12px] font-medium leading-[16px] text-text">
           {item.name}
         </Link>
-        <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
+        {enrollOnImage ? null : (
+          <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
+        )}
       </div>
     </article>
   );

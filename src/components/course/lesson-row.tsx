@@ -3,6 +3,7 @@
 import { HomeIcon } from "@/components/home/icon";
 import { BrandThumb } from "@/components/shared/brand-thumb";
 import { useI18n } from "@/lib/i18n/locale";
+import { imageFor } from "@/lib/media/image-url";
 import { cn } from "@/lib/utils";
 
 export function LessonRow({
@@ -28,7 +29,7 @@ export function LessonRow({
       <div className="relative aspect-[82/55] overflow-hidden rounded-[10px] border-[0.5px] border-white/25 bg-surface">
         {thumb ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={thumb} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
+          <img src={imageFor("lesson", thumb)} alt="" width={256} height={144} loading="lazy" decoding="async" className="h-full w-full object-cover" />
         ) : (
           <BrandThumb seed={seed} />
         )}

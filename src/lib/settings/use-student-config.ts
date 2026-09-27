@@ -24,6 +24,7 @@ export type StudentConfig = {
   chapterPrefix?: boolean;
   /** Settings > General > Course cards: the lesson count and runtime on cards. */
   showLessonsAndHours?: boolean;
+  skipPhoneVerification?: boolean;
 };
 
 export async function fetchStudentConfig(): Promise<StudentConfig> {
@@ -81,4 +82,18 @@ export function useLessonsAndHours() {
     staleTime: 60 * 1000,
   });
   return data?.showLessonsAndHours === true;
+}
+
+/** Whether students may save a mobile number without an SMS code. */
+export function useSkipPhoneVerification() {
+  const { data } = useQuery({
+    queryKey: ["student-config", "skipPhoneVerification"],
+    queryFn: async () => {
+      const res = await fetch("/api/student-config", { cache: "no-store" });
+      if (!res.ok) throw new Error("Could not load student config");
+      return (await res.json()) as { skipPhoneVerification?: boolean };
+    },
+    staleTime: 60 * 1000,
+  });
+  return data?.skipPhoneVerification === true;
 }

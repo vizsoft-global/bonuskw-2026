@@ -34,7 +34,7 @@ export function OfferGridCard({
     <article className="flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={course.href} className="block">
-          <CourseThumb image={course.image} seed={course.id} aspect="3/4" className="w-full" />
+          <CourseThumb image={course.image} seed={course.id} aspect="5/3" className="w-full" />
         </Link>
       </div>
       <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-2 lg:gap-2">

@@ -341,6 +341,9 @@ function AppChrome({ children }: { children: ReactNode }) {
   });
   const cartCount = cart.data?.lines.length ?? 0;
   const offerCount = usePromotions().data?.length ?? 0;
+  const offersTab = { href: "/offers", key: "offers" as const, icon: "/home/star.svg", iconActive: "/home/star.svg" };
+  const desktopTabs = [tabs[0], offersTab, ...tabs.slice(1)];
+  const mobileTabs = offerCount > 0 ? [tabs[0], offersTab, ...tabs.slice(1)] : tabs;
   const uniName = university.data || "";
   const displayName = profile?.display_name || t("profile");
   const isChrome = chromePaths.has(path);
@@ -371,7 +374,7 @@ function AppChrome({ children }: { children: ReactNode }) {
                 <BrandLogo size="nav" />
               </Link>
               <nav className="flex items-center gap-2">
-                {tabs.map((tab) => {
+                {desktopTabs.map((tab) => {
                   const active =
                     tab.href === "/" ? path === "/" : path === tab.href || path.startsWith(`${tab.href}/`);
                   return (
@@ -383,29 +386,19 @@ function AppChrome({ children }: { children: ReactNode }) {
                         if (!active) haptic("light");
                       }}
                       className={cn(
-                        "rounded-full px-5 py-2 text-[14px] font-medium transition-[background-color,color] duration-200",
+                        "relative rounded-full px-5 py-2 text-[14px] font-medium transition-[background-color,color] duration-200",
                         active ? "bg-surface-2 text-text" : "text-muted hover:text-text",
                       )}
                     >
                       {t(tab.key)}
+                      {tab.href === "/offers" && offerCount > 0 ? (
+                        <span className="absolute -top-1 end-1 grid min-w-4 place-items-center rounded-full bg-[#f24822] px-1 text-[9px] font-semibold leading-4 text-white">
+                          {offerCount}
+                        </span>
+                      ) : null}
                     </Link>
                   );
                 })}
-                {offerCount > 0 ? (
-                  <Link
-                    href="/offers"
-                    prefetch
-                    className={cn(
-                      "relative rounded-full px-5 py-2 text-[14px] font-medium",
-                      path.startsWith("/offers") ? "bg-surface-2 text-text" : "text-[#f24822]",
-                    )}
-                  >
-                    {t("offers")}
-                    <span className="absolute -top-1 end-1 grid min-w-4 place-items-center rounded-full bg-[#f24822] px-1 text-[9px] font-semibold leading-4 text-white">
-                      {offerCount}
-                    </span>
-                  </Link>
-                ) : null}
               </nav>
             </div>
             <div className="flex items-center gap-[15px]">
@@ -448,26 +441,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           </div>
 
           {isSearch ? (
-            <div className="relative px-[15px] pb-2.5 pt-safe-header lg:hidden">
-              <div className="flex min-h-12 items-center gap-2.5">
-                <BackButton />
-                <span className="h-5 w-px shrink-0 bg-white/20" />
-                <div ref={bindSearch} className="min-w-0 flex-1" />
-                <button
-                  type="button"
-                  aria-label={t("searchTitle")}
-                  className="grid size-10 shrink-0 place-items-center"
-                  onClick={(e) => {
-                    const input = e.currentTarget.parentElement?.querySelector("input");
-                    input?.focus();
-                  }}
-                >
-                  <span className="size-5">
-                    <HomeIcon src="/home/search.svg" />
-                  </span>
-                </button>
-              </div>
-            </div>
+            <div className="pt-safe-header lg:hidden" />
           ) : isChrome ? (
             <div className="relative overflow-hidden rounded-b-[18px] bg-app-top px-[15px] pb-5 pt-safe-header lg:hidden">
               <div
@@ -529,7 +503,7 @@ function AppChrome({ children }: { children: ReactNode }) {
             path.includes("/learn") && "lg:max-w-[1600px] lg:px-6 lg:pb-3",
           )}
         >
-          {nested && !path.startsWith("/profile/") ? (
+          {nested && !path.startsWith("/profile/") && path !== "/search" ? (
             <PageToolbar
               heading={false}
               className={cn("hidden lg:flex", path.includes("/learn") ? "mb-1.5" : "mb-4 pt-[30px]")}
@@ -548,12 +522,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           )}
           aria-hidden={!showTabBar}
         >
-          {[
-            ...tabs,
-            ...(offerCount > 0
-              ? [{ href: "/offers", key: "offers" as const, icon: "/home/star.svg", iconActive: "/home/star.svg" }]
-              : []),
-          ].map((tab) => {
+          {mobileTabs.map((tab) => {
             const active = tab.href === "/" ? path === "/" : path === tab.href;
             return (
               <TabItem

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import { HomeIcon } from "@/components/home/icon";
 import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
+import { imageFor } from "@/lib/media/image-url";
 import { cn } from "@/lib/utils";
 
 /**
@@ -60,7 +61,7 @@ export function CourseCover({
         <>
           {hasThumb(image) ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={image} alt="" className="h-full w-full object-cover" />
+            <img src={imageFor("courseHero", image)} alt="" width={1600} height={900} className="h-full w-full object-cover" />
           ) : (
             <ThumbPlaceholder seed={seed} />
           )}

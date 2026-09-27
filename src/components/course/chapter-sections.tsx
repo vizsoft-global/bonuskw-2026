@@ -5,6 +5,7 @@ import { HomeIcon } from "@/components/home/icon";
 import { BrandThumb } from "@/components/shared/brand-thumb";
 import { FileDownloadIcon, FileGlyph, FileTileArt, fileGradient, fileTypeLabel } from "@/components/course/file-art";
 import { formatBytes } from "@/lib/course/resource-kind";
+import { imageFor } from "@/lib/media/image-url";
 import type { OutlineFile, OutlineItem, OutlineLesson } from "@/lib/course/outline";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
@@ -105,7 +106,7 @@ function CardThumb({
     >
       {src ? (
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={src} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={imageFor("chapter", src)} alt="" width={640} height={384} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <BrandThumb seed={seed} />
       )}

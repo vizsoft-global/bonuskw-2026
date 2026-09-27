@@ -2,8 +2,8 @@
 
 import { toast } from "@/components/ui/toaster";
 import { openCart } from "@/components/cart/cart-panel";
-import { useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { arrayRemove, arrayUnion, doc, getDoc, updateDoc } from "firebase/firestore";
 import { CourseHeaderActions } from "@/components/course/header-actions";
@@ -278,6 +278,7 @@ export default function CoursePage() {
   }
   // One outline in the instructor's order: every chapter is a section holding
   // its lessons, its files and the tests that follow it.
+  const search = useSearchParams();
   const outline = buildOutline({
     chapters: chapters.data ?? [],
     lessons: lessons.data ?? [],
@@ -312,6 +313,15 @@ export default function CoursePage() {
   // handler follows the lesson's own lock rather than the course enrolment.
   const canOpenLessons = hasAccess || Boolean(chapterAccess.data?.size);
   const hasIntro = Boolean(c.videoRef || c.video);
+
+  useEffect(() => {
+    const wanted = search.get("preview");
+    if (!wanted) return;
+    const lesson = outline
+      .flatMap((item) => (item.kind === "chapter" ? item.lessons : []))
+      .find((row) => row.id === wanted && row.preview);
+    if (lesson) setPreview(lesson);
+  }, [search, outline]);
 
   function openLesson(lesson: OutlineLesson) {
     if (canOpenLessons && !lesson.locked) {
@@ -441,7 +451,14 @@ export default function CoursePage() {
           {t("unlockingSoon")}
         </p>
       )}
-      {preview ? <VideoPopup lessonId={preview.id} title={preview.name} onClose={() => setPreview(null)} /> : null}
+      {preview ? (
+        <VideoPopup
+          lessonId={preview.id}
+          title={preview.name}
+          files={preview.files.filter((file) => !file.locked)}
+          onClose={() => setPreview(null)}
+        />
+      ) : null}
       {previewFile ? <FilePreview file={previewFile} onClose={() => setPreviewFile(null)} /> : null}
     </AppShell>
   );

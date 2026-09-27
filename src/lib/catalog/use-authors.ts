@@ -20,6 +20,7 @@ export function useAuthors(ids: (string | undefined | null)[]) {
     queryKey: ["authors-info", unique.join(",")],
     enabled: unique.length > 0,
     staleTime: STALE_MS,
+    placeholderData: (previous) => previous,
     queryFn: async (): Promise<AuthorMap> => {
       const rows = await getDocsByIds(collections.users, unique);
       return Object.fromEntries(

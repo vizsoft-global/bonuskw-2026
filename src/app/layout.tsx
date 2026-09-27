@@ -54,6 +54,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning className={`${inter.variable} ${arabic.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://imagedelivery.net" />
+      </head>
       <body>
         <Providers>
           <VersionGuard />

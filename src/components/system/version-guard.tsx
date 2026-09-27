@@ -39,7 +39,7 @@ async function clearClientCaches() {
   if ("caches" in window) {
     try {
       const keys = await caches.keys();
-      await Promise.all(keys.map((key) => caches.delete(key)));
+      await Promise.all(keys.filter((key) => !key.startsWith("ba-images")).map((key) => caches.delete(key)));
     } catch {
       /* ignore */
     }
