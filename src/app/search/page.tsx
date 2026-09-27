@@ -15,6 +15,7 @@ import { SearchSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useOwnership } from "@/lib/cart/ownership";
 import { toast } from "@/components/ui/toaster";
 import { openCart } from "@/components/cart/cart-panel";
 import { listCourses, publishedCourses } from "@/lib/catalog/queries";
@@ -133,6 +134,7 @@ export default function SearchPage() {
   const tax = useTaxonomy();
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const router = useRouter();
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
@@ -328,9 +330,7 @@ export default function SearchPage() {
       await addCourseLine(user.uid, course);
     } catch (err) {
       toast.error(enrolmentClosedMessage(err, t));
-      return;
     }
-    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function toggleSave(courseId: string) {
@@ -610,7 +610,8 @@ export default function SearchPage() {
             >
               {items.map((item, index) => {
                 const course = results.find((c) => c.id === item.id);
-                const blocked = !course || isEbookCourse(course) ? "skip" : gate.blockFor(purchaseKindFor(course));
+                const blocked =
+                  own.labelOf(item.id) ?? (!course || isEbookCourse(course) ? "skip" : gate.blockFor(purchaseKindFor(course)));
                 return (
                   <ExploreGridCard
                     key={item.id}

@@ -180,7 +180,7 @@ function CardActions({
           enrollBlocked ? "cursor-not-allowed bg-surface-2 text-muted" : "bg-[#0c5eff] text-white",
         )}
       >
-        {enrollBlocked || labels.enroll}
+        {enrollBlocked === "skip" ? labels.enroll : enrollBlocked || labels.enroll}
       </button>
     </div>
   );
@@ -241,7 +241,7 @@ export function ExploreGridCard({
   priority?: boolean;
 }) {
   const href = itemHref(item);
-  const showEnroll = enrollOnImage ? !enrollBlocked : true;
+  const showEnroll = enrollBlocked !== "skip";
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
@@ -255,13 +255,18 @@ export function ExploreGridCard({
         {enrollOnImage && showEnroll ? (
           <button
             type="button"
+            disabled={Boolean(enrollBlocked)}
             onClick={() => {
+              if (enrollBlocked) return;
               haptic("medium");
               onEnroll();
             }}
-            className="absolute bottom-1.5 start-1.5 z-10 h-7 translate-y-1 rounded-[16px] bg-[#0c5eff] px-3 text-[11px] font-medium leading-none text-white opacity-0 shadow-lg transition-[opacity,transform] duration-150 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 [@media(hover:none)]:hidden"
+            className={cn(
+              "absolute bottom-1.5 start-1.5 z-10 h-7 translate-y-1 rounded-[16px] px-3 text-[11px] font-medium leading-none opacity-0 shadow-lg transition-[opacity,transform] duration-150 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 [@media(hover:none)]:hidden",
+              enrollBlocked ? "cursor-not-allowed bg-black/70 text-white/80 backdrop-blur-sm" : "bg-[#0c5eff] text-white",
+            )}
           >
-            {labels.enroll}
+            {enrollBlocked || labels.enroll}
           </button>
         ) : null}
       </div>

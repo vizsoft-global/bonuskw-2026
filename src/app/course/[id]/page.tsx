@@ -1,7 +1,5 @@
 "use client";
 
-import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
 import { useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -19,7 +17,9 @@ import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { EnrolledCta } from "@/components/course/enrolled-cta";
-import { addCourseLine, EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { addCourseLine, AlreadyOwnedError, EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useOwnership } from "@/lib/cart/ownership";
+import { showAddedToCart } from "@/components/cart/added-dialog";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
 import { getBatch, getCourse, listChapters, listLessons, listQuizzes, listResources } from "@/lib/catalog/queries";
 import { batchTone } from "@/lib/course/batch-status";
@@ -51,6 +51,7 @@ export default function CoursePage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   // Settings > General > Course cards. Off unless an admin switches it on.
   const showStats = useLessonsAndHours();
   const qc = useQueryClient();
@@ -143,13 +144,13 @@ export default function CoursePage() {
       }
       // Re-reads the batch and refuses if enrolment is closed, even when the
       // page was opened before the batch ended.
-      await addCourseLine(user.uid, { ...c, id }, paymentType);
-      if (paymentType === "EMI") {
-        router.push("/cart");
+      await addCourseLine(user.uid, { ...c, id }, paymentType, { announce: paymentType !== "EMI" });
+      if (paymentType === "EMI") router.push("/cart");
+    } catch (err) {
+      if (err instanceof AlreadyOwnedError) {
+        setCartError(enrolmentClosedMessage(err, t));
         return;
       }
-      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
-    } catch (err) {
       if (err instanceof EnrolmentClosedError) {
         setCartError(enrolmentClosedMessage(err, t));
         void batch.refetch();
@@ -178,6 +179,10 @@ export default function CoursePage() {
       | { name?: string; price?: number }
       | undefined;
     if (!c || !chapter) return;
+    if (own.stateOf(id) || own.chapterInCart(id, chapterId)) {
+      setCartError(own.longLabelOf(id) ?? t("ownInCartLong"));
+      return;
+    }
     setBusy(true);
     setCartError("");
     try {
@@ -203,7 +208,7 @@ export default function CoursePage() {
           addedAt: Date.now(),
         }),
       );
-      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
+      showAddedToCart({ title: `${c.name ?? ""} › ${chapter.name ?? ""}`.trim(), image: courseThumb(c) });
     } catch (err) {
       if (err instanceof EnrolmentClosedError) {
         setCartError(enrolmentClosedMessage(err, t));
@@ -399,7 +404,7 @@ export default function CoursePage() {
               }
               emiLabel={t("payInEmi")}
               secure={t("secure")}
-              block={block}
+              block={own.longLabelOf(id) ?? block}
               busy={busy}
               showEmi={Boolean(c.emiPaymentStatus)}
               onEnroll={() => void addCart("Full payment")}
@@ -440,7 +445,7 @@ export default function CoursePage() {
           }}
           onQuiz={hasAccess ? (quizId) => router.push(`/course/${id}/learn?quiz=${quizId}`) : undefined}
           onBuyChapter={
-            c.coursePaymentType === "Free" || hasAccess || gate.blockFor("chapter")
+            c.coursePaymentType === "Free" || hasAccess || own.stateOf(id) || gate.blockFor("chapter")
               ? undefined
               : (chapterId) => void addChapterToCart(chapterId)
           }

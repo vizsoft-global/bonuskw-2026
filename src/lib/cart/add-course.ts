@@ -1,4 +1,9 @@
+import { collection, doc, getDocs, query, where, type DocumentReference } from "firebase/firestore";
+import { showAddedToCart } from "@/components/cart/added-dialog";
 import { getBatch } from "@/lib/catalog/queries";
+import { loadLiveSubscription } from "@/lib/course/enrollments";
+import { getDb } from "@/lib/firebase/client";
+import { collections } from "@/lib/firebase/collections";
 import { loadCart, saveCart, upsertLine, type CartLine, type CartPaymentType } from "@/lib/cart/store";
 import { enrolmentBlock, type EnrolBlock } from "@/lib/course/enrol";
 import { courseEmiAmounts, courseEmiCount, splitEmi } from "@/lib/course/emi";
@@ -16,11 +21,22 @@ export class EnrolmentClosedError extends Error {
   }
 }
 
+/** The student already has this course or eBook, or it is already in the cart. */
+export class AlreadyOwnedError extends Error {
+  reason: "enrolled" | "inCart";
+  constructor(reason: "enrolled" | "inCart") {
+    super(`Already ${reason}`);
+    this.name = "AlreadyOwnedError";
+    this.reason = reason;
+  }
+}
+
 /** Translated reason for a refused add-to-cart; generic text for anything else. */
 export function enrolmentClosedMessage(
   err: unknown,
-  t: (key: "batchFull" | "enrolmentClosedToast" | "draft") => string,
+  t: (key: "batchFull" | "enrolmentClosedToast" | "draft" | "ownEnrolledLong" | "ownInCartLong") => string,
 ): string {
+  if (err instanceof AlreadyOwnedError) return t(err.reason === "enrolled" ? "ownEnrolledLong" : "ownInCartLong");
   if (err instanceof EnrolmentClosedError) {
     if (err.reason === "batch-full") return t("batchFull");
     if (err.reason === "draft" || err.reason === "ebook") return t("draft");
@@ -46,8 +62,17 @@ export async function addCourseLine(
   uid: string,
   course: CourseDoc & { id: string },
   paymentType: CartPaymentType = "Full payment",
+  { announce = true }: { announce?: boolean } = {},
 ) {
   const ebook = isEbookCourse(course);
+  const kind = ebook ? "ebook" : "course";
+  const cart = await loadCart(uid);
+  if (cart.lines.some((line) => line.kind === kind && line.courseId === course.id)) {
+    throw new AlreadyOwnedError("inCart");
+  }
+  if (ebook ? await ownsEbook(uid, course.id) : await loadLiveSubscription(uid, course.id)) {
+    throw new AlreadyOwnedError("enrolled");
+  }
   let batchName: string | undefined;
   let batchId: string | undefined;
   if (!ebook) {
@@ -60,7 +85,7 @@ export async function addCourseLine(
 
   const emi = !ebook && Boolean(course.emiPaymentStatus);
   const line: CartLine = {
-    kind: ebook ? "ebook" : "course",
+    kind,
     courseId: course.id,
     paymentType: emi ? paymentType : "Full payment",
     title: course.name,
@@ -73,6 +98,19 @@ export async function addCourseLine(
     ...(batchId ? { batchId } : {}),
   };
 
-  const cart = await loadCart(uid);
   await saveCart(uid, upsertLine(cart, line));
+  if (announce) showAddedToCart({ title: course.name, image: line.image });
+}
+
+/** eBook ids the student has bought (`ebookAccess` rows still Ongoing). */
+export async function loadOwnedEbookIds(uid: string) {
+  const db = getDb();
+  const snap = await getDocs(
+    query(collection(db, collections.ebookAccess), where("userRef", "==", doc(db, collections.users, uid))),
+  );
+  return snap.docs.filter((d) => d.get("status") === "Ongoing").map((d) => (d.get("courseRef") as DocumentReference).id);
+}
+
+async function ownsEbook(uid: string, courseId: string) {
+  return (await loadOwnedEbookIds(uid)).includes(courseId);
 }

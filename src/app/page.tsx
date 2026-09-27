@@ -45,7 +45,7 @@ import {
 } from "@/lib/taxonomy/use-taxonomy";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
+import { useOwnership } from "@/lib/cart/ownership";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
@@ -113,6 +113,7 @@ function HomeBody({ uid }: { uid: string }) {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("grid");
   // Filter starts at the student's own university/field; they can widen it.
@@ -187,9 +188,7 @@ function HomeBody({ uid }: { uid: string }) {
       await addCourseLine(uid, course);
     } catch (err) {
       toast.error(enrolmentClosedMessage(err, t));
-      return;
     }
-    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function toggleSave(courseId: string) {
@@ -355,7 +354,7 @@ function HomeBody({ uid }: { uid: string }) {
                       labels={exploreLabels}
                       onEnroll={() => course && void enrol(course)}
                       onSave={() => void toggleSave(item.id)}
-                      enrollBlocked={gate.blockFor("course")}
+                      enrollBlocked={own.labelOf(item.id) ?? gate.blockFor("course")}
                     />
                   );
                 })}
@@ -371,7 +370,7 @@ function HomeBody({ uid }: { uid: string }) {
                       labels={exploreLabels}
                       onEnroll={() => course && void enrol(course)}
                       onSave={() => void toggleSave(item.id)}
-                      enrollBlocked={gate.blockFor("course")}
+                      enrollBlocked={own.labelOf(item.id) ?? gate.blockFor("course")}
                     />
                   );
                 })}

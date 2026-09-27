@@ -1,7 +1,6 @@
 "use client";
 
-import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
+import { showAddedToCart } from "@/components/cart/added-dialog";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { exploreGridClass } from "@/components/home/explore-card";
@@ -10,7 +9,8 @@ import { OfferGridCard, type OfferCourseCard } from "@/components/promotions/off
 import { EmptyState } from "@/components/shared/empty-state";
 import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { addCourseLine, AlreadyOwnedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useOwnership } from "@/lib/cart/ownership";
 import { getCourse } from "@/lib/catalog/queries";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { formatKwdLocale } from "@/lib/i18n/content";
@@ -47,6 +47,7 @@ export default function OffersPage() {
   const { t, locale } = useI18n();
   const { user } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +122,6 @@ export default function OffersPage() {
         return;
       }
       await addCourseLine(user.uid, course);
-      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
     } catch (err) {
       setError(enrolmentClosedMessage(err, t));
     } finally {
@@ -135,7 +135,7 @@ export default function OffersPage() {
       return;
     }
     if (gate.blockFor("course")) return;
-    const ids = (promo.courses ?? []).map((course) => course.id);
+    const ids = (promo.courses ?? []).map((course) => course.id).filter((id) => !own.stateOf(id));
     if (!ids.length) return;
     setBusy(`all:${promo.id}`);
     setError(null);
@@ -144,14 +144,18 @@ export default function OffersPage() {
       let count = 0;
       for (const doc of docs) {
         if (!doc) continue;
-        await addCourseLine(user.uid, doc);
-        count += 1;
+        try {
+          await addCourseLine(user.uid, doc, "Full payment", { announce: false });
+          count += 1;
+        } catch (err) {
+          if (!(err instanceof AlreadyOwnedError)) throw err;
+        }
       }
       if (!count) {
         setError(t("offerUnavailable"));
         return;
       }
-      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
+      showAddedToCart({ title: localizedText(promo.name, locale) || t("offers"), image: promo.bannerImage ?? undefined });
     } catch (err) {
       setError(enrolmentClosedMessage(err, t));
     } finally {
@@ -177,6 +181,7 @@ export default function OffersPage() {
             const rule = ruleLabel(promo);
             const ends = promo.endsAt ? endsLabel(promo.endsAt) : null;
             const adding = busy === `all:${promo.id}`;
+            const allOwned = courses.length > 0 && courses.every((course) => own.stateOf(course.id));
             return (
               <section key={promo.id} className="flex flex-col gap-4">
                 <div className="overflow-hidden rounded-[14px] border border-line bg-surface">
@@ -211,17 +216,17 @@ export default function OffersPage() {
                     ) : null}
                     <button
                       type="button"
-                      disabled={Boolean(purchaseBlocked) || adding}
+                      disabled={Boolean(purchaseBlocked) || adding || allOwned}
                       title={purchaseBlocked}
                       onClick={() => void addAll(promo)}
                       className={cn(
                         "mt-1 h-9 w-full rounded-[10px] text-[12px] font-medium lg:w-auto lg:px-6",
-                        purchaseBlocked || adding
+                        purchaseBlocked || adding || allOwned
                           ? "cursor-not-allowed bg-surface-2 text-muted"
                           : "bg-[#0c5eff] text-white",
                       )}
                     >
-                      {purchaseBlocked || t("offerAddAll")}
+                      {purchaseBlocked || (allOwned ? t("ownInCart") : t("offerAddAll"))}
                     </button>
                   </div>
                 </div>
@@ -232,7 +237,7 @@ export default function OffersPage() {
                       key={course.id}
                       course={toCard(course)}
                       addLabel={t("offerAddToCart")}
-                      blocked={purchaseBlocked}
+                      blocked={own.labelOf(course.id) ?? purchaseBlocked}
                       busy={busy === course.id}
                       onAdd={() => void addOne(course.id)}
                     />

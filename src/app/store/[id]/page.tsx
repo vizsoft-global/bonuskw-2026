@@ -1,7 +1,5 @@
 "use client";
 
-import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -17,7 +15,8 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
+import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useOwnership } from "@/lib/cart/ownership";
 import { getCourse, listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -36,6 +35,7 @@ export default function EbookPage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile, ready } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
 
@@ -130,10 +130,9 @@ export default function EbookPage() {
     setBusy(true);
     setCartError("");
     try {
-      await addEbookToCart(user.uid, target);
-      toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
+      await addCourseLine(user.uid, target);
     } catch (err) {
-      setCartError(err instanceof Error ? err.message : "Could not add to cart");
+      setCartError(enrolmentClosedMessage(err, t));
     } finally {
       setBusy(false);
     }
@@ -232,7 +231,7 @@ export default function EbookPage() {
             price={formatKwdLocale(data.price, locale)}
             enrollLabel={t("addToCart")}
             secure={t("secure")}
-            block={owned.data ? t("purchased") : gate.blockFor("ebook")}
+            block={owned.data ? t("purchased") : own.longLabelOf(id) ?? gate.blockFor("ebook")}
             busy={busy}
             showEmi={false}
             onEnroll={() => void addEbook(data)}
@@ -264,6 +263,7 @@ export default function EbookPage() {
                     labels={cardLabels}
                     onEnroll={() => row && void addEbook(row)}
                     onSave={() => void toggleSave(item.id)}
+                    enrollBlocked={own.labelOf(item.id)}
                   />
                 </div>
               );
@@ -297,20 +297,4 @@ export default function EbookPage() {
 function courseLanguage(course: object) {
   const value = (course as { language?: unknown }).language;
   return typeof value === "string" && value.trim() ? value.trim() : undefined;
-}
-
-async function addEbookToCart(uid: string, book: CourseDoc & { id: string }) {
-  const cart = await loadCart(uid);
-  await saveCart(
-    uid,
-    upsertLine(cart, {
-      kind: "ebook",
-      courseId: book.id,
-      paymentType: "Full payment",
-      title: book.name,
-      image: book.image,
-      price: Number(book.price) || 0,
-      addedAt: Date.now(),
-    }),
-  );
 }

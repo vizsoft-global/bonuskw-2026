@@ -20,6 +20,7 @@ import { listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { usePromotions } from "@/lib/promotions/use-promotions";
 import { getDoc } from "firebase/firestore";
 import { BrandLogo } from "@/components/auth/brand-logo";
+import { AddedToCartDialog } from "@/components/cart/added-dialog";
 import { CartPanel, openCart } from "@/components/cart/cart-panel";
 import { CustomPopupHost } from "@/components/home/custom-popup";
 import { InstallButton, InstallPrompt } from "@/components/system/install-prompt";
@@ -375,6 +376,7 @@ function AppChrome({ children }: { children: ReactNode }) {
       <div className="relative min-h-dvh overflow-x-hidden bg-app-top text-text">
         <CatalogWarmup />
         <CartPanel count={cartCount} />
+        <AddedToCartDialog />
         <CustomPopupHost />
         <InstallPrompt />
         <HeaderGlow />

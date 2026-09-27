@@ -13,7 +13,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
 import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
+import { useOwnership } from "@/lib/cart/ownership";
 import { getCourse, getDocsByIds } from "@/lib/catalog/queries";
 import { avatarSrc } from "@/lib/avatar";
 import { batchInfo, type BatchInfo } from "@/lib/course/batch-status";
@@ -30,6 +30,7 @@ import { courseThumb } from "@/lib/course/thumb";
 export default function SavedPage() {
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<"course" | "ebook">("course");
@@ -102,9 +103,7 @@ export default function SavedPage() {
       await addCourseLine(user.uid, course);
     } catch (err) {
       toast.error(enrolmentClosedMessage(err, t));
-      return;
     }
-    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
   }
 
   async function unsave(courseId: string) {
@@ -138,7 +137,7 @@ export default function SavedPage() {
               labels={labels}
               onEnroll={() => void enrol(item.id)}
               onSave={() => void unsave(item.id)}
-              enrollBlocked={gate.blockFor(tab === "ebook" ? "ebook" : "course")}
+              enrollBlocked={own.labelOf(item.id) ?? gate.blockFor(tab === "ebook" ? "ebook" : "course")}
             />
           ))}
         </div>

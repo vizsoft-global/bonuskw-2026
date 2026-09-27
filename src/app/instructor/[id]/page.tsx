@@ -1,7 +1,6 @@
 "use client";
 
 import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +13,8 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InstructorSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
+import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useOwnership } from "@/lib/cart/ownership";
 import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
@@ -33,6 +33,7 @@ export default function InstructorPage() {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
+  const own = useOwnership();
   const [tab, setTab] = useState<"courses" | "ebooks">("courses");
 
   const instructor = useQuery({
@@ -94,9 +95,11 @@ export default function InstructorPage() {
       return;
     }
     if (gate.blockFor(purchaseKindFor(row))) return;
-    if (isEbookCourse(row)) await addEbookToCart(user.uid, row);
-    else await addCourseToCart(user.uid, row);
-    toast.success(t("addedToCart"), { action: { label: t("viewCart"), onClick: () => openCart() } });
+    try {
+      await addCourseLine(user.uid, row);
+    } catch (err) {
+      toast.error(enrolmentClosedMessage(err, t));
+    }
   }
 
   async function toggleSave(courseId: string) {
@@ -209,7 +212,7 @@ export default function InstructorPage() {
                 labels={tab === "ebooks" ? ebookLabels : courseLabels}
                 onEnroll={() => row && void addItem(row)}
                 onSave={() => void toggleSave(item.id)}
-                enrollBlocked={row ? gate.blockFor(purchaseKindFor(row)) : undefined}
+                enrollBlocked={own.labelOf(item.id) ?? (row ? gate.blockFor(purchaseKindFor(row)) : undefined)}
               />
             );
           })}
@@ -222,37 +225,5 @@ export default function InstructorPage() {
         />
       )}
     </AppShell>
-  );
-}
-
-async function addCourseToCart(uid: string, course: CourseDoc & { id: string }) {
-  const cart = await loadCart(uid);
-  await saveCart(
-    uid,
-    upsertLine(cart, {
-      kind: "course",
-      courseId: course.id,
-      paymentType: "Full payment",
-      title: course.name,
-      image: courseThumb(course),
-      price: course.price,
-      addedAt: Date.now(),
-    }),
-  );
-}
-
-async function addEbookToCart(uid: string, book: CourseDoc & { id: string }) {
-  const cart = await loadCart(uid);
-  await saveCart(
-    uid,
-    upsertLine(cart, {
-      kind: "ebook",
-      courseId: book.id,
-      paymentType: "Full payment",
-      title: book.name,
-      image: book.image,
-      price: book.price,
-      addedAt: Date.now(),
-    }),
   );
 }
