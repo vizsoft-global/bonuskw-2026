@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
+// `||`, not `??`: deploys made without git metadata set the commit SHA to "".
 const buildVersion =
-  process.env.VERCEL_GIT_COMMIT_SHA ??
-  process.env.VERCEL_DEPLOYMENT_ID ??
-  process.env.NEXT_DEPLOYMENT_ID ??
+  process.env.VERCEL_GIT_COMMIT_SHA ||
+  process.env.VERCEL_DEPLOYMENT_ID ||
+  process.env.NEXT_DEPLOYMENT_ID ||
   String(Date.now());
 
 const isProduction = process.env.NODE_ENV === "production";
