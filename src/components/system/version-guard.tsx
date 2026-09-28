@@ -16,6 +16,31 @@ const RELOAD_LOOP_WINDOW_MS = 60 * 1000;
 const RELOAD_MARK_KEY = "ba:last-version-reload";
 const FORCE_KEY = "ba_force_reload_at";
 
+/**
+ * Screens where a reload throws away work in progress: a half-typed sign-up or
+ * login, an academic selection, a profile edit, a cart, or a checkout that is
+ * mid-payment. A reload here loses the form and, when an order is in flight,
+ * leaves the student unsure whether they paid — so the update is held, and the
+ * check on the next route change releases it from a page that costs nothing to
+ * reload.
+ */
+const HOLD_PREFIXES = [
+  "/login",
+  "/register",
+  "/onboarding",
+  "/activate",
+  "/verify",
+  "/session-ended",
+  "/cart",
+  "/checkout",
+  "/dues",
+  "/profile",
+];
+
+function holdsRefresh(path: string) {
+  return HOLD_PREFIXES.some((prefix) => path === prefix || path.startsWith(`${prefix}/`));
+}
+
 type ReloadMark = { version: string; at: number };
 
 function readMark(): ReloadMark | null {
@@ -104,6 +129,16 @@ export function VersionGuard() {
   const [stuck, setStuck] = useState(false);
   const lastCheck = useRef(0);
   const reloading = useRef(false);
+  /** The path a check reads; kept current so a deferred reload can wait. */
+  const pathRef = useRef(pathname);
+  /** A newer build seen while the student was on a screen worth keeping. */
+  const heldVersion = useRef<string | null>(null);
+  /** An admin "refresh everyone" that had to wait for a safe screen. */
+  const heldForce = useRef(0);
+
+  useEffect(() => {
+    pathRef.current = pathname;
+  }, [pathname]);
 
   const forceRefresh = useCallback(
     async (serverVersion: string) => {
@@ -135,6 +170,25 @@ export function VersionGuard() {
     async (force = false) => {
       if (APP_VERSION === "dev" || reloading.current) return;
       if (typeof document !== "undefined" && document.visibilityState === "hidden" && !force) return;
+      const held = holdsRefresh(pathRef.current);
+      // A held update is applied the moment the student reaches a screen that
+      // costs nothing to reload — this is where "leave the cart and the app
+      // updates itself" happens.
+      if (!held) {
+        if (heldVersion.current) {
+          const version = heldVersion.current;
+          heldVersion.current = null;
+          await forceRefresh(version);
+          return;
+        }
+        if (heldForce.current > BUILD_TIME && heldForce.current > Number(window.localStorage.getItem(FORCE_KEY) || 0)) {
+          const at = heldForce.current;
+          heldForce.current = 0;
+          window.localStorage.setItem(FORCE_KEY, String(at));
+          await forceRefresh(`force:${at}`);
+          return;
+        }
+      }
       const now = Date.now();
       if (!force && now - lastCheck.current < MIN_GAP_MS) return;
       lastCheck.current = now;
@@ -143,6 +197,12 @@ export function VersionGuard() {
         if (!res.ok) return;
         const json = (await res.json()) as { version?: string };
         if (json.version && json.version !== "dev" && json.version !== APP_VERSION) {
+          // Never reload a half-typed sign-up, a cart or a checkout: hold the
+          // update until the student navigates away from these screens.
+          if (held) {
+            heldVersion.current = json.version;
+            return;
+          }
           await forceRefresh(json.version);
         }
       } catch {
@@ -186,6 +246,12 @@ export function VersionGuard() {
         if (!at) return;
         const done = Number(window.localStorage.getItem(FORCE_KEY) || 0);
         if (at > BUILD_TIME && at > done) {
+          // "Refresh everyone" also waits: applying it mid-checkout is worse
+          // than a slightly stale build.
+          if (holdsRefresh(pathRef.current)) {
+            heldForce.current = at;
+            return;
+          }
           window.localStorage.setItem(FORCE_KEY, String(at));
           void forceRefresh(`force:${at}`);
         }
