@@ -42,7 +42,7 @@ export function EmiInfo({ plan, total }: { plan: number[]; total?: number }) {
         <Info className="size-4" />
       </button>
       {open ? (
-        <span className="absolute end-0 bottom-10 z-30 w-56 rounded-xl border border-line bg-surface p-3 text-start shadow-xl">
+        <span className="absolute end-0 bottom-10 z-30 w-52 max-w-[70vw] rounded-xl border border-line bg-surface p-3 text-start shadow-xl">
           <span className="mb-2 block text-[12px] font-semibold text-text">{t("emiCount", { n: plan.length })}</span>
           <span className="flex flex-col gap-1.5">
             {plan.map((amount, index) => (

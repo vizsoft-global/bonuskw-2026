@@ -76,7 +76,7 @@ export function LineCard({
           <p className="line-clamp-2 px-1 text-[14px] font-medium leading-normal text-text">
             {line.title || line.courseId}
           </p>
-          <div className="flex items-end justify-between gap-2 px-1 pb-0.5">
+          <div className="flex min-w-0 flex-wrap items-end justify-between gap-x-2 gap-y-1 px-1 pb-0.5">
             {line.batch || batchTone ? (
               <span
                 className={cn(
@@ -93,19 +93,21 @@ export function LineCard({
             ) : (
               <span />
             )}
-            <div className="flex max-w-[70%] shrink-0 flex-col items-end gap-0.5 text-end">
+            <div className="ms-auto flex min-w-0 flex-col items-end gap-0.5 text-end">
               {discounted ? (
                 <span className="text-[11px] leading-tight text-muted line-through">
                   {formatKwdLocale(quoted?.originalPrice ?? listAmount, locale)}
                 </span>
               ) : null}
               {(quoted?.paymentType ?? line.paymentType) === "EMI" && finalAmount > 0 ? (
-                <span className="flex items-center gap-0.5">
+                <span className="flex flex-col items-end">
                   <span className={cn("text-[13px] font-semibold", discounted ? "text-[#1f9d4d]" : "text-text")}>
                     {formatKwdLocale(finalAmount, locale)}
                   </span>
-                  <span className="text-[11px] text-muted">{t("emiCount", { n: emiPlanOf(line, installments, finalAmount).length })}</span>
-                  <EmiInfo plan={emiPlanOf(line, installments, finalAmount)} total={finalAmount} />
+                  <span className="flex items-center">
+                    <span className="text-[11px] text-muted">{t("emiCount", { n: emiPlanOf(line, installments, finalAmount).length })}</span>
+                    <EmiInfo plan={emiPlanOf(line, installments, finalAmount)} total={finalAmount} />
+                  </span>
                 </span>
               ) : (
                 <p className={cn("text-[13px] font-semibold leading-tight", discounted ? "text-[#1f9d4d]" : "text-text")}>
