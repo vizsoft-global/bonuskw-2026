@@ -17,7 +17,8 @@ import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { AppShell } from "@/components/layout/app-shell";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { EnrolledCta } from "@/components/course/enrolled-cta";
-import { addCourseLine, AlreadyOwnedError, EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { EnrolmentClosedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { showAddedToCart } from "@/components/cart/added-dialog";
 import { loadCart, saveCart, upsertLine } from "@/lib/cart/store";
@@ -51,6 +52,7 @@ export default function CoursePage() {
   const { user, profile, refreshProfile, ready } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   // Settings > General > Course cards. Off unless an admin switches it on.
   const showStats = useLessonsAndHours();
   const qc = useQueryClient();
@@ -141,15 +143,13 @@ export default function CoursePage() {
         router.push(`/course/${id}/learn`);
         return;
       }
-      // Re-reads the batch and refuses if enrolment is closed, even when the
-      // page was opened before the batch ended.
-      await addCourseLine(user.uid, { ...c, id }, paymentType, { announce: paymentType !== "EMI" });
-      if (paymentType === "EMI") router.push("/cart");
-    } catch (err) {
-      if (err instanceof AlreadyOwnedError) {
-        setCartError(enrolmentClosedMessage(err, t));
+      const result = await addToCart({ ...c, id }, paymentType, { announce: paymentType !== "EMI" });
+      if (result === "error") {
+        setCartError(t("enrolmentClosedToast"));
         return;
       }
+      if (paymentType === "EMI" && result === "ok") router.push("/cart");
+    } catch (err) {
       if (err instanceof EnrolmentClosedError) {
         setCartError(enrolmentClosedMessage(err, t));
         void batch.refetch();

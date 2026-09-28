@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import { BatchBadge, CourseThumb } from "./course-thumb";
 import { HomeIcon } from "./icon";
@@ -127,15 +128,18 @@ function SaveButton({
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
-  onSave: () => void;
+  onSave: () => void | Promise<void>;
 }) {
+  const [busy, setBusy] = useState(false);
   return (
     <button
       type="button"
+      disabled={busy}
       onClick={(e) => {
         e.preventDefault();
         e.stopPropagation();
-        onSave();
+        setBusy(true);
+        void Promise.resolve(onSave()).finally(() => setBusy(false));
       }}
       aria-label={item.saved ? labels.saved : labels.save}
       aria-pressed={item.saved}
@@ -143,7 +147,9 @@ function SaveButton({
     >
       <span className="flex size-7 items-center justify-center rounded-full bg-surface-2">
         <span className="size-3.5">
-          <HomeIcon src={item.saved ? "/home/bookmark-filled.svg" : "/home/bookmark.svg"} />
+          {busy ? <span className="block size-3.5 animate-spin rounded-full border-2 border-line border-t-[#f24822]" /> : (
+            <HomeIcon src={item.saved ? "/home/bookmark-filled.svg" : "/home/bookmark.svg"} />
+          )}
         </span>
       </span>
     </button>

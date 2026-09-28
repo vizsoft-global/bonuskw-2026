@@ -15,7 +15,7 @@ import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { CourseDetailsSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { getCourse, listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
@@ -36,6 +36,7 @@ export default function EbookPage() {
   const { user, profile, refreshProfile, ready } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   const [busy, setBusy] = useState(false);
   const [cartError, setCartError] = useState("");
 
@@ -127,15 +128,9 @@ export default function EbookPage() {
       router.push("/login");
       return;
     }
-    setBusy(true);
     setCartError("");
-    try {
-      await addCourseLine(user.uid, target);
-    } catch (err) {
-      setCartError(enrolmentClosedMessage(err, t));
-    } finally {
-      setBusy(false);
-    }
+    const result = await addToCart(target);
+    if (result === "error") setCartError(t("enrolmentClosedToast"));
   }
 
   async function share() {

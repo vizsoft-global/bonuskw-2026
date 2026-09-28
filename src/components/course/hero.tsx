@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import { HomeIcon } from "@/components/home/icon";
+import { Loader } from "@/components/shared/loader";
 import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { imageFor } from "@/lib/media/image-url";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,8 @@ export function CourseCover({
   aspect?: "5/3" | "3/4" | "16/9";
   video?: CoverVideo;
 }) {
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(false), [video?.src]);
   return (
     <div
       className={cn(
@@ -47,16 +50,24 @@ export function CourseCover({
       )}
     >
       {video?.src ? (
-        <iframe
-          key={video.src}
-          title={video.label}
-          src={video.src}
-          className="absolute inset-0 h-full w-full"
+        <>
+          {ready ? null : (
+            <div className="absolute inset-0 z-10 grid place-items-center bg-black">
+              <Loader size="page" />
+            </div>
+          )}
+          <iframe
+            key={video.src}
+            title={video.label}
+            src={video.src}
+            onLoad={() => setReady(true)}
+            className="absolute inset-0 h-full w-full"
           /* The directive is Chrome's; the attribute is what iOS Safari and
              in-app WebViews still ask for before they allow fullscreen. */
           allow="fullscreen; autoplay; encrypted-media"
           allowFullScreen
         />
+        </>
       ) : (
         <>
           {hasThumb(image) ? (

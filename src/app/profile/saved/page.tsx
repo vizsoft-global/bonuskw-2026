@@ -11,8 +11,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
-import { toast } from "@/components/ui/toaster";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { getCourse, getDocsByIds } from "@/lib/catalog/queries";
 import { avatarSrc } from "@/lib/avatar";
@@ -31,6 +30,7 @@ export default function SavedPage() {
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   const { t, locale } = useI18n();
   const router = useRouter();
   const [tab, setTab] = useState<"course" | "ebook">("course");
@@ -99,11 +99,7 @@ export default function SavedPage() {
     if (!user) return;
     const course = saved.data?.rows.find((row) => row.id === id);
     if (!course || gate.blockFor(purchaseKindFor(course))) return;
-    try {
-      await addCourseLine(user.uid, course);
-    } catch (err) {
-      toast.error(enrolmentClosedMessage(err, t));
-    }
+    await addToCart(course);
   }
 
   async function unsave(courseId: string) {

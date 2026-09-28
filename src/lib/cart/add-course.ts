@@ -66,17 +66,18 @@ export async function addCourseLine(
 ) {
   const ebook = isEbookCourse(course);
   const kind = ebook ? "ebook" : "course";
-  const cart = await loadCart(uid);
+  const [cart, already, batch] = await Promise.all([
+    loadCart(uid),
+    ebook ? ownsEbook(uid, course.id) : loadLiveSubscription(uid, course.id),
+    ebook ? Promise.resolve(null) : getBatch(course.batchesRef?.id),
+  ]);
   if (cart.lines.some((line) => line.kind === kind && line.courseId === course.id)) {
     throw new AlreadyOwnedError("inCart");
   }
-  if (ebook ? await ownsEbook(uid, course.id) : await loadLiveSubscription(uid, course.id)) {
-    throw new AlreadyOwnedError("enrolled");
-  }
+  if (already) throw new AlreadyOwnedError("enrolled");
   let batchName: string | undefined;
   let batchId: string | undefined;
   if (!ebook) {
-    const batch = await getBatch(course.batchesRef?.id);
     const reason = enrolmentBlock(course, batch);
     if (reason) throw new EnrolmentClosedError(reason);
     batchName = batch?.name || undefined;

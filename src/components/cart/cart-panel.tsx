@@ -8,6 +8,7 @@ import { CartSummary } from "@/components/cart/cart-summary";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { startNavigation } from "@/components/system/nav-progress";
 import { useCartQuote } from "@/lib/cart/use-cart-quote";
 import { lineKey, removeLine, saveCart, type CartLine } from "@/lib/cart/store";
 import { imageFor } from "@/lib/media/image-url";
@@ -58,12 +59,20 @@ export function CartPanel({ count }: { count: number }) {
     };
   }, [open]);
 
+  const [removing, setRemoving] = useState<string | null>(null);
+
   async function remove(line: CartLine) {
     if (!user || !cart) return;
-    const next = removeLine(cart, lineKey(line));
-    await saveCart(user.uid, next);
-    void client.invalidateQueries({ queryKey: ["cart", user.uid] });
-    void client.invalidateQueries({ queryKey: ["cart-quote", user.uid] });
+    const id = lineKey(line);
+    setRemoving(id);
+    try {
+      const next = removeLine(cart, id);
+      await saveCart(user.uid, next);
+      void client.invalidateQueries({ queryKey: ["cart", user.uid] });
+      void client.invalidateQueries({ queryKey: ["cart-quote", user.uid] });
+    } finally {
+      setRemoving(null);
+    }
   }
 
   if (!open) return null;
@@ -111,8 +120,8 @@ export function CartPanel({ count }: { count: number }) {
                   <span className="block text-[12px] font-semibold text-text">
                     {formatKwdLocale(Number(line.price) || 0, locale as Locale)}
                   </span>
-                  <button type="button" onClick={() => void remove(line)} className="text-[11px] text-[#f24822]">
-                    {t("remove")}
+                  <button type="button" disabled={removing === lineKey(line)} onClick={() => void remove(line)} className="text-[11px] text-[#f24822] disabled:opacity-50">
+                    {removing === lineKey(line) ? "…" : t("remove")}
                   </button>
                 </span>
               </li>
@@ -123,6 +132,7 @@ export function CartPanel({ count }: { count: number }) {
             <button
               type="button"
               onClick={() => {
+                startNavigation();
                 setOpen(false);
                 router.push("/cart");
               }}

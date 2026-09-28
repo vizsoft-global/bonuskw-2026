@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "@/components/ui/toaster";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuthors } from "@/lib/catalog/use-authors";
@@ -39,7 +38,7 @@ import {
   useTaxonomy,
   type TaxonomySelection,
 } from "@/lib/taxonomy/use-taxonomy";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { listCourses, storeEbooks } from "@/lib/catalog/queries";
 import { placementOf } from "@/lib/course/status";
@@ -57,6 +56,7 @@ export default function StorePage() {
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("grid");
   const [filter, setFilter] = useState<TaxonomySelection | null>(null);
@@ -129,11 +129,7 @@ export default function StorePage() {
       return;
     }
     if (gate.blockFor("ebook")) return;
-    try {
-      await addCourseLine(user.uid, book);
-    } catch (err) {
-      toast.error(enrolmentClosedMessage(err, t));
-    }
+    await addToCart(book);
   }
 
   async function toggleSave(courseId: string) {

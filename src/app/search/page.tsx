@@ -14,10 +14,9 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { SearchSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { toast } from "@/components/ui/toaster";
-import { openCart } from "@/components/cart/cart-panel";
 import { listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { useBatches } from "@/lib/catalog/use-batches";
 import { getDb } from "@/lib/firebase/client";
@@ -135,6 +134,7 @@ export default function SearchPage() {
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   const router = useRouter();
   const [q, setQ] = useState("");
   const deferredQ = useDeferredValue(q);
@@ -326,11 +326,7 @@ export default function SearchPage() {
 
   async function enrol(course: CourseDoc & { id: string }) {
     if (!user || gate.blockFor(purchaseKindFor(course))) return;
-    try {
-      await addCourseLine(user.uid, course);
-    } catch (err) {
-      toast.error(enrolmentClosedMessage(err, t));
-    }
+    await addToCart(course);
   }
 
   async function toggleSave(courseId: string) {

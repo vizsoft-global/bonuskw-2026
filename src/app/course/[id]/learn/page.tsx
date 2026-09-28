@@ -88,6 +88,7 @@ function LearnBody() {
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
   const [otp, setOtp] = useState<PlaybackTicket | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [playerReady, setPlayerReady] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
   const [mobileTab, setMobileTab] = useState<"lessons" | "resources">("lessons");
   const [previewFile, setPreviewFile] = useState<OutlineFile | null>(null);
@@ -285,6 +286,7 @@ function LearnBody() {
   // phone, so the stage carries one of its own.
   const fullscreen = useFullscreen(stageEl);
   const src = playerSrc(otp);
+  useEffect(() => setPlayerReady(false), [src]);
   // Keep the dock through the brief OTP refetch when the user picks another
   // lesson. A fullscreen page must not also pin a mini player onto itself.
   const docked =
@@ -392,21 +394,23 @@ function LearnBody() {
                     }}
                   >
                     {src ? (
-                      <iframe
-                        ref={iframeRef}
-                        key={src}
-                        title={String(lesson?.name || "Lesson")}
-                        src={src}
-                        className="absolute inset-0 h-full w-full"
-                        /* `allow` is what Chrome reads; the `allowFullScreen`
-                           attribute is what iOS Safari and in-app WebViews still
-                           require before they let the player go fullscreen. */
-                        allow="fullscreen; autoplay; encrypted-media"
-                        allowFullScreen
-                        onLoad={(e) => {
-                          e.currentTarget.dataset.loaded = "1";
-                        }}
-                      />
+                      <>
+                        {playerReady ? null : (
+                          <div className="absolute inset-0 z-10 grid place-items-center">
+                            <Loader size="page" />
+                          </div>
+                        )}
+                        <iframe
+                          ref={iframeRef}
+                          key={src}
+                          title={String(lesson?.name || "Lesson")}
+                          src={src}
+                          className="absolute inset-0 h-full w-full"
+                          allow="fullscreen; autoplay; encrypted-media"
+                          allowFullScreen
+                          onLoad={() => setPlayerReady(true)}
+                        />
+                      </>
                     ) : otpBusy ? (
                       <div className="grid h-full w-full place-items-center">
                         <Loader size="page" />

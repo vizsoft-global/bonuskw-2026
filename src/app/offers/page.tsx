@@ -2,6 +2,7 @@
 
 import { showAddedToCart } from "@/components/cart/added-dialog";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { exploreGridClass } from "@/components/home/explore-card";
 import { AppShell } from "@/components/layout/app-shell";
@@ -9,9 +10,9 @@ import { OfferGridCard, type OfferCourseCard } from "@/components/promotions/off
 import { EmptyState } from "@/components/shared/empty-state";
 import { StoreSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
-import { addCourseLine, AlreadyOwnedError, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
-import { getCourse } from "@/lib/catalog/queries";
+import { getCourse, listCourses } from "@/lib/catalog/queries";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
@@ -48,6 +49,8 @@ export default function OffersPage() {
   const { user } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
+  const catalog = useQuery({ queryKey: ["courses"], queryFn: listCourses, staleTime: 5 * 60_000 });
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -107,26 +110,23 @@ export default function OffersPage() {
     };
   }
 
+  async function courseDoc(courseId: string) {
+    return catalog.data?.find((course) => course.id === courseId) ?? (await getCourse(courseId));
+  }
+
   async function addOne(courseId: string) {
     if (!user) {
       router.push("/login");
       return;
     }
     if (gate.blockFor("course")) return;
-    setBusy(courseId);
     setError(null);
-    try {
-      const course = await getCourse(courseId);
-      if (!course) {
-        setError(t("offerUnavailable"));
-        return;
-      }
-      await addCourseLine(user.uid, course);
-    } catch (err) {
-      setError(enrolmentClosedMessage(err, t));
-    } finally {
-      setBusy(null);
+    const course = await courseDoc(courseId);
+    if (!course) {
+      setError(t("offerUnavailable"));
+      return;
     }
+    await addToCart(course);
   }
 
   async function addAll(promo: Promotion) {
@@ -140,24 +140,18 @@ export default function OffersPage() {
     setBusy(`all:${promo.id}`);
     setError(null);
     try {
-      const docs = await Promise.all(ids.map((id) => getCourse(id)));
       let count = 0;
-      for (const doc of docs) {
-        if (!doc) continue;
-        try {
-          await addCourseLine(user.uid, doc, "Full payment", { announce: false });
-          count += 1;
-        } catch (err) {
-          if (!(err instanceof AlreadyOwnedError)) throw err;
-        }
+      for (const id of ids) {
+        const course = await courseDoc(id);
+        if (!course) continue;
+        const result = await addToCart(course, "Full payment", { announce: false });
+        if (result === "ok") count += 1;
       }
       if (!count) {
         setError(t("offerUnavailable"));
         return;
       }
       showAddedToCart({ title: localizedText(promo.name, locale) || t("offers"), image: promo.bannerImage ?? undefined });
-    } catch (err) {
-      setError(enrolmentClosedMessage(err, t));
     } finally {
       setBusy(null);
     }

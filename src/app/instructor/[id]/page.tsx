@@ -1,6 +1,5 @@
 "use client";
 
-import { toast } from "@/components/ui/toaster";
 import { useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
@@ -13,7 +12,7 @@ import { EmptyState } from "@/components/shared/empty-state";
 import { InstructorSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { purchaseKindFor, usePurchaseGate } from "@/lib/commerce/purchase-gate";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
+import { useAddToCart } from "@/lib/cart/use-add-to-cart";
 import { useOwnership } from "@/lib/cart/ownership";
 import { getBatch, listCourses, publishedCourses } from "@/lib/catalog/queries";
 import { getDb } from "@/lib/firebase/client";
@@ -34,6 +33,7 @@ export default function InstructorPage() {
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
   const own = useOwnership();
+  const addToCart = useAddToCart();
   const [tab, setTab] = useState<"courses" | "ebooks">("courses");
 
   const instructor = useQuery({
@@ -95,11 +95,7 @@ export default function InstructorPage() {
       return;
     }
     if (gate.blockFor(purchaseKindFor(row))) return;
-    try {
-      await addCourseLine(user.uid, row);
-    } catch (err) {
-      toast.error(enrolmentClosedMessage(err, t));
-    }
+    await addToCart(row);
   }
 
   async function toggleSave(courseId: string) {

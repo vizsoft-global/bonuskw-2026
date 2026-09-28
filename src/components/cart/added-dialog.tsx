@@ -3,42 +3,44 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
 import { CartSummary } from "@/components/cart/cart-summary";
 import { openCart } from "@/components/cart/cart-panel";
 import { useCartQuote } from "@/lib/cart/use-cart-quote";
-import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 import { imageFor } from "@/lib/media/image-url";
 
 type Added = { title?: string; image?: string };
 
 let show: ((item: Added) => void) | null = null;
+let hide: (() => void) | null = null;
 
 /** Confirms a successful add-to-cart from anywhere in the app. */
 export function showAddedToCart(item: Added) {
   show?.(item);
 }
 
+/** Closes the popup, used when a background save is refused. */
+export function dismissAddedToCart() {
+  hide?.();
+}
+
 export function AddedToCartDialog() {
   const { t } = useI18n();
-  const { user } = useAuth();
   const router = useRouter();
-  const client = useQueryClient();
   const [item, setItem] = useState<Added | null>(null);
   const { quote, quoting, cart } = useCartQuote();
 
   useEffect(() => {
-    const open = (next: Added) => {
-      setItem(next);
-      void client.invalidateQueries({ queryKey: ["cart", user?.uid] });
-    };
+    const open = (next: Added) => setItem(next);
+    const close = () => setItem(null);
     show = open;
+    hide = close;
     return () => {
       if (show === open) show = null;
+      if (hide === close) hide = null;
     };
-  }, [client, user?.uid]);
+  }, []);
 
   useEffect(() => {
     if (!item) return;
@@ -82,13 +84,10 @@ export function AddedToCartDialog() {
             ) : null}
             <p className="line-clamp-2 text-[13px] font-medium text-text">{item.title}</p>
           </div>
-          <div className="w-full text-start">
-            <CartSummary
-              quote={quote}
-              quoting={quoting}
-              fallback={(cart?.lines ?? []).reduce((sum, line) => sum + (Number(line.price) || 0), 0)}
-            />
-          </div>
+        {quoting ? <span className="block h-16 animate-pulse rounded-lg bg-surface-2" /> : null}
+        <div className={quoting ? "opacity-60" : undefined}>
+          <CartSummary quote={quote} quoting={quoting} fallback={(cart?.lines ?? []).reduce((sum, line) => sum + (Number(line.price) || 0), 0)} />
+        </div>
         </div>
         <div className="mt-5 flex flex-col gap-2">
           <button

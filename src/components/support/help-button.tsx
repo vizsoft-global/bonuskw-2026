@@ -298,6 +298,7 @@ export function HelpButton() {
       <button
         type="button"
         data-help-widget="1"
+        data-no-press="1"
         aria-label={t("help")}
         onPointerDown={(e) => {
           const rect = e.currentTarget.getBoundingClientRect();

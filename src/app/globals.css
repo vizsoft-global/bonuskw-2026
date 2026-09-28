@@ -566,3 +566,17 @@ html:not(.dark) .bg-primary img {
     --learn-player-h: min(calc(100dvh - var(--learn-chrome) - var(--learn-rail)), 32dvh);
   }
 }
+
+@media (prefers-reduced-motion: no-preference) {
+  button:not([data-no-press]),
+  a:not([data-no-press]),
+  [role="button"]:not([data-no-press]) {
+    transition: transform 120ms ease, opacity 120ms ease;
+  }
+  button:not(:disabled):not([data-no-press]):active,
+  a:not([data-no-press]):active,
+  [role="button"]:not([data-no-press]):active {
+    transform: scale(0.97);
+    opacity: 0.82;
+  }
+}

@@ -45,6 +45,8 @@ export function VideoPopup({
   }, [onClose]);
 
   const src = playerSrc(ticket);
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(false), [src]);
 
   return (
     <div
@@ -74,16 +76,24 @@ export function VideoPopup({
         </div>
         <div className="aspect-video w-full overflow-hidden rounded-[16px] bg-black ring-1 ring-white/10">
           {src ? (
-            <iframe
-              key={src}
-              title={title}
-              src={src}
-              className="h-full w-full"
+            <>
+              {ready ? null : (
+                <div className="grid h-full w-full place-items-center">
+                  <Loader size="page" />
+                </div>
+              )}
+              <iframe
+                key={src}
+                title={title}
+                src={src}
+                onLoad={() => setReady(true)}
+                className={ready ? "h-full w-full" : "hidden"}
               /* `allow` is what Chrome reads; the `allowFullScreen` attribute is
                  what iOS Safari and in-app WebViews still require. */
               allow="fullscreen; autoplay; encrypted-media"
               allowFullScreen
             />
+            </>
           ) : ticket?.error ? (
             <div className="grid h-full w-full place-items-center px-6 text-center text-[13px] text-muted">
               {ticket.error}
