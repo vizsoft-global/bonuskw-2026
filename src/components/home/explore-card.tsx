@@ -1,14 +1,11 @@
 "use client";
 
-import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { BatchBadge, CourseThumb } from "./course-thumb";
 import { HomeIcon } from "./icon";
 import type { BatchTone } from "@/lib/course/batch-status";
 import { useLessonsAndHours } from "@/lib/settings/use-student-config";
 import { cn } from "@/lib/utils";
-import { haptic } from "@/lib/ui/haptics";
-
 export const exploreGridClass =
   "grid grid-cols-2 gap-x-5 gap-y-6 lg:gap-[25px]";
 export const exploreRailClass =
@@ -153,50 +150,15 @@ function SaveButton({
   );
 }
 
-function AddButton({
-  labels,
-  onEnroll,
-  enrollBlocked,
-}: {
-  labels: ExploreLabels;
-  onEnroll: () => void;
-  enrollBlocked?: string;
-}) {
-  if (enrollBlocked === "skip") return null;
-  const blocked = Boolean(enrollBlocked);
-  return (
-    <button
-      type="button"
-      disabled={blocked}
-      title={enrollBlocked || labels.enroll}
-      aria-label={enrollBlocked || labels.enroll}
-      onClick={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (blocked) return;
-        haptic("medium");
-        onEnroll();
-      }}
-      className={cn(
-        "grid size-7 shrink-0 place-items-center rounded-full text-white shadow",
-        blocked ? "cursor-not-allowed bg-black/65" : "bg-[#0c5eff]",
-      )}
-    >
-      {blocked ? <Check className="size-3.5" /> : <Plus className="size-4" />}
-    </button>
-  );
-}
-
 export function ExploreListCard({
   item,
   labels,
-  onEnroll,
   onSave,
-  enrollBlocked,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
-  onEnroll: () => void;
+  /** Unused: courses are added from their own page. Kept so existing callers compile. */
+  onEnroll?: () => void;
   onSave?: () => void;
   enrollBlocked?: string;
 }) {
@@ -209,7 +171,6 @@ export function ExploreListCard({
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
             <ThumbOverlay item={item} />
             <span className="absolute bottom-1.5 end-1.5 z-10 flex items-center gap-1">
-              <AddButton labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
               {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
             </span>
           </CourseThumb>
@@ -229,17 +190,15 @@ export function ExploreListCard({
 export function ExploreGridCard({
   item,
   labels,
-  onEnroll,
   onSave,
-  enrollBlocked,
   priority,
 }: {
   item: ExploreItem;
   labels: ExploreLabels;
-  onEnroll: () => void;
+  /** Unused: courses are added from their own page. Kept so existing callers compile. */
+  onEnroll?: () => void;
   onSave?: () => void;
   enrollBlocked?: string;
-  /** Unused: every card uses the + button now. Kept so existing callers compile. */
   enrollOnImage?: boolean;
   priority?: boolean;
 }) {
@@ -251,7 +210,6 @@ export function ExploreGridCard({
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full" priority={priority}>
             <ThumbOverlay item={item} />
             <span className="absolute bottom-1.5 end-1.5 z-10 flex items-center gap-1">
-              <AddButton labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
               {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
             </span>
           </CourseThumb>
