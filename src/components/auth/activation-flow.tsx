@@ -274,30 +274,17 @@ export function ActivationFlow({ onFinished }: { onFinished?: () => void }) {
   const complete = Boolean(user && profile) && !gate.loading && gate.steps.length === 0;
 
   /**
-   * Runs once the last step is done: stamps `verification.activatedAt` (through a
-   * dot path, so any fields already in `verification` survive) and releases the
-   * student. Driven by the steps being complete rather than by the last step
-   * calling it, so a phase that adds a step cannot stamp early.
+   * Runs once the last enforced step is done: tells the caller and moves the
+   * student on. The `verification.activatedAt` stamp itself lives in
+   * `ActivationGuard`, because this component unmounts the moment the steps
+   * empty — an effect here never got the chance to run.
    */
   useEffect(() => {
     if (!complete || finishing.current) return;
     finishing.current = true;
-    void (async () => {
-      try {
-        if (user) {
-          await updateDoc(doc(getDb(), collections.users, user.uid), {
-            "verification.activatedAt": new Date(),
-          });
-          await refreshProfile();
-        }
-      } catch {
-        // The gate releases on the steps being complete, so a failed stamp must
-        // not hold the student here.
-      }
-      onFinished?.();
-      router.replace("/");
-    })();
-  }, [complete, user, refreshProfile, onFinished, router]);
+    onFinished?.();
+    router.replace("/");
+  }, [complete, onFinished, router]);
 
   if (!ready || !profile || !user || gate.loading) {
     return (

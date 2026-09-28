@@ -1,8 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { doc, updateDoc } from "firebase/firestore";
 import { ActivationFlow } from "@/components/auth/activation-flow";
-import { useActivationGate } from "@/lib/auth/activation";
+import { isStaff, useActivationGate } from "@/lib/auth/activation";
 import { useAuth } from "@/lib/auth/auth-provider";
+import { collections } from "@/lib/firebase/collections";
+import { getDb } from "@/lib/firebase/client";
 
 /**
  * Holds a signed-in student on the activation flow until it is finished.
@@ -15,10 +19,28 @@ import { useAuth } from "@/lib/auth/auth-provider";
  *
  * The academic step (onboarding) still comes first, so it is left to its own
  * redirect rather than being intercepted here.
+ *
+ * It also stamps `verification.activatedAt`, once the enforced steps are done.
+ * That has to happen somewhere that survives the moment of completion: the flow
+ * itself is unmounted the instant its steps empty (the guard stops rendering
+ * the overlay, `/activate` swaps to a loader), so an effect inside it never got
+ * to run — which is why no account created since the gate shipped carried the
+ * stamp, and the panel showed all of them as still pending.
  */
 export function ActivationGuard({ children }: { children: React.ReactNode }) {
-  const { user, needsOnboarding } = useAuth();
+  const { user, profile, needsOnboarding, refreshProfile } = useAuth();
   const { needsActivation } = useActivationGate();
+
+  useEffect(() => {
+    if (!user || !profile || needsActivation) return;
+    if (profile.verification?.activatedAt || profile.verification?.grandfathered) return;
+    if (isStaff(profile)) return;
+    void updateDoc(doc(getDb(), collections.users, user.uid), {
+      "verification.activatedAt": new Date(),
+    })
+      .then(() => refreshProfile())
+      .catch(() => undefined);
+  }, [user, profile, needsActivation, refreshProfile]);
 
   if (!user || !needsActivation || needsOnboarding) return <>{children}</>;
 

@@ -16,10 +16,15 @@ export type ActivationStep = "names" | "email" | "phone";
  * asked for at the point of purchase instead, where the checkout can refuse the
  * sale without locking anyone out of browsing.
  *
- * `/activate` still renders PhoneStep and `outstanding` still reports it, so
- * re-enforcing it here is a one-word change.
+ * Email verification is not enforced either, for the same reason the flow was
+ * walling people out: nothing stamped `verification.activatedAt` for any account
+ * created since the gate shipped — 58 of 58 in three days — because a student
+ * who never finds the link in their inbox (or whose mail provider files it as
+ * spam) could not use the app at all. The step is still rendered by `/activate`
+ * and `outstanding` still reports it, so re-enforcing it stays a one-word change
+ * here; what it is not is a gate on browsing, a cart or a purchase.
  */
-const ENFORCED: ActivationStep[] = ["names", "email"];
+const ENFORCED: ActivationStep[] = ["names"];
 
 /** Staff are outside activation entirely. */
 export function isStaff(profile: UserDoc | null) {
