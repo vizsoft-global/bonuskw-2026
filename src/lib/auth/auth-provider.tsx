@@ -244,9 +244,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     /**
      * This device lost its session — a take-over from somewhere else, or a tab
      * that came back after its session was closed. Ask for a session again
-     * instead of signing straight out: when nobody is using the account right
-     * now the student simply carries on, and only a session that is still
-     * heartbeating on another device ends at /session-ended.
+     * rather than signing straight out: when nobody is using the account right
+     * now the student simply carries on, and when another device really is live
+     * they get the same choice the first conflict offers. Signing out here threw
+     * away whatever they were doing (half-way through onboarding, for instance)
+     * and dropped them at the sign-in screen holding an account that already
+     * existed.
      */
     async function reacquire() {
       if (reacquiring) return;
@@ -256,9 +259,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const again = await startSession(token);
         if (cancelled) return;
         if (again.status === "conflict") {
-          setKicked(true);
           setStoredSessionId(null);
-          void signOut(getFirebaseAuth());
+          setConflict(again.sessions);
           return;
         }
         attach(again.sessionId);

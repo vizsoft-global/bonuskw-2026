@@ -121,13 +121,17 @@ export async function startSession(
 
   const now = Date.now();
   // A wiped browser hands out a new device id (iOS ITP, private mode, cleared
-  // storage). Same model, browser and IP is the same device, so it must not read
-  // as a second sign-in and trigger a take-over prompt.
-  const myFingerprint = [input.model || "Web", input.os || "Web", input.browser || "", input.ip]
+  // storage). Same model, browser and OS is the same device, so it must not read
+  // as a second sign-in and trigger a take-over prompt. The IP is deliberately
+  // *not* part of this: mobile networks in Kuwait hand out a different address
+  // between two requests, and an address that changes made a student's own phone
+  // look like another device — the prompt (or the sign-out behind it) then hit
+  // the one device they were using.
+  const myFingerprint = [input.model || "Web", input.os || "Web", input.browser || ""]
     .map((v) => String(v ?? "").trim().toLowerCase())
     .join("|");
   const fingerprintOf = (doc: QueryDocumentSnapshot) =>
-    ["device", "os", "browser", "ip"]
+    ["device", "os", "browser"]
       .map((key) => String(doc.get(key) ?? "").trim().toLowerCase())
       .join("|");
   const rows = active.docs.map((doc) => ({
