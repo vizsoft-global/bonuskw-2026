@@ -42,7 +42,6 @@ import { avatarSrc } from "@/lib/avatar";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { useLessonsAndHours } from "@/lib/settings/use-student-config";
 import { courseRuntimeLabel } from "@/lib/course/runtime";
-import { emiLabel } from "@/lib/course/emi-label";
 import { courseThumb } from "@/lib/course/thumb";
 
 export default function CoursePage() {
@@ -395,14 +394,7 @@ export default function CoursePage() {
               lessonsLabel={showStats ? t("lessons") : undefined}
               price={formatKwdLocale(c.price, locale)}
               enrollLabel={t("enrollNow")}
-              emiPrice={
-                emiLabel(
-                  emiPlan(c),
-                  { months: t("emiMonths"), schedule: t("emiSchedule") },
-                  (value) => formatKwdLocale(value, locale),
-                ) ?? ""
-              }
-              emiLabel={t("payInEmi")}
+              emiPlan={emiPlan(c)}
               secure={t("secure")}
               block={own.longLabelOf(id) ?? block}
               busy={busy}

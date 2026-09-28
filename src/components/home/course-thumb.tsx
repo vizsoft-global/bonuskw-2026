@@ -16,7 +16,7 @@ export function CourseThumb({
   image,
   seed,
   className,
-  aspect = "5/3",
+  aspect = "4/3",
   use = "courseCard",
   priority,
   children,
@@ -25,7 +25,7 @@ export function CourseThumb({
   /** Course id: picks the colour of the default artwork. */
   seed?: string | null;
   className?: string;
-  aspect?: "5/3" | "3/4";
+  aspect?: "5/3" | "4/3" | "3/4";
   /** Which Cloudflare size to request. */
   use?: ImageUse;
   priority?: boolean;
@@ -35,7 +35,7 @@ export function CourseThumb({
     <div
       className={cn(
         "relative overflow-hidden rounded-[8px] border-[0.5px] border-line bg-surface",
-        aspect === "3/4" ? "aspect-[3/4]" : "aspect-[5/3]",
+        aspect === "3/4" ? "aspect-[3/4]" : aspect === "5/3" ? "aspect-[5/3]" : "aspect-[4/3]",
         className,
       )}
     >
@@ -45,7 +45,7 @@ export function CourseThumb({
           src={imageFor(use, image)}
           alt=""
           width={aspect === "3/4" ? 480 : 640}
-          height={aspect === "3/4" ? 640 : 384}
+          height={aspect === "3/4" ? 640 : aspect === "5/3" ? 384 : 480}
           loading={priority ? "eager" : "lazy"}
           fetchPriority={priority ? "high" : "auto"}
           decoding="async"
@@ -67,7 +67,7 @@ export function BatchBadge({ label, tone }: { label: string; tone?: BatchTone })
   return (
     <span
       className={cn(
-        "absolute bottom-1.5 end-1.5 inline-flex items-center gap-1 rounded-[6px] border-[0.5px] px-[5px] py-[2px] text-[10px] font-medium",
+        "inline-flex items-center gap-1 rounded-[6px] border-[0.5px] px-[5px] py-[2px] text-[10px] font-medium",
         tone ? BATCH_TONE_CLASS[tone] : "border-white bg-[#545454] text-white",
       )}
     >

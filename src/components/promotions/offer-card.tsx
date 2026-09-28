@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { CourseThumb } from "@/components/home/course-thumb";
 import { haptic } from "@/lib/ui/haptics";
@@ -58,18 +59,19 @@ export function OfferGridCard({
           <button
             type="button"
             disabled={disabled}
-            title={blocked}
+            title={blocked || addLabel}
+            aria-label={blocked || addLabel}
             onClick={() => {
               if (disabled) return;
               haptic("medium");
               onAdd();
             }}
             className={cn(
-              "ms-auto flex h-7 shrink-0 items-center justify-center rounded-[16px] px-[15px] text-[12px] font-medium leading-none whitespace-nowrap lg:h-8",
-              disabled ? "cursor-not-allowed bg-surface-2 text-muted" : "bg-[#0c5eff] text-white",
+              "grid size-7 shrink-0 place-items-center rounded-full text-white",
+              disabled ? "cursor-not-allowed bg-surface-2 text-muted" : "bg-[#0c5eff]",
             )}
           >
-            {blocked || addLabel}
+            {blocked ? <Check className="size-3.5" /> : <Plus className="size-4" />}
           </button>
         </div>
       </div>

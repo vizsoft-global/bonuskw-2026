@@ -1,34 +1,21 @@
 "use client";
 
+import { EmiInfo } from "@/components/course/emi-info";
 import { HomeIcon } from "@/components/home/icon";
 import { hasThumb, ThumbPlaceholder } from "@/components/home/course-thumb";
 import type { QuoteLine } from "@/lib/cart/quote";
 import type { CartLine } from "@/lib/cart/store";
 import { BATCH_TONE_CLASS, type BatchTone } from "@/lib/course/batch-status";
 import { EMI_COUNT, splitEmi } from "@/lib/course/emi";
-import { emiLabel } from "@/lib/course/emi-label";
+import { useI18n } from "@/lib/i18n/locale";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
 
-function linePriceLabel(
-  line: CartLine,
-  locale: Locale,
-  emiLabels: { months: string; schedule: string },
-  quoted?: number[],
-  amount = Number(line.price) || 0,
-  paymentType: string | undefined = line.paymentType,
-) {
-  // Nothing left to split (e.g. coupon covers the price) → plain amount.
-  if (paymentType !== "EMI" || amount <= 0) return formatKwdLocale(amount, locale);
-  // Server quote wins (it knows promotions/coupons); fall back to the course plan.
-  const plan =
-    quoted && quoted.length >= 2
-      ? quoted
-      : line.emiAmounts && line.emiAmounts.length >= 2
-        ? line.emiAmounts
-        : splitEmi(amount, "even", line.emiCount ?? EMI_COUNT);
-  return emiLabel(plan, emiLabels, (value) => formatKwdLocale(value, locale)) ?? formatKwdLocale(amount, locale);
+function emiPlanOf(line: CartLine, quoted: number[] | undefined, amount: number) {
+  if (quoted && quoted.length >= 2) return quoted;
+  if (line.emiAmounts && line.emiAmounts.length >= 2) return line.emiAmounts;
+  return splitEmi(amount, "even", line.emiCount ?? EMI_COUNT);
 }
 
 export function LineCard({
@@ -64,6 +51,7 @@ export function LineCard({
   onRemove: () => void;
   labels: { fullPay: string; emi: string; emiMonths: string; emiSchedule: string; saveLater: string; remove: string };
 }) {
+  const { t } = useI18n();
   const listAmount = Number(line.price) || 0;
   const discounted = Boolean(quoted) && !quoted?.owned && (quoted?.discount ?? 0) > 0;
   const finalAmount = discounted ? (quoted?.amountTotal ?? listAmount) : listAmount;
@@ -105,27 +93,25 @@ export function LineCard({
             ) : (
               <span />
             )}
-            <div className="flex max-w-[58%] shrink-0 flex-col items-end gap-0.5 text-end">
+            <div className="flex max-w-[70%] shrink-0 flex-col items-end gap-0.5 text-end">
               {discounted ? (
                 <span className="text-[11px] leading-tight text-muted line-through">
                   {formatKwdLocale(quoted?.originalPrice ?? listAmount, locale)}
                 </span>
               ) : null}
-              <p
-                className={cn(
-                  "text-[13px] font-semibold leading-tight",
-                  discounted ? "text-[#1f9d4d]" : "text-text",
-                )}
-              >
-                {linePriceLabel(
-                  line,
-                  locale,
-                  { months: labels.emiMonths, schedule: labels.emiSchedule },
-                  installments,
-                  finalAmount,
-                  quoted?.paymentType ?? line.paymentType,
-                )}
-              </p>
+              {(quoted?.paymentType ?? line.paymentType) === "EMI" && finalAmount > 0 ? (
+                <span className="flex items-center gap-0.5">
+                  <span className={cn("text-[13px] font-semibold", discounted ? "text-[#1f9d4d]" : "text-text")}>
+                    {formatKwdLocale(finalAmount, locale)}
+                  </span>
+                  <span className="text-[11px] text-muted">{t("emiCount", { n: emiPlanOf(line, installments, finalAmount).length })}</span>
+                  <EmiInfo plan={emiPlanOf(line, installments, finalAmount)} total={finalAmount} />
+                </span>
+              ) : (
+                <p className={cn("text-[13px] font-semibold leading-tight", discounted ? "text-[#1f9d4d]" : "text-text")}>
+                  {formatKwdLocale(finalAmount, locale)}
+                </p>
+              )}
               {hasCoupon && couponTag ? (
                 <span className="rounded-[6px] bg-[#1f9d4d]/15 px-1.5 py-[2px] text-[10px] font-medium text-[#1f9d4d]">
                   {couponTag}

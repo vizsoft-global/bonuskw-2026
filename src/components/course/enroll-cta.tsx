@@ -1,6 +1,8 @@
 "use client";
 
+import { EmiInfo } from "@/components/course/emi-info";
 import { HomeIcon } from "@/components/home/icon";
+import { useI18n } from "@/lib/i18n/locale";
 import { Loader } from "@/components/shared/loader";
 import { cn } from "@/lib/utils";
 import { haptic } from "@/lib/ui/haptics";
@@ -16,8 +18,7 @@ export function EnrollCta({
   stats: statsProp,
   price,
   enrollLabel,
-  emiPrice,
-  emiLabel,
+  emiPlan,
   secure,
   block,
   busy,
@@ -34,8 +35,8 @@ export function EnrollCta({
   stats?: EnrollStat[];
   price: string;
   enrollLabel: string;
-  emiPrice?: string;
-  emiLabel?: string;
+  /** Installment amounts; the button shows only the count, the icon the breakup. */
+  emiPlan?: number[];
   secure: string;
   block?: string;
   busy?: boolean;
@@ -50,7 +51,9 @@ export function EnrollCta({
       lessonsLabel ? { icon: "/course/lessons.svg", text: `${lessons ?? 0} ${lessonsLabel}` } : null,
       duration ? { icon: "/course/clock.svg", text: duration } : null,
     ].filter(Boolean) as EnrollStat[];
+  const { t } = useI18n();
   const disabled = Boolean(block) || busy;
+  const installments = (emiPlan ?? []).filter((amount) => Number(amount) > 0);
 
   return (
     <div className="mt-3 flex flex-col gap-2">
@@ -99,29 +102,18 @@ export function EnrollCta({
             </>
           )}
         </button>
-        {showEmi && !block ? (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={onEmi}
-            className="relative flex h-12 w-full items-center justify-between rounded-full bg-[#ff7a00] px-4 disabled:opacity-70"
-          >
-            {busy ? (
-              <span className="absolute inset-0 grid place-items-center">
-                <Loader size="inline" />
-              </span>
-            ) : (
-              <>
-                <span className="text-[14px] font-semibold text-text">{emiPrice}</span>
-                <span className="flex items-center gap-2 text-[14px] font-semibold text-text">
-                  {emiLabel}
-                  <span className="size-3.5 -scale-x-100 rtl:scale-x-100">
-                    <HomeIcon src="/course/enroll-arrow.svg" />
-                  </span>
-                </span>
-              </>
-            )}
-          </button>
+        {showEmi && !block && installments.length > 1 ? (
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={onEmi}
+              className="relative flex h-12 min-w-0 flex-1 items-center justify-center rounded-full bg-[#ff7a00] px-4 text-[14px] font-semibold text-text disabled:opacity-70"
+            >
+              {busy ? <Loader size="inline" /> : t("emiPayCount", { n: installments.length })}
+            </button>
+            <EmiInfo plan={installments} />
+          </div>
         ) : null}
       </div>
       <p className="text-center text-[11px] text-muted">{secure}</p>

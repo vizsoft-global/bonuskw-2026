@@ -112,7 +112,7 @@ export default function MySpacePage() {
   return (
     <AppShell loading={stats.isPending || courses.isPending || books.isPending} skeleton={<StoreSkeleton />}>
       <div className="flex flex-col">
-        <h1 className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">{t("mySpace")}</h1>
+        <h1 className="hidden text-[20px] font-semibold text-text lg:block lg:pt-4">{t("mySpace")}</h1>
 
         <div className="pt-5 lg:pt-4">
           <StatsCard

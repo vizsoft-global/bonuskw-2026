@@ -166,7 +166,7 @@ export default function OffersPage() {
   return (
     <AppShell title={t("offers")} loading={promos.isPending} skeleton={<StoreSkeleton />}>
       <div className="flex flex-col">
-        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">
+        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-4">
           {t("offers")}
         </p>
         <p className="pt-4 text-[12px] leading-relaxed text-muted lg:pt-2">{t("offersSubtitle")}</p>

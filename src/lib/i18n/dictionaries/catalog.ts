@@ -27,6 +27,10 @@ export const catalog = {
     addedTitle: "Added to cart",
     addedBody: "{name} is in your cart.",
     continueBrowsing: "Continue browsing",
+    emiPayCount: "Pay in {n} installments",
+    emiCount: "{n} installments",
+    emiInstallment: "Installment {i}",
+    emiDueNow: "Due now",
   },
   ar: {
     searchType: "النوع",
@@ -55,5 +59,9 @@ export const catalog = {
     addedTitle: "أُضيف إلى السلة",
     addedBody: "{name} في سلتك الآن.",
     continueBrowsing: "متابعة التصفح",
+    emiPayCount: "ادفع على {n} أقساط",
+    emiCount: "{n} أقساط",
+    emiInstallment: "القسط {i}",
+    emiDueNow: "مستحق الآن",
   },
 } as const;

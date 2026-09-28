@@ -172,7 +172,7 @@ export default function StorePage() {
   return (
     <AppShell headerExtra={<StoriesRow stories={storyItems} />} loading={courses.isPending} skeleton={<StoreSkeleton />}>
       <div className="flex flex-col">
-        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">
+        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-4">
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
 

@@ -37,6 +37,7 @@ import { useI18n } from "@/lib/i18n/locale";
 import { haptic } from "@/lib/ui/haptics";
 import { useDeferredLoading } from "@/lib/ui/deferred-loading";
 import { avatarSrc } from "@/lib/avatar";
+import { hasTabBar } from "@/lib/ui/tab-bar";
 import { cn } from "@/lib/utils";
 
 const tabs = [
@@ -48,7 +49,6 @@ const tabs = [
 
 const chromePaths = new Set(["/", "/store", "/my-space"]);
 const tabPaths = new Set(["/", "/store", "/my-space", "/profile"]);
-const tabBarPaths = new Set(["/", "/store", "/my-space"]);
 const tabHrefs = tabs.map((tab) => tab.href);
 const GLOW = "linear-gradient(180deg, #ED4A27 26%, #32B2B9 72%, #048EE4 100%)";
 
@@ -186,11 +186,13 @@ function PageToolbar({
   className,
   title,
   actionsRef,
+  trailing,
 }: {
   heading?: boolean;
   className?: string;
   title?: string;
   actionsRef: (node: HTMLElement | null) => void;
+  trailing?: ReactNode;
 }) {
   const path = usePathname();
   const TitleTag = heading ? "h1" : "p";
@@ -205,6 +207,7 @@ function PageToolbar({
         <span className="min-w-0 flex-1" />
       )}
       <div ref={actionsRef} className="flex shrink-0 items-center gap-3 empty:hidden" />
+      {trailing}
     </div>
   );
 }
@@ -366,7 +369,7 @@ function AppChrome({ children }: { children: ReactNode }) {
   const uniName = university.data || "";
   const displayName = profile?.display_name || t("profile");
   const isChrome = chromePaths.has(path);
-  const showTabBar = tabBarPaths.has(path);
+  const showTabBar = hasTabBar(path);
   const isSearch = path === "/search";
   const nested = !tabPaths.has(path);
   const hideSearch = isSearch;
@@ -510,14 +513,30 @@ function AppChrome({ children }: { children: ReactNode }) {
                   : "pb-3 pt-safe-header",
               )}
             >
-              <PageToolbar title={pageTitle} actionsRef={bindActions} />
+              <PageToolbar
+                title={pageTitle}
+                actionsRef={bindActions}
+                trailing={
+                  <button
+                    type="button"
+                    aria-label={t("cart")}
+                    onClick={() => openCart()}
+                    className="relative grid size-10 shrink-0 place-items-center"
+                  >
+                    <span className="size-5">
+                      <HomeIcon src="/home/cart.svg" />
+                    </span>
+                    <CountBadge count={cartCount} />
+                  </button>
+                }
+              />
             </div>
           )}
         </header>
 
         <main
           className={cn(
-            "relative z-10 mx-auto w-full max-w-[1040px] px-[15px] lg:px-0 lg:pb-10",
+            "relative z-10 mx-auto w-full max-w-[1040px] px-3 lg:px-0 lg:pb-10",
             showTabBar ? "pb-32" : path.includes("/learn") ? "pb-4" : "pb-10",
             (path.startsWith("/profile") || path === "/search") && "lg:max-w-[1280px] lg:px-[30px]",
             path.includes("/learn") && "lg:max-w-[1600px] lg:px-6 lg:pb-3",
@@ -526,7 +545,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           {nested && !path.startsWith("/profile/") && path !== "/search" ? (
             <PageToolbar
               heading={false}
-              className={cn("hidden lg:flex", path.includes("/learn") ? "mb-1.5" : "mb-4 pt-[30px]")}
+              className={cn("hidden lg:flex", path.includes("/learn") ? "mb-1.5" : "mb-3 pt-4")}
               title={pageTitle}
               actionsRef={bindActionsLg}
             />
@@ -543,7 +562,7 @@ function AppChrome({ children }: { children: ReactNode }) {
           aria-hidden={!showTabBar}
         >
           {navTabs.map((tab) => {
-            const active = tab.href === "/" ? path === "/" : path === tab.href;
+            const active = tab.href === "/" ? path === "/" : path === tab.href || path.startsWith(`${tab.href}/`);
             return (
               <TabItem
                 key={tab.href}

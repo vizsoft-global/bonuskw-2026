@@ -244,7 +244,7 @@ function HomeBody({ uid }: { uid: string }) {
             <DevModeBanner />
           </div>
         ) : null}
-        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-[30px]">
+        <p className="hidden text-[20px] font-semibold text-text lg:block lg:pt-4">
           {t("hello")} {profile?.display_name || t("profile")}
         </p>
 

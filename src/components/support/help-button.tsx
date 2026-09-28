@@ -19,6 +19,7 @@ import {
   subscribeDraft,
   withTimeout,
 } from "@/lib/support/capture";
+import { hasTabBar } from "@/lib/ui/tab-bar";
 import { APP_VERSION } from "@/lib/version";
 import { cn } from "@/lib/utils";
 
@@ -28,8 +29,6 @@ type RecentError = { message: string; at: number };
 
 const errorBuffer: RecentError[] = [];
 let errorHookInstalled = false;
-
-const TAB_BAR_PATHS = new Set(["/", "/store", "/my-space"]);
 
 function installErrorHook() {
   if (typeof window === "undefined" || errorHookInstalled) return;
@@ -134,7 +133,19 @@ export function HelpButton() {
   const pageRef = useRef<PageInfo | null>(null);
 
   const hideOnPath = pathname.startsWith("/checkout/return");
-  const raisedForTabs = TAB_BAR_PATHS.has(pathname);
+  const raisedForTabs = hasTabBar(pathname);
+  const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
+  const drag = useRef<{ ox: number; oy: number; startX: number; startY: number; moved: boolean; x: number; y: number } | null>(null);
+
+  useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("ba-help-pos");
+      const saved = raw ? (JSON.parse(raw) as { x: number; y: number }) : null;
+      if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) setPos(saved);
+    } catch {
+      /* keep the default corner */
+    }
+  }, []);
 
   useEffect(() => {
     installErrorHook();
@@ -287,17 +298,45 @@ export function HelpButton() {
       <button
         type="button"
         data-help-widget="1"
-        onClick={start}
         aria-label={t("help")}
+        onPointerDown={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          drag.current = { ox: e.clientX - rect.left, oy: e.clientY - rect.top, startX: e.clientX, startY: e.clientY, moved: false, x: rect.left, y: rect.top };
+          e.currentTarget.setPointerCapture(e.pointerId);
+        }}
+        onPointerMove={(e) => {
+          const current = drag.current;
+          if (!current) return;
+          if (Math.hypot(e.clientX - current.startX, e.clientY - current.startY) > 6) current.moved = true;
+          const size = 36;
+          current.x = Math.min(window.innerWidth - size, Math.max(0, e.clientX - current.ox));
+          current.y = Math.min(window.innerHeight - size, Math.max(0, e.clientY - current.oy));
+          setPos({ x: current.x, y: current.y });
+        }}
+        onPointerUp={() => {
+          const current = drag.current;
+          drag.current = null;
+          if (!current || !current.moved) {
+            start();
+            return;
+          }
+          const size = 36;
+          const inset = raisedForTabs && current.x > window.innerWidth / 2 ? 88 : 16;
+          const next = {
+            x: current.x + size / 2 < window.innerWidth / 2 ? 8 : window.innerWidth - size - 8,
+            y: Math.min(window.innerHeight - size - inset, Math.max(8, current.y)),
+          };
+          setPos(next);
+          window.localStorage.setItem("ba-help-pos", JSON.stringify(next));
+        }}
         className={cn(
-          "fixed end-4 z-50 flex size-12 items-center justify-center rounded-full bg-text text-bg shadow-lg transition hover:opacity-90",
-          // Sit above ScrollToTop (bottom-28/6) and the mobile tab bar.
-          raisedForTabs ? "bottom-40 lg:bottom-20" : "bottom-20 lg:bottom-8",
+          "fixed z-50 flex size-9 items-center justify-center rounded-full bg-text text-bg opacity-50 shadow-lg touch-none hover:opacity-100 focus-visible:opacity-100",
+          pos ? "" : raisedForTabs ? "end-4 bottom-40 lg:bottom-20" : "end-4 bottom-20 lg:bottom-8",
         )}
-        style={{ marginBottom: "env(safe-area-inset-bottom)" }}
+        style={pos ? { left: pos.x, top: pos.y } : { marginBottom: "env(safe-area-inset-bottom)" }}
         title={t("help")}
       >
-        <LifeBuoy className="size-5" />
+        <LifeBuoy className="size-4" />
         {hasDraft && !open ? (
           <span className="absolute end-0.5 top-0.5 size-3 rounded-full border-2 border-bg bg-amber-500" />
         ) : null}

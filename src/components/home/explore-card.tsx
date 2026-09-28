@@ -1,5 +1,6 @@
 "use client";
 
+import { Check, Plus } from "lucide-react";
 import Link from "next/link";
 import { BatchBadge, CourseThumb } from "./course-thumb";
 import { HomeIcon } from "./icon";
@@ -102,18 +103,18 @@ function ThumbOverlay({ item }: { item: ExploreItem }) {
     <div className="absolute start-1.5 top-1.5 flex max-w-[calc(100%-12px)] flex-col items-start gap-1">
       {item.author ? (
         <span
-          className="group/author inline-flex max-w-full items-center gap-1.5 rounded-full bg-black/60 p-[2px] text-[10px] font-medium leading-none text-white backdrop-blur-sm transition-[padding] duration-200 hover:pe-2 [@media(hover:none)]:pe-2"
+          className="group/author inline-flex max-w-full items-center gap-1 rounded-full bg-black/55 p-px text-[9px] font-medium leading-none text-white backdrop-blur-sm hover:pe-1.5"
           title={item.author}
         >
           {item.authorPhoto ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={item.authorPhoto} alt="" loading="lazy" className="size-[18px] shrink-0 rounded-full bg-white/20 object-cover" />
+            <img src={item.authorPhoto} alt="" loading="lazy" className="size-3.5 shrink-0 rounded-full bg-white/20 object-cover" />
           ) : (
-            <span className="grid size-[18px] shrink-0 place-items-center rounded-full bg-white/20 text-[9px] uppercase">
+            <span className="grid size-3.5 shrink-0 place-items-center rounded-full bg-white/20 text-[8px] uppercase">
               {item.author.trim().charAt(0)}
             </span>
           )}
-          <span className="max-w-0 truncate opacity-0 transition-all duration-200 group-hover/author:max-w-[120px] group-hover/author:opacity-100 [@media(hover:none)]:max-w-[120px] [@media(hover:none)]:opacity-100">
+          <span className="hidden max-w-[110px] truncate group-hover/author:inline">
             {item.author}
           </span>
         </span>
@@ -152,37 +153,37 @@ function SaveButton({
   );
 }
 
-function CardActions({
-  item,
+function AddButton({
   labels,
   onEnroll,
   enrollBlocked,
 }: {
-  item: ExploreItem;
   labels: ExploreLabels;
   onEnroll: () => void;
   enrollBlocked?: string;
 }) {
+  if (enrollBlocked === "skip") return null;
+  const blocked = Boolean(enrollBlocked);
   return (
-    <div className="mt-auto flex w-full items-center justify-between gap-2.5 px-1 pb-0.5">
-      <Meta item={item} labels={labels} />
-      <button
-        type="button"
-        disabled={Boolean(enrollBlocked)}
-        title={enrollBlocked}
-        onClick={() => {
-          if (enrollBlocked) return;
-          haptic("medium");
-          onEnroll();
-        }}
-        className={cn(
-          "ms-auto flex h-7 shrink-0 items-center justify-center rounded-[16px] px-[15px] text-[12px] font-medium leading-none whitespace-nowrap lg:h-8",
-          enrollBlocked ? "cursor-not-allowed bg-surface-2 text-muted" : "bg-[#0c5eff] text-white",
-        )}
-      >
-        {enrollBlocked === "skip" ? labels.enroll : enrollBlocked || labels.enroll}
-      </button>
-    </div>
+    <button
+      type="button"
+      disabled={blocked}
+      title={enrollBlocked || labels.enroll}
+      aria-label={enrollBlocked || labels.enroll}
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (blocked) return;
+        haptic("medium");
+        onEnroll();
+      }}
+      className={cn(
+        "grid size-7 shrink-0 place-items-center rounded-full text-white shadow",
+        blocked ? "cursor-not-allowed bg-black/65" : "bg-[#0c5eff]",
+      )}
+    >
+      {blocked ? <Check className="size-3.5" /> : <Plus className="size-4" />}
+    </button>
   );
 }
 
@@ -207,7 +208,10 @@ export function ExploreListCard({
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className={portrait ? "w-[110px]" : "w-[154px]"}>
             <ThumbOverlay item={item} />
-            {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
+            <span className="absolute bottom-1.5 end-1.5 z-10 flex items-center gap-1">
+              <AddButton labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
+              {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
+            </span>
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
@@ -216,7 +220,7 @@ export function ExploreListCard({
         <Link href={href} className="line-clamp-2 px-1 text-[14px] font-medium leading-[18px] text-text">
           {item.name}
         </Link>
-        <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
+        <Meta item={item} labels={labels} />
       </div>
     </article>
   );
@@ -228,7 +232,6 @@ export function ExploreGridCard({
   onEnroll,
   onSave,
   enrollBlocked,
-  enrollOnImage,
   priority,
 }: {
   item: ExploreItem;
@@ -236,47 +239,30 @@ export function ExploreGridCard({
   onEnroll: () => void;
   onSave?: () => void;
   enrollBlocked?: string;
-  /** Search results: Enroll sits on the image, and only when it can be used. */
+  /** Unused: every card uses the + button now. Kept so existing callers compile. */
   enrollOnImage?: boolean;
   priority?: boolean;
 }) {
   const href = itemHref(item);
-  const showEnroll = enrollBlocked !== "skip";
   return (
-    <article className="group flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
+    <article className="flex h-full flex-col overflow-hidden rounded-[12px] border border-line bg-surface p-1.5 lg:p-1">
       <div className="relative shrink-0">
         <Link href={href} className="block">
           <CourseThumb image={item.image} seed={item.id} aspect={item.aspect} className="w-full" priority={priority}>
             <ThumbOverlay item={item} />
-            {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
+            <span className="absolute bottom-1.5 end-1.5 z-10 flex items-center gap-1">
+              <AddButton labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
+              {item.batch ? <BatchBadge label={item.batch} tone={item.batchTone} /> : null}
+            </span>
           </CourseThumb>
         </Link>
         {onSave ? <SaveButton item={item} labels={labels} onSave={onSave} /> : null}
-        {enrollOnImage && showEnroll ? (
-          <button
-            type="button"
-            disabled={Boolean(enrollBlocked)}
-            onClick={() => {
-              if (enrollBlocked) return;
-              haptic("medium");
-              onEnroll();
-            }}
-            className={cn(
-              "absolute bottom-1.5 start-1.5 z-10 h-7 translate-y-1 rounded-[16px] px-3 text-[11px] font-medium leading-none opacity-0 shadow-lg transition-[opacity,transform] duration-150 group-hover:translate-y-0 group-hover:opacity-100 focus-visible:translate-y-0 focus-visible:opacity-100 [@media(hover:none)]:hidden",
-              enrollBlocked ? "cursor-not-allowed bg-black/70 text-white/80 backdrop-blur-sm" : "bg-[#0c5eff] text-white",
-            )}
-          >
-            {enrollBlocked || labels.enroll}
-          </button>
-        ) : null}
       </div>
-      <div className="flex min-h-0 flex-1 flex-col justify-between gap-1.5 pt-2 lg:gap-2">
-        <Link href={href} className="line-clamp-2 px-1 text-[12px] font-medium leading-[16px] text-text">
+      <div className="flex min-h-0 flex-1 flex-col gap-1.5 pt-2">
+        <Link href={href} className="line-clamp-2 px-1 text-[13px] font-medium leading-[17px] text-text">
           {item.name}
         </Link>
-        {enrollOnImage ? null : (
-          <CardActions item={item} labels={labels} onEnroll={onEnroll} enrollBlocked={enrollBlocked} />
-        )}
+        <Meta item={item} labels={labels} />
       </div>
     </article>
   );

@@ -5,7 +5,9 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { Check, X } from "lucide-react";
+import { CartSummary } from "@/components/cart/cart-summary";
 import { openCart } from "@/components/cart/cart-panel";
+import { useCartQuote } from "@/lib/cart/use-cart-quote";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 import { imageFor } from "@/lib/media/image-url";
@@ -25,6 +27,7 @@ export function AddedToCartDialog() {
   const router = useRouter();
   const client = useQueryClient();
   const [item, setItem] = useState<Added | null>(null);
+  const { quote, quoting, cart } = useCartQuote();
 
   useEffect(() => {
     const open = (next: Added) => {
@@ -78,6 +81,13 @@ export function AddedToCartDialog() {
               <img src={imageFor("courseCard", item.image)} alt="" className="size-12 shrink-0 rounded-[8px] object-cover" />
             ) : null}
             <p className="line-clamp-2 text-[13px] font-medium text-text">{item.title}</p>
+          </div>
+          <div className="w-full text-start">
+            <CartSummary
+              quote={quote}
+              quoting={quoting}
+              fallback={(cart?.lines ?? []).reduce((sum, line) => sum + (Number(line.price) || 0), 0)}
+            />
           </div>
         </div>
         <div className="mt-5 flex flex-col gap-2">

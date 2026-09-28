@@ -142,7 +142,7 @@
  * In a normal browser tab the insets are 0 and the design values win.
  */
 @utility pt-safe-header {
-  padding-top: max(60px, calc(env(safe-area-inset-top, 0px) + 20px));
+  padding-top: max(12px, calc(env(safe-area-inset-top, 0px) + 8px));
 }
 @utility pt-safe {
   padding-top: env(safe-area-inset-top, 0px);

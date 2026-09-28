@@ -636,7 +636,7 @@ export default function SearchPage() {
       <button
         type="button"
         onClick={() => setDrawer(true)}
-        className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+16px)] z-30 mx-auto flex h-11 w-fit items-center gap-2 rounded-full bg-text px-5 text-[13px] font-semibold text-bg shadow-[0_8px_24px_rgba(0,0,0,0.35)] active:scale-95 lg:hidden"
+        className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+76px)] z-40 mx-auto flex h-11 w-fit items-center gap-2 rounded-full bg-text px-5 text-[13px] font-semibold text-bg shadow-[0_8px_24px_rgba(0,0,0,0.35)] active:scale-95 lg:hidden"
       >
         <SlidersHorizontal className="size-4" />
         {t("searchFilters")}
