@@ -43,15 +43,12 @@ import {
   useTaxonomy,
   type TaxonomySelection,
 } from "@/lib/taxonomy/use-taxonomy";
-import { addCourseLine, enrolmentClosedMessage } from "@/lib/cart/add-course";
-import { toast } from "@/components/ui/toaster";
-import { useOwnership } from "@/lib/cart/ownership";
 import { imageFor } from "@/lib/media/image-url";
 import { getDb } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { localizedField } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
-import type { CourseDoc, SettingsDoc } from "@/lib/types/firestore";
+import type { SettingsDoc } from "@/lib/types/firestore";
 import { localizedText, usePromotions } from "@/lib/promotions/use-promotions";
 import { isStoryActive } from "@/lib/stories/media";
 import { cn } from "@/lib/utils";
@@ -114,7 +111,6 @@ function HomeBody({ uid }: { uid: string }) {
   const { t, locale } = useI18n();
   const { user, profile, refreshProfile } = useAuth();
   const gate = usePurchaseGate();
-  const own = useOwnership();
   const router = useRouter();
   const [view, setView] = useState<"grid" | "list">("grid");
   // Filter starts at the student's own university/field; they can widen it.
@@ -182,15 +178,6 @@ function HomeBody({ uid }: { uid: string }) {
       })),
     [explore, authors.data, batches.data, locale, savedIds, t],
   );
-
-  async function enrol(course: CourseDoc & { id: string }) {
-    if (gate.blockFor("course")) return;
-    try {
-      await addCourseLine(uid, course);
-    } catch (err) {
-      toast.error(enrolmentClosedMessage(err, t));
-    }
-  }
 
   async function toggleSave(courseId: string) {
     if (!user) return;
@@ -350,15 +337,14 @@ function HomeBody({ uid }: { uid: string }) {
             view === "list" ? (
               <div className="flex flex-col gap-3">
                 {exploreItems.map((item) => {
-                  const course = explore.find((c) => c.id === item.id);
                   return (
                     <ExploreListCard
                       key={item.id}
                       item={item}
                       labels={exploreLabels}
-                      onEnroll={() => course && void enrol(course)}
+                      onEnroll={() => {}}
                       onSave={() => void toggleSave(item.id)}
-                      enrollBlocked={own.labelOf(item.id) ?? gate.blockFor("course")}
+                      enrollBlocked="skip"
                     />
                   );
                 })}
@@ -366,15 +352,14 @@ function HomeBody({ uid }: { uid: string }) {
             ) : (
               <div className={cn(exploreGridClass, "lg:grid-cols-[repeat(auto-fill,minmax(227px,1fr))]")}>
                 {exploreItems.map((item) => {
-                  const course = explore.find((c) => c.id === item.id);
                   return (
                     <ExploreGridCard
                       key={item.id}
                       item={item}
                       labels={exploreLabels}
-                      onEnroll={() => course && void enrol(course)}
+                      onEnroll={() => {}}
                       onSave={() => void toggleSave(item.id)}
-                      enrollBlocked={own.labelOf(item.id) ?? gate.blockFor("course")}
+                      enrollBlocked="skip"
                     />
                   );
                 })}
