@@ -1,4 +1,4 @@
-const STATIC = "ba-static-v3";
+const STATIC = "ba-static-v4";
 const IMAGES = "ba-images-v1";
 const IMAGE_HOSTS = ["imagedelivery.net", "firebasestorage.googleapis.com", "storage.googleapis.com"];
 const IMAGE_LIMIT = 400;
@@ -43,6 +43,12 @@ self.addEventListener("fetch", (event) => {
   ) {
     return;
   }
+  // Only this origin is cached. Firestore, Identity Toolkit and everything
+  // else cross-origin must reach the network untouched: the cache-first branch
+  // below used to swallow Firestore's long-polling webchannel, which made a
+  // read hang instead of resolve — a student would sit on a loader until they
+  // reloaded the page. Cross-origin images are handled by the branch below.
+  if (url.origin !== self.location.origin && !IMAGE_HOSTS.includes(url.hostname)) return;
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request).catch(async () => {
