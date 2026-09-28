@@ -17,7 +17,6 @@ export function CartSummary({ quote, quoting, fallback }: { quote: Quote | null;
     .map((promo) => suggestionText(promo.name ?? null, locale))
     .filter(Boolean)
     .join(", ");
-  const hints = Array.from(new Set((quote?.suggestions ?? []).map((item) => suggestionText(item.message, locale)))).filter(Boolean);
 
   return (
     <div className="flex flex-col gap-1.5 text-[13px]">
@@ -30,9 +29,6 @@ export function CartSummary({ quote, quoting, fallback }: { quote: Quote | null;
         <span>{t("totalDueNow")}</span>
         <span>{quoting ? "…" : money(due)}</span>
       </div>
-      {hints.map((hint) => (
-        <p key={hint} className="text-[12px] text-[#0c5eff]">{hint}</p>
-      ))}
     </div>
   );
 }

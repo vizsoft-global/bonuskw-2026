@@ -323,9 +323,6 @@ export default function CartPage() {
   const couponTotal = quote
     ? (quote.lines ?? []).reduce((sum, q) => sum + (q.owned ? 0 : q.couponDiscount || 0), 0)
     : 0;
-  const suggestionTexts = Array.from(
-    new Set((quote?.suggestions ?? []).map((item) => suggestionText(item.message, locale))),
-  ).filter(Boolean);
   const summaryTotal = quote
     ? (quote.lines ?? []).reduce((sum, q) => sum + (q.owned ? 0 : q.amountTotal || 0), 0)
     : listTotal;
@@ -620,11 +617,6 @@ export default function CartPage() {
                 </div>
               ) : null}
             </form>
-            {suggestionTexts.map((text) => (
-              <p key={text} className="text-[12px] text-[#0c5eff]">
-                {text}
-              </p>
-            ))}
           </div>
           {checkoutBlock}
         </div>
