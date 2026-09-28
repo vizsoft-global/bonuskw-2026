@@ -11,8 +11,9 @@ import { CtaButton } from "@/components/auth/cta-button";
 import { Field } from "@/components/auth/field";
 import { LegalNote } from "@/components/auth/legal-note";
 import { SocialButton } from "@/components/auth/social-button";
+import { Button } from "@/components/ui/button";
 import { PageLoader } from "@/components/shared/loader";
-import { authErrorMessage } from "@/lib/auth/auth-errors";
+import { authErrorKey, authErrorMessage } from "@/lib/auth/auth-errors";
 import { useAuth, type SignInResult } from "@/lib/auth/auth-provider";
 import { usePending } from "@/lib/auth/use-pending";
 import { useI18n } from "@/lib/i18n/locale";
@@ -27,7 +28,7 @@ import { useI18n } from "@/lib/i18n/locale";
  */
 function RegisterForm() {
   const { t } = useI18n();
-  const { signUpEmail, signInGoogle, signInApple } = useAuth();
+  const { signUpEmail, signInEmail, resetPassword, signInGoogle, signInApple } = useAuth();
   const router = useRouter();
   /** One request at a time; `busy` alone is read too late to stop a double tap. */
   const guard = usePending();
@@ -36,6 +37,9 @@ function RegisterForm() {
   const [confirm, setConfirm] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  /** The address already belongs to an account: guide them instead of failing. */
+  const [existing, setExisting] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const emailReady = /\S+@\S+\.\S+/.test(email);
@@ -52,14 +56,58 @@ function RegisterForm() {
     await guard(async () => {
       setBusy(true);
       setError("");
+      setNotice("");
+      setExisting(false);
       try {
         landing(await signUpEmail(email, password));
+      } catch (err) {
+        /*
+         * The address already has an account — the usual cause is a sign-up
+         * that was interrupted (a reload, a closed tab, a dropped connection)
+         * after Firebase created the account but before onboarding finished.
+         * The typed password decides: if it is the password for that account,
+         * let them straight in; if it is not, the account is theirs to recover
+         * rather than a dead end.
+         */
+        if (authErrorKey(err) === "authErrEmailInUse") {
+          try {
+            landing(await signInEmail(email, password));
+            return;
+          } catch {
+            setExisting(true);
+            return;
+          }
+        }
+        setError(authErrorMessage(err, t));
+      } finally {
+        setBusy(false);
+      }
+    });
+  }
+
+  /** A reset link is the shortest way back in when the password is not theirs to recall. */
+  async function sendReset() {
+    await guard(async () => {
+      setBusy(true);
+      setError("");
+      try {
+        await resetPassword(email);
+        setNotice(t("resetEmailSent"));
       } catch (err) {
         setError(authErrorMessage(err, t));
       } finally {
         setBusy(false);
       }
     });
+  }
+
+  function useOtherEmail() {
+    setExisting(false);
+    setNotice("");
+    setError("");
+    setEmail("");
+    setPassword("");
+    setConfirm("");
   }
 
   /**
@@ -100,46 +148,68 @@ function RegisterForm() {
           <p className="text-[14px] leading-relaxed text-muted">{t("signupSubtitle")}</p>
         </div>
 
-        <div className="flex flex-col gap-3">
-          <Field
-            type="email"
-            label={t("emailAddress")}
-            value={email}
-            onChange={setEmail}
-            placeholder="name@example.com"
-            autoComplete="email"
-          />
-          <Field
-            type={showPassword ? "text" : "password"}
-            label={t("password")}
-            value={password}
-            onChange={setPassword}
-            placeholder="••••••••"
-            autoComplete="new-password"
-            trailing={toggle}
-          />
-          <Field
-            type={showPassword ? "text" : "password"}
-            label={t("signupConfirmPassword")}
-            value={confirm}
-            onChange={setConfirm}
-            placeholder="••••••••"
-            autoComplete="new-password"
-            onSubmit={() => void submit()}
-          />
-          {/* Only speak up once there is something to complain about, and only
-              about the field that is actually wrong. */}
-          {password && !passwordReady ? (
-            <p className="text-[13px] text-accent">{t("passwordTooShort")}</p>
-          ) : null}
-          {confirm && !matches ? (
-            <p className="text-[13px] text-accent">{t("passwordMismatch")}</p>
-          ) : null}
-          {error ? <p className="text-sm text-accent">{error}</p> : null}
-          <CtaButton loading={busy} disabled={busy || !ready} onClick={() => void submit()}>
-            {t("continue")}
-          </CtaButton>
-        </div>
+        {existing ? (
+          <div className="flex flex-col gap-3 rounded-[16px] border border-line bg-white/[0.03] p-4">
+            <p className="text-[15px] font-medium text-text">{t("existingAccountTitle")}</p>
+            <p className="text-[13px] leading-relaxed text-muted">
+              {t("existingAccountBody", { email: email.trim() })}
+            </p>
+            {notice ? <p className="text-[13px] leading-relaxed text-muted">{notice}</p> : null}
+            {error ? <p className="text-[13px] text-accent">{error}</p> : null}
+            <CtaButton loading={busy} disabled={busy} onClick={() => router.replace("/login")}>
+              {t("existingAccountSignIn")}
+            </CtaButton>
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" disabled={busy} onClick={() => void sendReset()}>
+                {t("forgotPassword")}
+              </Button>
+              <Button type="button" variant="ghost" disabled={busy} onClick={useOtherEmail}>
+                {t("existingAccountDifferent")}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <Field
+              type="email"
+              label={t("emailAddress")}
+              value={email}
+              onChange={setEmail}
+              placeholder="name@example.com"
+              autoComplete="email"
+            />
+            <Field
+              type={showPassword ? "text" : "password"}
+              label={t("password")}
+              value={password}
+              onChange={setPassword}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              trailing={toggle}
+            />
+            <Field
+              type={showPassword ? "text" : "password"}
+              label={t("signupConfirmPassword")}
+              value={confirm}
+              onChange={setConfirm}
+              placeholder="••••••••"
+              autoComplete="new-password"
+              onSubmit={() => void submit()}
+            />
+            {/* Only speak up once there is something to complain about, and only
+                about the field that is actually wrong. */}
+            {password && !passwordReady ? (
+              <p className="text-[13px] text-accent">{t("passwordTooShort")}</p>
+            ) : null}
+            {confirm && !matches ? (
+              <p className="text-[13px] text-accent">{t("passwordMismatch")}</p>
+            ) : null}
+            {error ? <p className="text-sm text-accent">{error}</p> : null}
+            <CtaButton loading={busy} disabled={busy || !ready} onClick={() => void submit()}>
+              {t("continue")}
+            </CtaButton>
+          </div>
+        )}
 
         <div className="flex flex-col gap-3">
           <div className="flex items-center gap-3 text-[12px] uppercase tracking-wide text-faint">

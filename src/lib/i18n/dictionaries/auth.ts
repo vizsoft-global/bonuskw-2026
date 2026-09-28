@@ -85,6 +85,11 @@ export const auth = {
     linkUsed: "This sign-in link was already used. Ask the academy to send you a new one.",
     linkInvalid: "This sign-in link is not valid. Ask the academy to send you a new one.",
     linkGoToLogin: "Go to sign in",
+    existingAccountTitle: "You already have an account",
+    existingAccountBody:
+      "An account already exists for {email}. Sign in to carry on where you left off — or use a different address.",
+    existingAccountSignIn: "Sign in",
+    existingAccountDifferent: "Use a different email",
   },
   ar: {
     authLandingHeadline: "تعلّم مع أفضل المدرّسين في الكويت",
@@ -170,5 +175,10 @@ export const auth = {
     linkUsed: "تم استخدام رابط تسجيل الدخول هذا من قبل. اطلب من الأكاديمية إرسال رابط جديد.",
     linkInvalid: "رابط تسجيل الدخول هذا غير صالح. اطلب من الأكاديمية إرسال رابط جديد.",
     linkGoToLogin: "الانتقال إلى تسجيل الدخول",
+    existingAccountTitle: "لديك حساب بالفعل",
+    existingAccountBody:
+      "يوجد حساب مسجّل بهذا البريد {email}. سجّل الدخول لمتابعة ما كنت عليه — أو استخدم بريدًا آخر.",
+    existingAccountSignIn: "تسجيل الدخول",
+    existingAccountDifferent: "استخدام بريد آخر",
   },
 } as const;
