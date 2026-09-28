@@ -93,7 +93,7 @@ export function useTaxonomy() {
   const data = q.data ?? EMPTY;
   const isSchool = (universityId?: string) =>
     Boolean(universityId) && data.universities.find((u) => u.id === universityId)?.type === SCHOOL_TYPE;
-  return { ...data, isPending: q.isPending, isSchool };
+  return { ...data, isPending: q.isPending, isError: q.isError, refetch: q.refetch, isSchool };
 }
 
 /** Ids picked at each level; empty string means "not chosen / all". */
