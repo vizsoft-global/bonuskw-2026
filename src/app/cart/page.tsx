@@ -310,7 +310,13 @@ export default function CartPage() {
     .join(", ");
   const walletApplied = useWallet ? Math.max(0, Number(quote?.walletApplied) || 0) : 0;
   const walletBalance = Math.max(0, Number(quote?.walletBalance) || 0);
-  const due = Math.max(0, (quote?.dueNow ?? listTotal) - walletApplied);
+  /**
+   * The price is already net of wallet credit — the server takes it off the
+   * lines, so `dueNow` and `gatewayDue` both exclude it, and `gatewayDue` is the
+   * figure the gateway will actually collect. Subtracting the credit again here
+   * would show a total lower than the one the student is charged.
+   */
+  const due = Math.max(0, Number(quote?.gatewayDue ?? quote?.dueNow ?? listTotal) || 0);
   const quotedInstallments = (line: CartLine) => quoteLineFor(quote, line)?.installments ?? undefined;
   // Coupon lands on exactly one line server-side; surface which one.
   const couponLine = quote?.lines?.find((q) => (q.couponDiscount ?? 0) > 0);
@@ -367,6 +373,31 @@ export default function CartPage() {
     </div>
   );
 
+  /**
+   * Wallet credit offered as a payment choice, beside the gateway.
+   *
+   * Shown only when the account actually holds credit, and shown whether or not
+   * it covers the cart: unticking it is how a student whose credit covers
+   * everything chooses to pay by card instead.
+   */
+  const walletOption =
+    walletBalance > 0 ? (
+      <label className="flex items-center justify-between gap-3 rounded-[12px] border border-line p-3 text-[12px]">
+        <span className="min-w-0">
+          <span className="block font-medium text-text">{t("useWallet")}</span>
+          <span className="text-muted">
+            {t("walletBalanceLabel").replace("{amount}", formatKwdLocale(walletBalance, locale))}
+          </span>
+        </span>
+        <input
+          type="checkbox"
+          className="size-4"
+          checked={useWallet}
+          onChange={(e) => setUseWallet(e.target.checked)}
+        />
+      </label>
+    ) : null;
+
   const checkoutBlock = (
     <div className="flex flex-col gap-[25px] rounded-[12px] border border-line-strong bg-white/[0.06] p-[15px]">
       <div className="flex flex-col gap-2 border-b border-line pb-4">
@@ -402,34 +433,26 @@ export default function CartPage() {
           {quoteError}
         </p>
       ) : null}
-      {walletBalance > 0 ? (
-        <label className="flex items-center justify-between gap-3 rounded-[12px] border border-line p-3 text-[12px]">
-          <span className="min-w-0">
-            <span className="block font-medium text-text">{t("useWallet")}</span>
-            <span className="text-muted">{t("walletBalanceLabel").replace("{amount}", formatKwdLocale(walletBalance, locale))}</span>
-          </span>
-          <input
-            type="checkbox"
-            className="size-4"
-            checked={useWallet}
-            onChange={(e) => setUseWallet(e.target.checked)}
-          />
-        </label>
-      ) : null}
       {freeCheckout ? (
-        <div className="flex items-start gap-3 rounded-[12px] bg-[#1f9d4d]/15 p-3">
-          <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#1f9d4d] text-[11px] font-bold text-white">
-            ✓
-          </span>
-          <p className="text-[12px] leading-relaxed text-[#1f7a45]">{t("freeCheckoutHint")}</p>
+        <div className="flex flex-col gap-2.5">
+          {walletOption}
+          <div className="flex items-start gap-3 rounded-[12px] bg-[#1f9d4d]/15 p-3">
+            <span className="mt-0.5 grid size-5 shrink-0 place-items-center rounded-full bg-[#1f9d4d] text-[11px] font-bold text-white">
+              ✓
+            </span>
+            <p className="text-[12px] leading-relaxed text-[#1f7a45]">{t("freeCheckoutHint")}</p>
+          </div>
         </div>
       ) : (
-        <PaymentMethods
-          title={t("paymentMethod")}
-          hint={t("hostedPaymentHint")}
-          testTitle={t("testModeBanner")}
-          copyLabel={t("copyCardNumber")}
-        />
+        <div className="flex flex-col gap-2.5">
+          {walletOption}
+          <PaymentMethods
+            title={t("paymentMethod")}
+            hint={t("hostedPaymentHint")}
+            testTitle={t("testModeBanner")}
+            copyLabel={t("copyCardNumber")}
+          />
+        </div>
       )}
       <div className="flex items-start gap-2 text-[12px] text-muted">
         <input
