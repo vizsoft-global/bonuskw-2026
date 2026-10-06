@@ -9,12 +9,22 @@ import { collections } from "@/lib/firebase/collections";
 import { formatKwdLocale, type Locale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 
+/**
+ * Every reason the wallet ledger can carry (see `WalletLedgerDoc` in the admin
+ * app). Anything missing here used to fall back to "Refund", which told a
+ * student that goodwill credit from the academy was money they had been
+ * refunded — so the fallback is deliberately vague instead, and staff-granted
+ * credit has a label of its own.
+ */
 const REASON = {
   refund: "walletRefund",
   checkout: "walletCheckout",
   checkout_reversal: "walletReturned",
   hold_expiry: "walletExpired",
+  admin_credit: "walletAdminCredit",
 } as const;
+
+const FALLBACK_REASON = "walletCreditGeneric";
 
 export default function WalletPage() {
   const { t, locale } = useI18n();
@@ -36,6 +46,8 @@ export default function WalletPage() {
           direction: String(d.get("direction") || "in"),
           amountFils: Number(d.get("amountFils") || 0),
           reason: String(d.get("reason") || "refund"),
+          /** Staff note on a granted credit, so the entry explains itself. */
+          note: String(d.get("note") || ""),
           createdAt: d.get("createdAt")?.toDate?.() as Date | undefined,
         }))
         .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0));
@@ -54,12 +66,15 @@ export default function WalletPage() {
       {(wallet.data?.rows ?? []).length ? (
         <ul className="flex flex-col divide-y divide-line">
           {(wallet.data?.rows ?? []).map((row) => {
-            const label = REASON[row.reason as keyof typeof REASON] ?? "walletRefund";
+            const label = REASON[row.reason as keyof typeof REASON] ?? FALLBACK_REASON;
             const sign = row.direction === "out" ? "−" : "+";
             return (
               <li key={row.id} className="flex items-center justify-between gap-3 py-3 text-sm">
                 <span className="min-w-0">
                   <span className="block font-medium">{t(label)}</span>
+                  {row.note ? (
+                    <span className="block text-[11px] text-muted">{row.note}</span>
+                  ) : null}
                   {row.createdAt ? (
                     <span className="block text-[11px] text-muted">{row.createdAt.toLocaleDateString(locale === "ar" ? "ar-KW" : "en-KW")}</span>
                   ) : null}
