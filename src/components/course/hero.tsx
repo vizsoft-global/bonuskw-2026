@@ -122,20 +122,10 @@ export function CourseCover({
   );
 }
 
-function Face({ letters }: { letters: string }) {
-  return (
-    <span className="grid size-6 place-items-center overflow-hidden rounded-full border border-[#666] bg-surface-2 text-[8px] font-semibold leading-none tracking-tight text-muted ring-2 ring-[#050505]">
-      {letters}
-    </span>
-  );
-}
-
 export function CourseInfo({
   sku,
   language,
   title,
-  enrolled,
-  enrolledLabel,
   description,
   seeMore,
   seeLess,
@@ -143,8 +133,6 @@ export function CourseInfo({
   sku?: string;
   language?: string;
   title: string;
-  enrolled: number;
-  enrolledLabel: string;
   description?: string;
   seeMore: string;
   seeLess: string;
@@ -168,19 +156,6 @@ export function CourseInfo({
       </div>
 
       <p className="text-[18px] font-semibold leading-6 text-text lg:text-[22px] lg:leading-7">{title}</p>
-
-      {enrolled > 0 ? (
-        <div className="flex flex-wrap items-center gap-3 text-[12px] text-muted">
-          <span className="flex items-center gap-2">
-            <span className="flex -space-x-2 rtl:space-x-reverse">
-              {["B", "A", "S"].map((letters) => (
-                <Face key={letters} letters={letters} />
-              ))}
-            </span>
-            <span>{enrolledLabel.replace("{n}", String(enrolled))}</span>
-          </span>
-        </div>
-      ) : null}
 
       {text ? (
         <div>

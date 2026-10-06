@@ -195,14 +195,6 @@ export default function EbookPage() {
     pages: t("pages"),
   };
   const ctaStats = [
-    ...(Number(data.studentCount || 0) > 0
-      ? [
-          {
-            icon: "/course/lessons.svg",
-            text: t("studentsEnrolled").replace("{n}", String(data.studentCount)),
-          },
-        ]
-      : []),
     ...(pages > 0 ? [{ icon: "/course/book.svg", text: `${pages} ${t("pages")}` }] : []),
   ];
 
@@ -215,8 +207,6 @@ export default function EbookPage() {
             sku={data.sku || id.slice(0, 8)}
             language={language}
             title={title}
-            enrolled={Number(data.studentCount || 0)}
-            enrolledLabel={t("studentsEnrolled")}
             description={data.description}
             seeMore={t("seeMore")}
             seeLess={t("seeLess")}

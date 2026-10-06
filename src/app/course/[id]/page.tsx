@@ -368,8 +368,6 @@ export default function CoursePage() {
             sku={c.sku || id.slice(0, 8)}
             language={language}
             title={title}
-            enrolled={Number(c.studentCount || 0)}
-            enrolledLabel={t("studentsEnrolled")}
             description={c.description}
             seeMore={t("seeMore")}
             seeLess={t("seeLess")}
