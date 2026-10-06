@@ -83,17 +83,24 @@ function Equalizer() {
 }
 
 /**
- * Lesson thumbnail: its own uploaded image, else the brand artwork in the
- * chapter's colour so every lesson of a chapter looks like one set.
+ * Lesson thumbnail.
+ *
+ * A lesson with a video gets its own uploaded image, else the brand artwork in
+ * the chapter's colour so every lesson of a chapter looks like one set. A lesson
+ * with no video is a file to open, so it gets the document art instead — an
+ * aspect-video photo tile made a PDF look like something you press play on.
  */
 function CardThumb({
   src,
   seed,
+  file,
   children,
   className,
 }: {
   src?: string;
   seed?: string;
+  /** Set for a lesson with no video: draws the document art instead. */
+  file?: Pick<OutlineFile, "name" | "kind">;
   children?: ReactNode;
   className?: string;
 }) {
@@ -104,7 +111,14 @@ function CardThumb({
         className,
       )}
     >
-      {src ? (
+      {file ? (
+        <span
+          className="absolute inset-0 grid place-items-center"
+          style={{ background: fileGradient(file.kind) }}
+        >
+          <FileGlyph file={file} className="w-[22%]" />
+        </span>
+      ) : src ? (
         // eslint-disable-next-line @next/next/no-img-element
         <img src={imageFor("chapter", src)} alt="" width={640} height={384} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
       ) : (
@@ -150,6 +164,12 @@ function LessonCard({
   // Only an uploaded thumbnail counts; auto video posters are skipped so the
   // outline stays uniform.
   const thumb = lesson.image;
+  /*
+   * A lesson with no video is a file, and is drawn as one. Its uploaded image is
+   * ignored for these: on a file lesson it is usually a video-style frame, which
+   * is exactly what made a document look like something you press play on.
+   */
+  const fileArt = !lesson.hasVideo ? lesson.files[0] : undefined;
   return (
     <div className={cardClass(dense)}>
       <button
@@ -158,7 +178,12 @@ function LessonCard({
         onClick={onOpen}
         className="flex flex-col gap-1.5 text-start disabled:cursor-default"
       >
-        <CardThumb src={thumb} seed={chapterId} className={cn(active && "ring-2 ring-[#0c5eff]")}>
+        <CardThumb
+          src={fileArt ? undefined : thumb}
+          seed={chapterId}
+          file={fileArt}
+          className={cn(active && "ring-2 ring-[#0c5eff]")}
+        >
           {lesson.locked && !lesson.preview ? <span className="absolute inset-0 bg-black/35" /> : null}
           {lesson.locked && !lesson.preview ? <TinyLock /> : null}
           {active ? <Equalizer /> : null}
@@ -167,8 +192,9 @@ function LessonCard({
               {t("freePreview")}
             </span>
           ) : null}
-          {/* A lesson with no video is a file to open, not something to play. */}
-          {!lesson.hasVideo ? (
+          {/* A lesson with no video is a file to open, not something to play.
+              The document art already says so when there is a file to draw. */}
+          {!lesson.hasVideo && !fileArt ? (
             <span className="absolute bottom-1.5 end-1.5 grid size-5 place-items-center rounded-full bg-black/70 ring-1 ring-white/25">
               <span className="size-2.5">
                 <HomeIcon src="/course/paperclip.svg" />

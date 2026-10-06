@@ -15,6 +15,25 @@ function short(value: unknown, max = 80) {
 }
 
 /**
+ * Vercel percent-encodes `x-vercel-ip-city` — it arrives as
+ * `Al%20Farw%C4%81n%C4%AByah`. Storing it verbatim meant every screen that
+ * showed a sign-in location showed that instead of "Al Farwānīyah", for the
+ * admin device log and the student's own Devices page alike.
+ *
+ * Falls back to the raw value rather than throwing: a malformed header must not
+ * fail a sign-in.
+ */
+function cityHeader(req: NextRequest) {
+  const raw = req.headers.get("x-vercel-ip-city") ?? "";
+  if (!raw) return "";
+  try {
+    return decodeURIComponent(raw);
+  } catch {
+    return raw;
+  }
+}
+
+/**
  * The cookie is the durable device id: it outlives a cleared localStorage, so a
  * browser is not mistaken for a new device after its storage is wiped — which
  * used to raise a take-over prompt and sign the student out of the tab or PWA
@@ -47,7 +66,7 @@ export async function POST(req: NextRequest) {
         browser: short(body.browser),
         model: short(body.model),
         ip: clientIp(req),
-        city: req.headers.get("x-vercel-ip-city") ?? "",
+        city: cityHeader(req),
       },
       { force: body.force === true },
     );
