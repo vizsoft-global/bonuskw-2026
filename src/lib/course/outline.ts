@@ -56,6 +56,15 @@ export type OutlineLesson = {
   /** Video poster used when the lesson has no thumbnail of its own. */
   poster?: string;
   videoDuration: number;
+  /**
+   * Whether the lesson has a video at all.
+   *
+   * Decided by the video reference (with a non-zero duration as a second
+   * signal), never by the duration alone: a real video routinely reports 0
+   * until it has been watched. Without this a file-only lesson was given a play
+   * badge and a "0 min" readout it could never honour.
+   */
+  hasVideo: boolean;
   /** Not playable for this student (paid content they have not unlocked). */
   locked: boolean;
   /**
@@ -235,12 +244,22 @@ export function buildOutline(input: {
             downloadable: f.lesson_download_status !== false,
           } satisfies OutlineFile;
         });
+      const videoDuration = Number(lesson.videoDuration || input.durations?.[row.id] || 0);
+      /*
+       * A lesson can carry a file and no video, and a video can report 0 until it
+       * has been watched — so "has a video" is decided by the video reference,
+       * with a non-zero duration counting as proof as well. That second signal
+       * only ever adds confidence, so a real video can never be mistaken for a
+       * file-only lesson.
+       */
+      const hasVideo = Boolean(lesson.video || lesson.videoRef) || videoDuration > 0;
       return {
         id: row.id,
         name: localName(lesson as Translatable, locale, "Lesson"),
         image: typeof lesson.image === "string" ? lesson.image : undefined,
         poster: input.posters?.[row.id],
-        videoDuration: Number(lesson.videoDuration || input.durations?.[row.id] || 0),
+        videoDuration,
+        hasVideo,
         locked: !lessonOpen,
         preview,
         files,

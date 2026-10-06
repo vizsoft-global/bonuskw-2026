@@ -167,28 +167,41 @@ function LessonCard({
               {t("freePreview")}
             </span>
           ) : null}
+          {/* A lesson with no video is a file to open, not something to play. */}
+          {!lesson.hasVideo ? (
+            <span className="absolute bottom-1.5 end-1.5 grid size-5 place-items-center rounded-full bg-black/70 ring-1 ring-white/25">
+              <span className="size-2.5">
+                <HomeIcon src="/course/paperclip.svg" />
+              </span>
+            </span>
+          ) : null}
         </CardThumb>
         <span className="line-clamp-2 text-[13px] font-medium leading-[18px] text-text">{lesson.name}</span>
       </button>
-      <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-muted">
-        <span className="flex items-center gap-1">
-          <span className="size-3 shrink-0">
-            <HomeIcon src="/course/clock.svg" />
-          </span>
-          {mins(lesson.videoDuration)} {t("minShort")}
+      {lesson.hasVideo || lesson.files.length ? (
+        <span className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 text-[11px] font-medium text-muted">
+          {/* No video means no watch time: a "0 min" readout was pure noise. */}
+          {lesson.hasVideo ? (
+            <span className="flex items-center gap-1">
+              <span className="size-3 shrink-0">
+                <HomeIcon src="/course/clock.svg" />
+              </span>
+              {mins(lesson.videoDuration)} {t("minShort")}
+            </span>
+          ) : null}
+          {lesson.files.length ? (
+            <button
+              type="button"
+              onClick={onResources}
+              disabled={!onResources}
+              className="flex items-center gap-1 rounded-full hover:text-text disabled:hover:text-muted"
+            >
+              <FileDownloadIcon className="size-3 shrink-0" />
+              {t("resourcesCount").replace("{n}", String(lesson.files.length))}
+            </button>
+          ) : null}
         </span>
-        {lesson.files.length ? (
-          <button
-            type="button"
-            onClick={onResources}
-            disabled={!onResources}
-            className="flex items-center gap-1 rounded-full hover:text-text disabled:hover:text-muted"
-          >
-            <FileDownloadIcon className="size-3 shrink-0" />
-            {t("resourcesCount").replace("{n}", String(lesson.files.length))}
-          </button>
-        ) : null}
-      </span>
+      ) : null}
     </div>
   );
 }
