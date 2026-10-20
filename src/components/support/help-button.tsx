@@ -56,9 +56,19 @@ function parseUa(ua: string) {
   let browser = "Unknown";
   let browserVersion = "";
   let os = "Unknown";
-  if (/Edg\//.test(ua)) {
+  // Every iOS UA says "like Mac OS X"; matching Mac first is what made the
+  // ticket list look like 100% macOS desktops when every reporter was on an
+  // iPhone. iPadOS 13+ reports as Macintosh and needs the touch check.
+  const ipadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  if (/EdgiOS|EdgA?\//.test(ua)) {
     browser = "Edge";
-    browserVersion = ua.match(/Edg\/([\d.]+)/)?.[1] ?? "";
+    browserVersion = ua.match(/(?:EdgiOS|EdgA?)\/([\d.]+)/)?.[1] ?? "";
+  } else if (/CriOS\//.test(ua)) {
+    browser = "Chrome";
+    browserVersion = ua.match(/CriOS\/([\d.]+)/)?.[1] ?? "";
+  } else if (/FxiOS\//.test(ua)) {
+    browser = "Firefox";
+    browserVersion = ua.match(/FxiOS\/([\d.]+)/)?.[1] ?? "";
   } else if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) {
     browser = "Chrome";
     browserVersion = ua.match(/Chrome\/([\d.]+)/)?.[1] ?? "";
@@ -69,16 +79,16 @@ function parseUa(ua: string) {
     browser = "Firefox";
     browserVersion = ua.match(/Firefox\/([\d.]+)/)?.[1] ?? "";
   }
-  if (/Windows NT/.test(ua)) os = "Windows";
-  else if (/Mac OS X/.test(ua)) os = "macOS";
+  if (/iPhone|iPad|iPod/.test(ua) || ipadOs) os = "iOS";
   else if (/Android/.test(ua)) os = "Android";
-  else if (/iPhone|iPad|iPod/.test(ua)) os = "iOS";
+  else if (/Windows NT/.test(ua)) os = "Windows";
+  else if (/Mac OS X/.test(ua)) os = "macOS";
   else if (/Linux/.test(ua)) os = "Linux";
-  const deviceType = /Mobi|Android|iPhone|iPad/.test(ua)
-    ? /iPad|Tablet/.test(ua)
-      ? "tablet"
-      : "mobile"
-    : "desktop";
+  const deviceType = /iPad|Tablet/.test(ua) || ipadOs
+    ? "tablet"
+    : /Mobi|Android|iPhone/.test(ua)
+      ? "mobile"
+      : "desktop";
   return { browser, browserVersion, os, deviceType };
 }
 

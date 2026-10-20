@@ -4,7 +4,7 @@ import { startSession } from "@/lib/server/session";
 
 export const runtime = "nodejs";
 
-type Body = { deviceId?: string; os?: string; browser?: string; model?: string; force?: boolean };
+type Body = { deviceId?: string; os?: string; browser?: string; model?: string; force?: boolean; userAgent?: string };
 
 const DEVICE_COOKIE = "ba_device";
 const DEVICE_COOKIE_MAX_AGE = 60 * 60 * 24 * 365;
@@ -67,6 +67,10 @@ export async function POST(req: NextRequest) {
         model: short(body.model),
         ip: clientIp(req),
         city: cityHeader(req),
+        // The header is authoritative; the body copy is only a fallback for
+        // clients that strip it. Without this, "Safari on macOS" was all the
+        // device history had to explain a broken iPhone.
+        userAgent: short(req.headers.get("user-agent") ?? body.userAgent, 400),
       },
       { force: body.force === true },
     );

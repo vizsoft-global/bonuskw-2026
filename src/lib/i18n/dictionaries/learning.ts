@@ -31,6 +31,11 @@ export const learning = {
     leaveTestPrompt: "Your test is in progress. Leave anyway?",
     unansweredLeft: "unanswered",
     submitAnyway: "Submit anyway",
+    videoLoadFailed: "The video could not start. Check your connection and try again.",
+    videoPlaybackStopped: "Playback stopped.",
+    videoSlowLoad: "Still loading the video…",
+    retryPlayback: "Try again",
+    reloadPlayer: "Reload video",
   },
   ar: {
     courseContent: "محتوى الدورة",
@@ -63,5 +68,10 @@ export const learning = {
     leaveTestPrompt: "اختبارك قيد التقدم. هل تريد المغادرة على أي حال؟",
     unansweredLeft: "بدون إجابة",
     submitAnyway: "إرسال على أي حال",
+    videoLoadFailed: "تعذّر تشغيل الفيديو. تأكد من اتصالك وحاول مرة أخرى.",
+    videoPlaybackStopped: "توقف التشغيل.",
+    videoSlowLoad: "لا يزال تحميل الفيديو جارياً…",
+    retryPlayback: "حاول مرة أخرى",
+    reloadPlayer: "إعادة تحميل الفيديو",
   },
 } as const;

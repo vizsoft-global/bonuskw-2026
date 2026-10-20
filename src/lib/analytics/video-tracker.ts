@@ -51,6 +51,7 @@ type MediaLike = {
   videoHeight?: number;
   playbackRate?: number;
   paused?: boolean;
+  error?: { code?: number; message?: string } | null;
 };
 
 declare global {
@@ -106,6 +107,7 @@ function connectionKind() {
 export class VideoTracker {
   private ctx: VideoSessionContext;
   private getToken: () => Promise<string>;
+  private hooks: { onError?: (reason: string) => void; onReady?: () => void };
   private sessionId = crypto.randomUUID();
   private media: MediaLike | null = null;
   private handlers: [string, (e?: unknown) => void][] = [];
@@ -125,9 +127,14 @@ export class VideoTracker {
   private rate = 1;
   private ended = false;
 
-  constructor(ctx: VideoSessionContext, getToken: () => Promise<string>) {
+  constructor(
+    ctx: VideoSessionContext,
+    getToken: () => Promise<string>,
+    hooks: { onError?: (reason: string) => void; onReady?: () => void } = {},
+  ) {
     this.ctx = ctx;
     this.getToken = getToken;
+    this.hooks = hooks;
     this.duration = ctx.durationSec ?? 0;
   }
 
@@ -141,9 +148,16 @@ export class VideoTracker {
         this.media = window.Stream!(iframe);
       }
     } catch {
-      return; // analytics must never break playback
+      // Analytics must never break playback, but a player API that will not
+      // load is exactly the failure the dashboard could not see before.
+      this.hooks.onError?.("player api failed");
+      return;
     }
-    if (this.stopped || !this.media) return;
+    if (this.stopped || !this.media) {
+      this.hooks.onError?.("player instance unavailable");
+      return;
+    }
+    this.hooks.onReady?.();
     this.bind();
     this.timer = window.setInterval(() => void this.flush(false), FLUSH_MS);
     document.addEventListener("visibilitychange", this.onHide);
@@ -189,6 +203,10 @@ export class VideoTracker {
         this.d.buffers += 1;
         this.bufferingSince = Date.now();
       }
+    });
+    this.on("error", () => {
+      const err = this.media?.error;
+      this.hooks.onError?.(err?.code ? `media error ${err.code}` : "media error");
     });
     this.on("ratechange", () => {
       this.rate = this.media?.playbackRate ?? 1;

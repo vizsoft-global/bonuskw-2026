@@ -84,4 +84,6 @@ export const collections = {
   videoStats: "videoStats",
   courseStats: "courseStats",
   videoDaily: "videoDaily",
+  /** Student web: playback failures (ticket errors, player errors, expired OTP). */
+  videoErrors: "videoErrors",
 } as const;

@@ -7,7 +7,8 @@ import { Loader } from "@/components/shared/loader";
 import type { OutlineFile } from "@/lib/course/outline";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
-import { playerSrc, requestPlayback } from "@/lib/video/player-src";
+import { reportPlaybackIssue } from "@/lib/analytics/video-errors";
+import { playerSrc, requestPlayback, ticketProblem } from "@/lib/video/player-src";
 
 /**
  * Plays a free-preview lesson in a popup so students can sample a course
@@ -28,13 +29,21 @@ export function VideoPopup({
   const { t } = useI18n();
   const [file, setFile] = useState<OutlineFile | null>(null);
   const { user } = useAuth();
+  const [attempt, setAttempt] = useState(0);
   // Tickets are short-lived, so one is requested per opening and never cached.
-  const { data: ticket } = useQuery({
-    queryKey: ["preview-ticket", lessonId, user?.uid ?? "anon"],
+  const { data: ticket, isFetching } = useQuery({
+    queryKey: ["preview-ticket", lessonId, user?.uid ?? "anon", attempt],
     gcTime: 0,
     staleTime: 0,
     queryFn: async () => requestPlayback({ lessonId }, user ? await user.getIdToken() : null),
   });
+  // A failed ticket must say so and offer a retry — it used to fall through to
+  // an empty stage that looked like a video that would not load.
+  const problem = ticket && !isFetching ? ticketProblem(ticket) : null;
+  useEffect(() => {
+    if (!problem) return;
+    reportPlaybackIssue({ stage: "ticket", message: problem, lessonId, provider: ticket?.provider });
+  }, [problem, lessonId, ticket?.provider]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -94,9 +103,18 @@ export function VideoPopup({
               allowFullScreen
             />
             </>
-          ) : ticket?.error ? (
+          ) : problem ? (
             <div className="grid h-full w-full place-items-center px-6 text-center text-[13px] text-muted">
-              {ticket.error}
+              <div>
+                <p>{problem}</p>
+                <button
+                  type="button"
+                  onClick={() => setAttempt((n) => n + 1)}
+                  className="mt-3 rounded-[10px] bg-white px-4 py-2 text-[12px] font-semibold text-black"
+                >
+                  {t("retryPlayback")}
+                </button>
+              </div>
             </div>
           ) : (
             <div className="grid h-full w-full place-items-center">

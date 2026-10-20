@@ -21,6 +21,8 @@ export type StartSessionInput = {
   model?: string;
   ip: string;
   city: string;
+  /** Raw UA, kept so a mislabelled device can be diagnosed later. */
+  userAgent?: string;
 };
 
 export type DeviceEntry = {
@@ -233,6 +235,7 @@ export async function startSession(
     browser: input.browser || "",
     ip: input.ip,
     location: input.city,
+    ...(input.userAgent ? { userAgent: input.userAgent.slice(0, 400) } : {}),
   });
 
   // The sign-in itself, so the profile's Activity tab has a session history.

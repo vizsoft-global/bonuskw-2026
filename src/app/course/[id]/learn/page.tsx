@@ -27,7 +27,8 @@ import { useI18n } from "@/lib/i18n/locale";
 import type { QuizDoc, UserDoc } from "@/lib/types/firestore";
 import { cn } from "@/lib/utils";
 import { VideoTracker } from "@/lib/analytics/video-tracker";
-import { playerSrc, type PlaybackTicket } from "@/lib/video/player-src";
+import { reportPlaybackIssue } from "@/lib/analytics/video-errors";
+import { isTicketStale, playerSrc, ticketProblem, type PlaybackTicket } from "@/lib/video/player-src";
 import { useFullscreen } from "@/lib/video/use-fullscreen";
 
 function LearnBody() {
@@ -87,6 +88,15 @@ function LearnBody() {
   const [lessonId, setLessonId] = useState(params.get("lesson") || "");
   const [quizId, setQuizId] = useState(params.get("quiz") || "");
   const [otp, setOtp] = useState<PlaybackTicket | null>(null);
+  const [otpAt, setOtpAt] = useState<number | null>(null);
+  const [otpError, setOtpError] = useState<string | null>(null);
+  const [playerIssue, setPlayerIssue] = useState<string | null>(null);
+  const [slowLoad, setSlowLoad] = useState(false);
+  const otpAttempts = useRef(0);
+  /** Automatic remounts allowed per lesson, so a hopeless video cannot loop. */
+  const recoveries = useRef(0);
+  /** The lesson on screen right now; a delayed retry must not touch it. */
+  const latestLessonId = useRef<string | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [playerReady, setPlayerReady] = useState(false);
   const [otpBusy, setOtpBusy] = useState(false);
@@ -141,6 +151,12 @@ function LearnBody() {
         | undefined)
     : undefined;
   const lessonDuration = Number(lesson?.videoDuration || (lesson ? durations[lesson.id] : 0) || 0);
+
+  // Tracks the lesson on screen so a delayed ticket retry cannot apply its
+  // result to a lesson the student has already moved on from.
+  useEffect(() => {
+    latestLessonId.current = lesson?.id ?? null;
+  }, [lesson?.id]);
 
   useEffect(() => {
     if (!stageEl) return;
@@ -197,6 +213,35 @@ function LearnBody() {
         locale,
       },
       () => user.getIdToken(),
+      {
+        onReady: () => {
+          setPlayerReady(true);
+          setSlowLoad(false);
+        },
+        onError: (reason) => {
+          void user.getIdToken().then((token) =>
+            reportPlaybackIssue(
+              {
+                stage: "player",
+                message: reason,
+                courseId: id,
+                lessonId: lesson.id,
+                provider: otp.provider === "stream" ? "stream" : "vdocipher",
+              },
+              token,
+            ),
+          );
+          // A lapsed OTP is the commonest mid-lesson error; one automatic
+          // remount with a fresh ticket fixes it without the student seeing
+          // anything. Only the second failure is shown.
+          if (recoveries.current < 1) {
+            recoveries.current += 1;
+            void loadTicket(lesson.id, { reason: "retry" });
+            return;
+          }
+          setPlayerIssue(reason);
+        },
+      },
     );
     const start = () => void tracker.attach(iframe);
     if (iframe.contentWindow && iframe.dataset.loaded === "1") start();
@@ -208,20 +253,92 @@ function LearnBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- re-attach only when the video changes
   }, [user, lesson?.id, otp?.provider, otp?.otp, otp?.uid, quizId]);
 
-  async function play() {
-    if (!user || !lesson) return;
-    setOtpBusy(true);
+  /**
+   * Fetches a playback ticket. A failure is kept as a visible error with a
+   * retry — it used to be stored as if it were a ticket, so the stage rendered
+   * a bare Start button and every tap failed again with no explanation.
+   */
+  async function loadTicket(
+    targetId: string,
+    opts: { silent?: boolean; signal?: AbortSignal; reason?: "auto" | "manual" | "resume" | "retry" } = {},
+  ) {
+    if (!user) return;
+    if (!opts.silent) setOtpBusy(true);
+    const chapterId = (lesson?.chapterRef as { id?: string } | undefined)?.id;
     try {
       const token = await user.getIdToken();
       const res = await fetch("/api/video/otp", {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-        body: JSON.stringify({ lessonId: lesson.id }),
+        body: JSON.stringify({ lessonId: targetId }),
+        signal: opts.signal,
       });
-      setOtp(await res.json());
+      const json = (await res.json().catch(() => ({ error: "Could not start playback" }))) as PlaybackTicket;
+      // A retry fired 1.5s ago may resolve after the student picked another
+      // lesson; applying it would show the wrong video (or a stale error).
+      if (latestLessonId.current && latestLessonId.current !== targetId) return;
+      const problem = res.ok ? ticketProblem(json) : json.error || "Could not start playback";
+      if (problem) {
+        setOtp(null);
+        setOtpAt(null);
+        setOtpError(problem);
+        reportPlaybackIssue(
+          {
+            stage: opts.reason === "resume" ? "expired" : "ticket",
+            message: problem,
+            status: res.status,
+            courseId: id,
+            lessonId: targetId,
+            chapterId,
+            provider: json.provider,
+          },
+          token,
+        );
+        // One quiet retry: a mobile-network blip is the commonest cause, and a
+        // second attempt costs the student nothing.
+        if (res.status >= 500 && otpAttempts.current < 1) {
+          otpAttempts.current += 1;
+          window.setTimeout(() => void loadTicket(targetId, { silent: true, reason: "retry" }), 1500);
+        }
+        return;
+      }
+      otpAttempts.current = 0;
+      setOtp(json);
+      setOtpAt(Date.now());
+      setOtpError(null);
+      setPlayerIssue(null);
+    } catch (err) {
+      if ((err as Error)?.name === "AbortError") return;
+      if (latestLessonId.current && latestLessonId.current !== targetId) return;
+      setOtp(null);
+      setOtpError(t("videoLoadFailed"));
+      reportPlaybackIssue({
+        stage: "ticket",
+        message: (err as Error)?.message ?? "network",
+        courseId: id,
+        lessonId: targetId,
+        chapterId,
+      });
     } finally {
-      setOtpBusy(false);
+      if (!opts.silent) setOtpBusy(false);
     }
+  }
+
+  /** Drops the current player and asks for a fresh ticket. */
+  function reloadPlayer(targetId: string) {
+    setPlayerIssue(null);
+    setOtpError(null);
+    setOtp(null);
+    setOtpAt(null);
+    setPlayerReady(false);
+    setSlowLoad(false);
+    otpAttempts.current = 0;
+    recoveries.current = 0;
+    void loadTicket(targetId, { reason: "manual" });
+  }
+
+  function play() {
+    if (lesson) reloadPlayer(lesson.id);
   }
 
   // Opening a lesson starts playback straight away — no second tap on Start.
@@ -234,31 +351,9 @@ function LearnBody() {
     // must never block the run for the newly selected lesson.
     if (!user || !lesson || quizId || otp) return;
     const targetId = lesson.id;
-    const getToken = () => user.getIdToken();
     const controller = new AbortController();
     const timer = window.setTimeout(() => {
-      async function autoplay() {
-        setOtpBusy(true);
-        try {
-          const token = await getToken();
-          const res = await fetch("/api/video/otp", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${token}`, "Content-Type": "application/json" },
-            body: JSON.stringify({ lessonId: targetId }),
-            signal: controller.signal,
-          });
-          const json = await res.json();
-          setOtp(json);
-        } catch (err) {
-          // Aborts and network blips keep the Start button as the fallback.
-          if ((err as Error)?.name !== "AbortError") {
-            setOtpBusy(false);
-          }
-        }
-      }
-      void autoplay().finally(() => {
-        if (!controller.signal.aborted) setOtpBusy(false);
-      });
+      void loadTicket(targetId, { signal: controller.signal, reason: "auto" });
     }, 600);
     return () => {
       window.clearTimeout(timer);
@@ -267,10 +362,32 @@ function LearnBody() {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- autoplay only when the lesson changes
   }, [user, lesson?.id, quizId]);
 
+  // Coming back from the background: if the player never got going and the
+  // ticket has aged out, mint a fresh one before it has a chance to fail. A
+  // student who was mid-video is left alone — their stream is already running,
+  // and swapping the ticket would restart it from the beginning.
+  useEffect(() => {
+    if (!user || !lesson || quizId) return;
+    function onVisible() {
+      if (document.visibilityState !== "visible") return;
+      if (playerReady || !isTicketStale(otpAt)) return;
+      void loadTicket(lesson!.id, { silent: true, reason: "resume" });
+    }
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh only when the ticket ages out
+  }, [user, lesson?.id, quizId, playerReady, otpAt]);
+
   function openLesson(nextId: string) {
     setQuizId("");
     setLessonId(nextId);
     setOtp(null);
+    setOtpAt(null);
+    setOtpError(null);
+    setPlayerIssue(null);
+    setSlowLoad(false);
+    otpAttempts.current = 0;
+    recoveries.current = 0;
     router.replace(`/course/${id}/learn?lesson=${nextId}`);
   }
 
@@ -279,6 +396,9 @@ function LearnBody() {
     fullscreen.release();
     setQuizId(nextId);
     setOtp(null);
+    setOtpAt(null);
+    setOtpError(null);
+    setPlayerIssue(null);
     router.replace(`/course/${id}/learn?quiz=${nextId}`);
   }
 
@@ -287,6 +407,29 @@ function LearnBody() {
   const fullscreen = useFullscreen(stageEl);
   const src = playerSrc(otp);
   useEffect(() => setPlayerReady(false), [src]);
+
+  // An iframe that never finishes loading is the failure students describe as
+  // "it just spins". Say so, offer a reload, and record it.
+  useEffect(() => {
+    if (!src || playerReady) return;
+    const timer = window.setTimeout(() => {
+      setSlowLoad(true);
+      void user?.getIdToken().then((token) =>
+        reportPlaybackIssue(
+          {
+            stage: "load",
+            message: "player did not load within 20s",
+            courseId: id,
+            lessonId: lesson?.id,
+            provider: otp?.provider,
+          },
+          token,
+        ),
+      );
+    }, 20_000);
+    return () => window.clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [src, playerReady, id, lesson?.id, otp?.provider]);
   // Keep the dock through the brief OTP refetch when the user picks another
   // lesson. A fullscreen page must not also pin a mini player onto itself.
   const docked =
@@ -396,8 +539,22 @@ function LearnBody() {
                     {src ? (
                       <>
                         {playerReady ? null : (
-                          <div className="absolute inset-0 z-10 grid place-items-center">
+                          <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-3 px-6 text-center">
                             <Loader size="page" />
+                            {slowLoad ? (
+                              <>
+                                <p className="text-[12px]" style={{ color: "rgba(250,250,250,0.75)" }}>
+                                  {t("videoSlowLoad")}
+                                </p>
+                                <button
+                                  type="button"
+                                  onClick={() => lesson && reloadPlayer(lesson.id)}
+                                  className="rounded-[10px] bg-white px-3.5 py-1.5 text-[12px] font-semibold text-black"
+                                >
+                                  {t("reloadPlayer")}
+                                </button>
+                              </>
+                            ) : null}
                           </div>
                         )}
                         <iframe
@@ -414,6 +571,24 @@ function LearnBody() {
                     ) : otpBusy ? (
                       <div className="grid h-full w-full place-items-center">
                         <Loader size="page" />
+                      </div>
+                    ) : otpError || playerIssue ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-6 text-center">
+                        <p className="text-[13px] font-medium" style={{ color: "#fafafa" }}>
+                          {otpError ?? t("videoPlaybackStopped")}
+                        </p>
+                        {playerIssue ? (
+                          <p className="text-[11px]" style={{ color: "rgba(250,250,250,0.6)" }}>
+                            {t("videoLoadFailed")}
+                          </p>
+                        ) : null}
+                        <button
+                          type="button"
+                          onClick={() => lesson && reloadPlayer(lesson.id)}
+                          className="mt-1 rounded-[10px] bg-white px-4 py-2 text-[12px] font-semibold text-black"
+                        >
+                          {t("retryPlayback")}
+                        </button>
                       </div>
                     ) : (
                       <button

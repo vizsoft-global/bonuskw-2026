@@ -26,23 +26,34 @@ export function setDeviceId(id: string) {
 
 export function deviceLabel() {
   const ua = navigator.userAgent;
-  const os = /Mac/.test(ua)
-    ? "macOS"
-    : /Windows/.test(ua)
-      ? "Windows"
-      : /Android/.test(ua)
-        ? "Android"
-        : /iPhone|iPad/.test(ua)
-          ? "iOS"
+  // Order matters: every iPhone/iPad UA contains "like Mac OS X", so testing
+  // for Mac first labelled every phone as macOS — which hid the iPhone cohort
+  // that reports the playback problems. iPadOS 13+ additionally reports itself
+  // as "Macintosh" and is only distinguishable by its touch points.
+  const ipadOs = /Macintosh/.test(ua) && navigator.maxTouchPoints > 1;
+  const os = /Android/.test(ua)
+    ? "Android"
+    : /iPhone|iPad|iPod/.test(ua) || ipadOs
+      ? "iOS"
+      : /Mac/.test(ua)
+        ? "macOS"
+        : /Windows/.test(ua)
+          ? "Windows"
           : "Web";
-  const browser = /Edg/.test(ua)
+  // iOS browsers are all WebKit with their own token; Chrome's "Chrome/" is
+  // never present there. Checking Chrome first mislabels CriOS as Safari.
+  const browser = /EdgiOS|EdgA?\//.test(ua)
     ? "Edge"
-    : /Chrome/.test(ua)
+    : /CriOS/.test(ua)
       ? "Chrome"
-      : /Safari/.test(ua)
-        ? "Safari"
-        : /Firefox/.test(ua)
-          ? "Firefox"
-          : "Browser";
+      : /FxiOS/.test(ua)
+        ? "Firefox"
+        : /Chrome/.test(ua)
+          ? "Chrome"
+          : /Safari/.test(ua)
+            ? "Safari"
+            : /Firefox/.test(ua)
+              ? "Firefox"
+              : "Browser";
   return { os, browser, model: `${browser} on ${os}` };
 }
