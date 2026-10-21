@@ -1,0 +1,11 @@
+# Never upload local secrets or build output when deploying with the Vercel CLI.
+# Git deploys are unaffected (these paths are already gitignored).
+.env
+.env.*
+!.env.example
+.next
+.open-next
+.wrangler
+.dev.vars*
+node_modules
+tsconfig.tsbuildinfo
