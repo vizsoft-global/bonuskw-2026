@@ -172,6 +172,9 @@ function LearnBody() {
     return () => io.disconnect();
   }, [stageEl]);
 
+  // Watch-time heartbeat. 30s is the slowest this can run without losing data:
+  // /api/progress clamps deltaSec to 30. Every viewer used to add four requests
+  // a minute here, which was the single largest source of function invocations.
   useEffect(() => {
     if (!user || !lesson || quizId) return;
     let last = 0;
@@ -184,14 +187,14 @@ function LearnBody() {
             lessonId: lesson.id,
             courseId: id,
             chapterId: (lesson.chapterRef as { id?: string } | undefined)?.id,
-            positionSec: last + 15,
+            positionSec: last + 30,
             durationSec: lessonDuration,
-            deltaSec: 15,
+            deltaSec: 30,
           }),
         }),
       );
-      last += 15;
-    }, 15000);
+      last += 30;
+    }, 30000);
     return () => window.clearInterval(tick);
     // lessonDuration restarts the ticker once real runtimes resolve, so the
     // posted duration (and completion) is truthful from the first tick.

@@ -61,7 +61,12 @@ declare global {
   }
 }
 
-const FLUSH_MS = 20_000;
+/**
+ * Flush cadence. Pause, seek, tab-hide, unload and end all flush immediately,
+ * so a coarser timer loses nothing students can see — it only trims the request
+ * count, which is what the hosting bill is actually made of.
+ */
+const FLUSH_MS = 60_000;
 
 /** Approximate streaming bitrate by rendition height, in bits per second. */
 export function bitrateForHeight(height: number) {
