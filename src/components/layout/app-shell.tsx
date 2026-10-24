@@ -28,6 +28,7 @@ import { InstallButton, InstallPrompt } from "@/components/system/install-prompt
 import { HomeIcon } from "@/components/home/icon";
 import { Avatar } from "@/components/layout/avatar";
 import { BackButton } from "@/components/layout/back-button";
+import { DueBanner } from "@/components/layout/due-banner";
 import { ProfileMenu } from "@/components/layout/profile-menu";
 import { NotificationsBellButton, NotificationsMenu } from "@/components/notifications/menu";
 import { ScrollToTop } from "@/components/shared/scroll-to-top";
@@ -633,6 +634,9 @@ function AppShellBody({
       <Slot target={shell.search}>{searchField}</Slot>
       <Slot target={shell.actions}>{actions}</Slot>
       <Slot target={shell.actionsLg}>{actionCopy}</Slot>
+      {/* Above the page body on every screen: the student who needs this is the
+          one not looking for it. Renders nothing unless something is near due. */}
+      <DueBanner />
       {body}
     </>
   );

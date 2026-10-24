@@ -2,28 +2,18 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { useQuery } from "@tanstack/react-query";
-import {
-  collection,
-  doc,
-  getDocs,
-  query,
-  where,
-  type QueryDocumentSnapshot,
-} from "firebase/firestore";
 import { AppShell } from "@/components/layout/app-shell";
 import { EmptyState } from "@/components/shared/empty-state";
 import { ListPageSkeleton } from "@/components/shared/skeleton";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { usePurchaseGate } from "@/lib/commerce/purchase-gate";
 import { loadCart, saveCart, upsertLine, type CartLine, type CartState } from "@/lib/cart/store";
-import { getDb } from "@/lib/firebase/client";
-import { collections } from "@/lib/firebase/collections";
+import { dueAt, isOverdue, useOutstandingDues, type OutstandingDue } from "@/lib/dues/outstanding";
 import { formatKwdLocale } from "@/lib/i18n/content";
 import { useI18n } from "@/lib/i18n/locale";
 import { cn } from "@/lib/utils";
 
-type Due = QueryDocumentSnapshot;
+type Due = OutstandingDue;
 
 function dueLine(due: Due): CartLine {
   return {
@@ -37,12 +27,6 @@ function dueLine(due: Due): CartLine {
   };
 }
 
-function dueAt(due: Due): Date | null {
-  const raw = due.get("dueDate") ?? due.get("dueEndDate");
-  const date = raw?.toDate?.() as Date | undefined;
-  return date ?? null;
-}
-
 /**
  * Tranches are grouped by the calendar day they fall due, so one card answers
  * "what do I owe on the 25th" rather than listing every tranche flat.
@@ -50,17 +34,6 @@ function dueAt(due: Due): Date | null {
 function dayKey(due: Due) {
   const at = dueAt(due);
   return at ? `${at.getFullYear()}-${at.getMonth()}-${at.getDate()}` : "none";
-}
-
-/**
- * Overdue is decided by the status the reminder cron maintains, with the date as
- * a fallback: a tranche whose window has closed but which has not been flipped
- * yet is still late, and telling the student otherwise would be wrong.
- */
-function isOverdue(due: Due) {
-  if (due.get("status") === "overdue") return true;
-  const at = dueAt(due);
-  return at ? at.getTime() < Date.now() : false;
 }
 
 /** The app has no checkbox primitive, so a labelled button carries the state. */
@@ -97,19 +70,7 @@ export default function DuesPage() {
   const [busy, setBusy] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
 
-  const dues = useQuery({
-    queryKey: ["dues", user?.uid],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      const snap = await getDocs(
-        query(
-          collection(getDb(), collections.installments),
-          where("userRef", "==", doc(getDb(), collections.users, user!.uid)),
-        ),
-      );
-      return snap.docs.filter((d) => d.get("status") === "due" || d.get("status") === "overdue");
-    },
-  });
+  const dues = useOutstandingDues();
 
   // Memoised so the fallback array is not a fresh reference every render, which
   // would re-run the grouping below on every keystroke elsewhere on the page.
