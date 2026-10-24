@@ -54,6 +54,28 @@ export function MenuRow({
   );
 }
 
+export function ProfileTile({
+  href,
+  icon,
+  label,
+}: {
+  href: string;
+  icon: string;
+  label: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="group flex flex-col items-center gap-2 rounded-[16px] px-1 py-1.5 outline-none transition-colors hover:bg-white/[0.04] focus-visible:ring-2 focus-visible:ring-[#0c5eff] active:bg-white/[0.07]"
+    >
+      <span className="size-[58px] overflow-hidden rounded-[15px] shadow-[0_2px_10px_rgba(0,0,0,0.35)] transition-transform group-active:scale-95 sm:size-[62px]">
+        <HomeIcon src={icon} />
+      </span>
+      <span className="text-center text-[11.5px] font-medium leading-[1.25] text-text">{label}</span>
+    </Link>
+  );
+}
+
 export function PushToggle({ on, disabled }: { on: boolean; disabled?: boolean }) {
   return (
     <span

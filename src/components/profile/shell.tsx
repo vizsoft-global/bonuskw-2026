@@ -1,7 +1,6 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { BrandLogo } from "@/components/auth/brand-logo";
 import { AppShell } from "@/components/layout/app-shell";
 import { ProfileHub } from "@/components/profile/hub";
 import { useI18n } from "@/lib/i18n/locale";
@@ -27,25 +26,13 @@ export function ProfileShell({ children }: { children: React.ReactNode }) {
 
   return (
     <AppShell title={titleKey ? t(titleKey) : undefined}>
-      <div className="lg:grid lg:grid-cols-[365px_minmax(0,1fr)] lg:items-start lg:gap-10 lg:pt-2">
-        <aside className="hidden lg:sticky lg:top-[90px] lg:block lg:max-h-[calc(100dvh-110px)] lg:overflow-y-auto">
-          <ProfileHub />
-        </aside>
-        <div className="min-w-0 w-full">
-          {isHub ? (
-            <>
-              <div className="lg:hidden">
-                <ProfileHub />
-              </div>
-              <div className="hidden min-h-[calc(100dvh-180px)] w-full items-center justify-center lg:flex">
-                <BrandLogo className="opacity-20" />
-              </div>
-            </>
-          ) : (
-            children
-          )}
-        </div>
-      </div>
+      {/*
+        The hub is the icon grid and each sub-page is its own destination, so
+        there is no persistent side menu: a sub-page owns the full width and the
+        toolbar's back button (which already falls back to /profile) returns to
+        the grid.
+      */}
+      {isHub ? <ProfileHub /> : <div className="mx-auto w-full max-w-[760px]">{children}</div>}
     </AppShell>
   );
 }

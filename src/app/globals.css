@@ -286,17 +286,8 @@ html:not(.dark) .ring-\[\#050505\] {
 html:not(.dark) .border-\[\#050505\] {
   border-color: #f7f7f8;
 }
-html:not(.dark) img[src$=".svg"]:not([src*="glow"]):not([src*="knet"]):not([src*="visa"]) {
+html:not(.dark) img[src$=".svg"]:not([src*="glow"]):not([src*="knet"]):not([src*="visa"]):not([src*="/profile/icons/"]) {
   filter: brightness(0);
-}
-/* Profile menu card: follows the theme tokens so it cannot stay black on light. */
-.profile-menu-card {
-  background-color: var(--surface-solid);
-  border: 0.5px solid var(--line);
-}
-.dark .profile-menu-card {
-  background-image: linear-gradient(162deg, #1c1c1c 3%, #141414 90%);
-  border-color: transparent;
 }
 /* Chips drawn over thumbnails/video keep their dark look on the light theme. */
 html:not(.dark) .on-media img {

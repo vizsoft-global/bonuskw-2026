@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { collection, doc, getDoc, getDocs, query, where } from "firebase/firestore";
 import { getMessaging, getToken, isSupported } from "firebase/messaging";
@@ -10,11 +9,12 @@ import { HomeIcon } from "@/components/home/icon";
 import { DevModeBanner } from "@/components/commerce/dev-mode-banner";
 import { DevModeSheet } from "@/components/profile/dev-mode-sheet";
 import { LanguageSheet } from "@/components/profile/language-sheet";
-import { LangRadio, MenuRow, PushToggle, SectionLabel } from "@/components/profile/ui";
+import { LangRadio, MenuRow, ProfileTile, PushToggle, SectionLabel } from "@/components/profile/ui";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { getDb, getFirebaseApp } from "@/lib/firebase/client";
 import { collections } from "@/lib/firebase/collections";
 import { useI18n } from "@/lib/i18n/locale";
+import type { MessageKey } from "@/lib/i18n/messages";
 import { useInstallPrompt } from "@/lib/pwa/use-install-prompt";
 import { SHORT_VERSION } from "@/lib/version";
 
@@ -23,10 +23,28 @@ const PUSH_KEY = "ba_push_enabled";
 const PUSH_TOKEN_KEY = "ba_push_token";
 const LANG_SHEET_KEY = "ba_open_lang";
 
+/**
+ * Every entry here is a real page with a real back button. Notifications and
+ * language are deliberately absent: those routes are redirect stubs that bounce
+ * straight back to /profile, so a tile would appear to do nothing. They stay as
+ * inline controls in the preferences block below.
+ */
+const TILES: ReadonlyArray<{ href: string; icon: string; label: MessageKey }> = [
+  { href: "/profile/personal", icon: "personal", label: "personal" },
+  { href: "/dues", icon: "installments", label: "installmentsTitle" },
+  { href: "/profile/phone", icon: "mobile", label: "mobileNumber" },
+  { href: "/profile/saved", icon: "saved", label: "savedCourses" },
+  { href: "/my-space", icon: "space", label: "mySpace" },
+  { href: "/profile/transactions", icon: "transactions", label: "transactions" },
+  { href: "/profile/wallet", icon: "wallet", label: "wallet" },
+  { href: "/profile/devices", icon: "devices", label: "deviceLogs" },
+  { href: "/profile/password", icon: "password", label: "changePassword" },
+  { href: "/profile/terms", icon: "terms", label: "terms" },
+];
+
 export function ProfileHub() {
   const { profile, logout, user } = useAuth();
   const { t, locale, setLocale } = useI18n();
-  const path = usePathname();
   const [langOpen, setLangOpen] = useState(false);
   const [devOpen, setDevOpen] = useState(false);
   const taps = useRef<number[]>([]);
@@ -141,7 +159,7 @@ export function ProfileHub() {
   }
 
   return (
-    <div className="flex w-full max-w-[365px] flex-col items-center">
+    <div className="mx-auto flex w-full max-w-[680px] flex-col items-center">
       <DevModeBanner className="mb-3 w-full" />
       <EditableAvatar className="size-[75px] text-2xl lg:size-[100px]" />
       <p className="mt-2.5 text-[14px] font-bold text-text">{name}</p>
@@ -173,21 +191,18 @@ export function ProfileHub() {
         </div>
       </div>
 
-      <div className="profile-menu-card mt-4 flex w-full flex-col gap-5 rounded-[12px] px-[15px] py-5">
-        <div className="flex flex-col gap-[15px]">
-          <SectionLabel>{t("account")}</SectionLabel>
-          <MenuRow href="/profile/personal" icon="/profile/info.svg" label={t("personal")} active={path === "/profile/personal"} />
-          {/* Directly under personal details: of everything on this page, the
-              installments are the one item a student has to act on. */}
-          <MenuRow href="/dues" icon="/profile/clock.svg" label={t("installmentsTitle")} active={path === "/dues"} />
-          <MenuRow href="/profile/phone" icon="/profile/phone.svg" label={t("mobileNumber")} active={path === "/profile/phone"} />
-          <MenuRow href="/profile/saved" icon="/profile/heart.svg" label={t("savedCourses")} active={path === "/profile/saved"} />
-          <MenuRow href="/profile/devices" icon="/profile/phone.svg" label={t("deviceLogs")} active={path === "/profile/devices"} />
-          <MenuRow href="/profile/password" icon="/profile/passcode.svg" label={t("changePassword")} active={path === "/profile/password"} />
-          <MenuRow href="/profile/transactions" icon="/profile/receipt.svg" label={t("transactions")} active={path === "/profile/transactions"} />
-          <MenuRow href="/profile/wallet" icon="/profile/receipt.svg" label={t("wallet")} active={path === "/profile/wallet"} />
-          <MenuRow href="/my-space" icon="/profile/book.svg" label={t("mySpace")} last active={path === "/my-space"} />
-        </div>
+      <div className="mt-6 grid w-full grid-cols-3 gap-x-1 gap-y-5 sm:grid-cols-4 lg:grid-cols-5">
+        {TILES.map((tile) => (
+          <ProfileTile
+            key={tile.href}
+            href={tile.href}
+            icon={`/profile/icons/${tile.icon}.svg`}
+            label={t(tile.label)}
+          />
+        ))}
+      </div>
+
+      <div className="mt-6 flex w-full flex-col gap-[15px] rounded-[12px] border border-line bg-surface px-[15px] py-5">
         <div className="flex flex-col gap-[15px]">
           <SectionLabel>{t("preferences")}</SectionLabel>
           <MenuRow
@@ -229,7 +244,6 @@ export function ProfileHub() {
           {showInstall ? (
             <MenuRow icon="/profile/phone-02.svg" label={t("installRowTitle")} onClick={install.show} />
           ) : null}
-          <MenuRow href="/profile/terms" icon="/profile/file.svg" label={t("terms")} last active={path === "/profile/terms"} />
         </div>
         <MenuRow icon="/profile/logout.svg" label={t("logout")} onClick={() => void logout()} last />
       </div>
