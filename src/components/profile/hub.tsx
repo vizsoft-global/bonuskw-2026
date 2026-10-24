@@ -177,15 +177,14 @@ export function ProfileHub() {
         <div className="flex flex-col gap-[15px]">
           <SectionLabel>{t("account")}</SectionLabel>
           <MenuRow href="/profile/personal" icon="/profile/info.svg" label={t("personal")} active={path === "/profile/personal"} />
+          {/* Directly under personal details: of everything on this page, the
+              installments are the one item a student has to act on. */}
+          <MenuRow href="/dues" icon="/profile/clock.svg" label={t("installmentsTitle")} active={path === "/dues"} />
           <MenuRow href="/profile/phone" icon="/profile/phone.svg" label={t("mobileNumber")} active={path === "/profile/phone"} />
           <MenuRow href="/profile/saved" icon="/profile/heart.svg" label={t("savedCourses")} active={path === "/profile/saved"} />
           <MenuRow href="/profile/devices" icon="/profile/phone.svg" label={t("deviceLogs")} active={path === "/profile/devices"} />
           <MenuRow href="/profile/password" icon="/profile/passcode.svg" label={t("changePassword")} active={path === "/profile/password"} />
           <MenuRow href="/profile/transactions" icon="/profile/receipt.svg" label={t("transactions")} active={path === "/profile/transactions"} />
-          {/* The dues screen had no way in from the app at all — it was reachable
-              only from a payment link, which is why outstanding tranches went
-              unnoticed. */}
-          <MenuRow href="/dues" icon="/profile/clock.svg" label={t("installmentsTitle")} active={path === "/dues"} />
           <MenuRow href="/profile/wallet" icon="/profile/receipt.svg" label={t("wallet")} active={path === "/profile/wallet"} />
           <MenuRow href="/my-space" icon="/profile/book.svg" label={t("mySpace")} last active={path === "/my-space"} />
         </div>

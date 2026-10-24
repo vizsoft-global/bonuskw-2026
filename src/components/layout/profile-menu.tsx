@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { Bookmark, Languages, LogOut, Moon, Receipt, Sun, UserRound, type LucideIcon } from "lucide-react";
+import { Bookmark, Clock, Languages, LogOut, Moon, Receipt, Sun, UserRound, type LucideIcon } from "lucide-react";
 import { useTheme } from "next-themes";
 import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
@@ -61,6 +61,9 @@ export function ProfileMenu({
         >
           <MenuLink href="/profile" icon={UserRound} onClick={() => setOpen(false)}>
             {t("profile")}
+          </MenuLink>
+          <MenuLink href="/dues" icon={Clock} onClick={() => setOpen(false)}>
+            {t("installmentsTitle")}
           </MenuLink>
           <MenuLink href="/profile/saved" icon={Bookmark} onClick={() => setOpen(false)}>
             {t("saved")}
