@@ -61,7 +61,7 @@ const SPLASH_KEY = "ba_splash_done";
 let splashPlayed = false;
 
 export default function HomePage() {
-  const { user, ready, authKnown, needsOnboarding, kicked } = useAuth();
+  const { user, ready, needsOnboarding, kicked } = useAuth();
   const router = useRouter();
   const [boot, setBoot] = useState<"wait" | "splash" | "go">(splashPlayed ? "go" : "wait");
 
@@ -93,16 +93,14 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
-    // Only once Firebase has answered: `ready` on its own can come from the
-    // timeout, and treating that as signed out bounces a live session to /login.
-    if (boot !== "go" || !ready || !authKnown) return;
+    if (boot !== "go" || !ready) return;
     if (kicked) router.replace("/session-ended");
     else if (!user) router.replace("/login");
     else if (needsOnboarding) router.replace("/onboarding");
-  }, [boot, ready, authKnown, kicked, user, needsOnboarding, router]);
+  }, [boot, ready, kicked, user, needsOnboarding, router]);
 
   if (boot === "splash") return <Splash />;
-  if (boot !== "go" || !ready || !authKnown || kicked || !user || needsOnboarding) {
+  if (boot !== "go" || !ready || kicked || !user || needsOnboarding) {
     return <PageLoader full />;
   }
 

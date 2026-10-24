@@ -57,12 +57,6 @@ type AuthState = {
   user: User | null;
   profile: (UserDoc & { id: string }) | null;
   ready: boolean;
-  /**
-   * True only once Firebase has actually said who is signed in (or that nobody
-   * is). `ready` alone means "safe to draw something" and can be reached by a
-   * timeout, so it must never be read as "signed out".
-   */
-  authKnown: boolean;
   needsOnboarding: boolean;
   /** Signed in (Google / Apple / email) but no verified phone on the profile yet. */
   needsPhone: boolean;
@@ -140,7 +134,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<(UserDoc & { id: string }) | null>(null);
   const [ready, setReady] = useState(false);
-  const [authKnown, setAuthKnown] = useState(false);
   const [kicked, setKicked] = useState(false);
   /** Other devices holding an active session; non-null shows the take-over prompt. */
   const [conflict, setConflict] = useState<OtherSession[] | null>(null);
@@ -179,38 +172,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let cancelled = false;
-    /**
-     * Stops the skeleton — and nothing else.
-     *
-     * This timer used to mark the app ready on its own, and every guard reads
-     * `ready` with no user as "signed out". So a cold start where restoring the
-     * session took longer than 2.5s sent a perfectly signed-in student to the
-     * login screen: the app looked like it had logged the whole cohort out when
-     * it had only been slow. `authKnown` is what the guards wait for now.
-     */
     const failSafe = window.setTimeout(() => {
       if (!cancelled) setReady(true);
     }, 2500);
-    /**
-     * If the SDK never answers at all — storage blocked, a chunk that failed to
-     * load — waiting forever would be a freeze of its own. After this long we
-     * accept that nobody is signed in.
-     */
-    const giveUp = window.setTimeout(() => {
-      if (!cancelled) {
-        setReady(true);
-        setAuthKnown(true);
-      }
-    }, 10_000);
     let unsub: () => void = () => undefined;
     try {
       unsub = onAuthStateChanged(getFirebaseAuth(), (next) => {
         if (cancelled) return;
         setUser(next);
-        setAuthKnown(true);
         setReady(true);
         window.clearTimeout(failSafe);
-        window.clearTimeout(giveUp);
         if (next) void loadProfile(next.uid);
         else {
           setProfile(null);
@@ -219,19 +190,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
     } catch {
       window.clearTimeout(failSafe);
-      window.clearTimeout(giveUp);
       // Defer so we don't setState synchronously inside the effect body.
       window.setTimeout(() => {
-        if (!cancelled) {
-          setReady(true);
-          setAuthKnown(true);
-        }
+        if (!cancelled) setReady(true);
       }, 0);
     }
     return () => {
       cancelled = true;
       window.clearTimeout(failSafe);
-      window.clearTimeout(giveUp);
       unsub();
     };
   }, [loadProfile]);
@@ -412,7 +378,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       user,
       profile,
       ready,
-      authKnown,
       needsOnboarding: Boolean(user && profile && computeNeedsOnboarding(profile)),
       needsPhone: Boolean(user && profile && lacksPhone(profile)),
       kicked,
@@ -628,7 +593,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setKicked(false);
       },
     }),
-    [user, profile, ready, authKnown, kicked, afterSignIn, loadProfile],
+    [user, profile, ready, kicked, afterSignIn, loadProfile],
   );
 
   return (

@@ -2,6 +2,7 @@ import "server-only";
 import {
   FieldValue,
   type DocumentReference,
+  type Firestore,
   type QueryDocumentSnapshot,
   type Timestamp,
 } from "firebase-admin/firestore";
@@ -48,10 +49,11 @@ function toDate(value: DateLike): Date | null {
 }
 
 /*
- * Device and city limits were retired. Sessions never expire now and the only
- * rule is one live session at a time (see `startSession`). Nothing in either app
- * ever read the flags these used to write, so the policy is gone rather than
- * relaxed — a limit that silently signs people out is worse than no limit.
+ * Device and city limits were retired. Sessions never expire now, and the only
+ * rule left — one live session at a time — is behind an admin switch that is off
+ * by default (see `singleSessionOnly`). Nothing in either app ever read the flags
+ * the old limits wrote, so that policy is gone rather than relaxed: a limit that
+ * silently signs people out is worse than no limit.
  */
 
 /*
@@ -98,6 +100,37 @@ export type StartSessionResult =
   | { ok: false; conflict: ConflictingSession[] };
 
 /**
+ * Whether an account is limited to one live session.
+ *
+ * Written by Settings → General in the admin panel as
+ * `adminConfig/studentApp.singleSession`. Off unless it is explicitly on, so by
+ * default a student can be signed in on as many devices as they like. The rule
+ * exists so it can be switched back on for a reason; leaving it on by default
+ * meant every sign-in ended the other device's session, which students read as
+ * being kicked out for no reason.
+ *
+ * Cached briefly because it is read on every app load, and a failed read falls
+ * back to off: a settings lookup must never be the reason nobody can sign in.
+ */
+const SINGLE_SESSION_TTL_MS = 60_000;
+let singleSessionCache: { value: boolean; at: number } | null = null;
+
+async function singleSessionOnly(db: Firestore): Promise<boolean> {
+  const now = Date.now();
+  if (singleSessionCache && now - singleSessionCache.at < SINGLE_SESSION_TTL_MS) {
+    return singleSessionCache.value;
+  }
+  try {
+    const snap = await db.collection(collections.adminConfig).doc("studentApp").get();
+    const value = snap.get("singleSession") === true;
+    singleSessionCache = { value, at: now };
+    return value;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Starts a session for this device. A session on a *different* device blocks the
  * sign-in only while that device is still heartbeating (see `isLive`); the caller
  * then passes `force` to take over, and the other device is signed out because
@@ -111,6 +144,7 @@ export async function startSession(
   opts: { force?: boolean } = {},
 ): Promise<StartSessionResult> {
   const db = getAdminDb();
+  const singleSession = await singleSessionOnly(db);
   const userRef = db.collection(collections.users).doc(identity.uid);
   const contact = identity.email || identity.phone || "";
   const model = input.model || "Web";
@@ -149,7 +183,7 @@ export async function startSession(
   // are closed out quietly and the login continues — they used to keep forcing
   // the take-over prompt, and taking over signed the student's real device out.
   const liveOthers = rows.filter((row) => !row.sameDevice && row.live);
-  if (liveOthers.length && !opts.force) {
+  if (singleSession && liveOthers.length && !opts.force) {
     const conflict: ConflictingSession[] = liveOthers
       .map((row) => {
         const os = String(row.doc.get("os") ?? "");
@@ -188,6 +222,10 @@ export async function startSession(
   const batch = db.batch();
   rows.forEach((row) => {
     if (keep && row.doc.id === keep.doc.id) return;
+    // With the one-device rule switched off, another device's session is not
+    // this sign-in's business: only duplicates left by this same browser are
+    // tidied up. Nothing here may sign another device out.
+    if (!singleSession && !row.sameDevice) return;
     const sameDevice = row.sameDevice;
     const endedBy = sameDevice ? "duplicate" : row.live ? "takeover" : "stale";
     // Plain-language cause, so admin Activity can show why a session ended

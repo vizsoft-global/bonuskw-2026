@@ -21,7 +21,7 @@ export function RequireAuth({
   allowOnboarding?: boolean;
   allowActivation?: boolean;
 }) {
-  const { user, ready, authKnown, needsOnboarding, kicked } = useAuth();
+  const { user, ready, needsOnboarding, kicked } = useAuth();
   const activation = useActivationGate();
   const router = useRouter();
   const pathname = usePathname();
@@ -30,10 +30,7 @@ export function RequireAuth({
   const activationBlocked = activation.needsActivation && !needsOnboarding && !allowActivation;
 
   useEffect(() => {
-    // `ready` can be reached by a timeout, so it is not evidence that anyone is
-    // signed out. Bouncing on it sent students to /login while their session
-    // was still being restored.
-    if (!ready || !authKnown) return;
+    if (!ready) return;
     if (kicked) {
       router.replace("/session-ended");
       return;
@@ -50,7 +47,6 @@ export function RequireAuth({
     if (activationBlocked) router.replace("/activate");
   }, [
     ready,
-    authKnown,
     user,
     needsOnboarding,
     activationBlocked,
@@ -62,7 +58,6 @@ export function RequireAuth({
 
   if (
     !ready ||
-    !authKnown ||
     !user ||
     kicked ||
     (needsOnboarding && !allowOnboarding) ||
