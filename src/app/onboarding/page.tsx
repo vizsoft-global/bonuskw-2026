@@ -124,17 +124,19 @@ function AcademicStep() {
  * `components/auth/signed-in-as` (shared with the activation screen).
  */
 export default function OnboardingPage() {
-  const { user, needsOnboarding, ready, profile } = useAuth();
+  const { user, needsOnboarding, ready, authKnown, profile } = useAuth();
   const router = useRouter();
-  const done = ready && Boolean(profile) && !needsOnboarding;
-  const signedOut = ready && !user;
+  // A timeout can make `ready` true before anyone knows who is signed in.
+  const answered = ready && authKnown;
+  const done = answered && Boolean(profile) && !needsOnboarding;
+  const signedOut = answered && !user;
 
   useEffect(() => {
     if (signedOut) router.replace("/login");
     else if (done) router.replace("/");
   }, [done, router, signedOut]);
 
-  if (!ready || signedOut || done) {
+  if (!answered || signedOut || done) {
     return (
       <AuthShell showBack={false}>
         <PageLoader />

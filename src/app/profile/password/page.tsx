@@ -10,7 +10,7 @@ import { useAuth } from "@/lib/auth/auth-provider";
 import { useI18n } from "@/lib/i18n/locale";
 
 export default function PasswordPage() {
-  const { user } = useAuth();
+  const { user, resetPassword } = useAuth();
   const { t } = useI18n();
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
@@ -18,7 +18,30 @@ export default function PasswordPage() {
   const [show, setShow] = useState({ current: false, next: false, confirm: false });
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  /** Google / Apple / phone accounts have no password until they set one. */
+  const [sendBusy, setSendBusy] = useState(false);
+  const [sent, setSent] = useState(false);
   const hasPassword = Boolean(user?.providerData.some((p) => p.providerId === "password"));
+
+  /**
+   * Setting a password for an account that signs in with Google, Apple or a
+   * phone code. Firebase will not attach one without the student proving they
+   * own the address, so the only honest button is "mail me a link".
+   */
+  async function emailReset() {
+    const address = user?.email;
+    if (!address) return;
+    setSendBusy(true);
+    setError("");
+    try {
+      await resetPassword(address);
+      setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("passwordHint"));
+    } finally {
+      setSendBusy(false);
+    }
+  }
 
   async function save() {
     if (!user) return;
@@ -88,7 +111,27 @@ export default function PasswordPage() {
           </div>
         </div>
       ) : (
-        <p className="text-[14px] text-muted">{t("phoneAccountPassword")}</p>
+        <div className="flex flex-col">
+          <SectionLabel>{t("security")}</SectionLabel>
+          <p className="mt-[15px] text-[14px] leading-relaxed text-muted">{t("noPasswordYet")}</p>
+          {sent ? (
+            <p className="mt-3 text-[12px] text-[#39c07a]">{t("resetEmailSent")}</p>
+          ) : null}
+          {error ? <p className="mt-2 text-[12px] text-[#f24822]">{error}</p> : null}
+          <div className="mt-6 flex flex-col gap-3 pb-4">
+            {user?.email ? (
+              <CtaButton
+                loading={sendBusy}
+                disabled={sendBusy || sent}
+                onClick={() => void emailReset()}
+              >
+                {t("emailMePasswordLink")}
+              </CtaButton>
+            ) : (
+              <p className="text-[12px] text-muted">{t("addEmailFirst")}</p>
+            )}
+          </div>
+        </div>
       )}
     </ProfilePane>
   );

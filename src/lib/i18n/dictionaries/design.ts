@@ -396,7 +396,10 @@ export const design = {
     enterNewPassword: "Enter your new password",
     passwordHint: "Password must be at least 8 characters long",
     updatePassword: "Update Password",
-    phoneAccountPassword: "This account uses a phone number. Manage sign-in from the login screen.",
+    noPasswordYet:
+      "You sign in with Google, Apple or a code, so this account has no password yet. We can email you a link to set one.",
+    emailMePasswordLink: "Email me a password link",
+    addEmailFirst: "Add an email address to your profile first, then we can send the link.",
     ebooks: "eBooks",
     changeLanguage: "Change language",
     english: "English",
@@ -795,7 +798,10 @@ export const design = {
     enterNewPassword: "أدخل كلمة المرور الجديدة",
     passwordHint: "يجب أن تتكون كلمة المرور من 8 أحرف على الأقل",
     updatePassword: "تحديث كلمة المرور",
-    phoneAccountPassword: "هذا الحساب يستخدم رقم هاتف. أدِر تسجيل الدخول من شاشة الدخول.",
+    noPasswordYet:
+      "تسجيل دخولك يتم عبر Google أو Apple أو رمز، لذا لا توجد كلمة مرور لهذا الحساب بعد. يمكننا إرسال رابط لتعيين واحدة.",
+    emailMePasswordLink: "أرسل لي رابط كلمة المرور",
+    addEmailFirst: "أضف بريدًا إلكترونيًا إلى ملفك أولًا، ثم نرسل الرابط.",
     ebooks: "الكتب",
     changeLanguage: "تغيير اللغة",
     english: "English",
